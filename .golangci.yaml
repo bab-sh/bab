@@ -1,0 +1,99 @@
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    - gofmt
+    - goimports
+    - gocritic
+    - gosec
+    - misspell
+    - unconvert
+    - unparam
+    - whitespace
+    - gocyclo
+    - dupl
+    - prealloc
+    - bodyclose
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - copyloopvar
+    - goconst
+    - godot
+    - errorlint
+    - revive
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  misspell:
+    locale: US
+
+  unparam:
+    check-exported: false
+
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+
+  gosec:
+    excludes:
+      - G204
+
+issues:
+  exclude-use-default: false
+  max-same-issues: 50
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - goconst
+
+    - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"
+      linters:
+        - errcheck
+
+    # Allow TODO comments
+    - text: "Line contains TODO/BUG/FIXME"
+      linters:
+        - godot
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  sort-results: true
