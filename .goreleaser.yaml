@@ -50,7 +50,7 @@ checksum:
 
 release:
   github:
-    owner: aiomayo
+    owner: bab-sh
     name: bab
   mode: append
   skip_upload: false
