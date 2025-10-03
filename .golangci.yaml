@@ -35,7 +35,5 @@ formatters:
     - goimports
 
 output:
-  formats:
-    - format: colored-line-number
-      path: stdout
+  formats: colored-line-number
   sort-results: true
