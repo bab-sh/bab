@@ -12,11 +12,13 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// Executor executes tasks with configurable options.
 type Executor struct {
 	dryRun  bool
 	verbose bool
 }
 
+// New creates a new Executor with the given options.
 func New(options ...Option) *Executor {
 	e := &Executor{}
 	for _, opt := range options {
@@ -25,20 +27,24 @@ func New(options ...Option) *Executor {
 	return e
 }
 
+// Option is a functional option for configuring the Executor.
 type Option func(*Executor)
 
+// WithDryRun enables dry-run mode (shows commands without executing).
 func WithDryRun(dryRun bool) Option {
 	return func(e *Executor) {
 		e.dryRun = dryRun
 	}
 }
 
+// WithVerbose enables verbose output.
 func WithVerbose(verbose bool) Option {
 	return func(e *Executor) {
 		e.verbose = verbose
 	}
 }
 
+// Execute runs the given task.
 func (e *Executor) Execute(task *registry.Task) error {
 	if task == nil {
 		return fmt.Errorf("cannot execute nil task")
