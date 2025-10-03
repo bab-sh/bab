@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/bab/bab/internal/registry"
+	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/log"
 )
 
