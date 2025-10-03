@@ -3,6 +3,7 @@ package display
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bab-sh/bab/internal/registry"
@@ -26,56 +27,93 @@ func ListTasks(reg registry.Registry) error {
 
 	fmt.Println("\nAvailable tasks:")
 
-	taskTree := reg.Tree()
+	root := reg.Tree()
 
-	if rootTasks, exists := taskTree[""]; exists && len(rootTasks) > 0 {
-		maxLen := 0
-		for _, task := range rootTasks {
-			if len(task.Name) > maxLen {
-				maxLen = len(task.Name)
-			}
-		}
+	// Get sorted children names for consistent ordering
+	childNames := getSortedChildNames(root)
 
-		for _, task := range rootTasks {
-			t := tree.New().
-				Root(formatTaskWithPadding(task.Name, task.Description, maxLen, taskNameStyle, descriptionStyle)).
-				Enumerator(tree.RoundedEnumerator).
-				EnumeratorStyle(enumeratorStyle)
-			fmt.Println(t)
-		}
-	}
-
-	for group, groupTasks := range taskTree {
-		if group == "" {
-			continue
-		}
-
-		maxLen := 0
-		for _, task := range groupTasks {
-			shortName := strings.TrimPrefix(task.Name, group+":")
-			if len(shortName) > maxLen {
-				maxLen = len(shortName)
-			}
-		}
-
-		t := tree.New().
-			Root(groupNameStyle.Render(group)).
-			Enumerator(tree.RoundedEnumerator).
-			EnumeratorStyle(enumeratorStyle)
-
-		for _, task := range groupTasks {
-			shortName := strings.TrimPrefix(task.Name, group+":")
-			taskDisplay := formatTaskWithPadding(shortName, task.Description, maxLen, taskNameStyle, descriptionStyle)
-			t.Child(taskDisplay)
-		}
-
-		fmt.Println(t)
+	for _, childName := range childNames {
+		child := root.Children[childName]
+		displayNode(child, taskNameStyle, descriptionStyle, groupNameStyle, enumeratorStyle)
 	}
 
 	fmt.Println("\nRun 'bab <task>' to execute a task")
 	fmt.Println("Run 'bab <task> --dry-run' to see what would be executed")
 
 	return nil
+}
+
+// displayNode recursively displays a tree node and its children.
+func displayNode(node *registry.TreeNode, taskStyle, descStyle, groupStyle, enumStyle lipgloss.Style) {
+	if node.IsTask() {
+		// Display as a standalone task
+		t := tree.New().
+			Root(formatTaskWithPadding(node.Name, node.Task.Description, 0, taskStyle, descStyle)).
+			Enumerator(tree.RoundedEnumerator).
+			EnumeratorStyle(enumStyle)
+		fmt.Println(t)
+	} else {
+		// Display as a group with children
+		t := tree.New().
+			Root(groupStyle.Render(node.Name)).
+			Enumerator(tree.RoundedEnumerator).
+			EnumeratorStyle(enumStyle)
+
+		// Calculate max length for padding
+		maxLen := calculateMaxLength(node)
+
+		// Add children recursively
+		addChildrenToTree(t, node, maxLen, taskStyle, descStyle, groupStyle)
+
+		fmt.Println(t)
+	}
+}
+
+// addChildrenToTree recursively adds children to a tree.
+func addChildrenToTree(t *tree.Tree, node *registry.TreeNode, maxLen int, taskStyle, descStyle, groupStyle lipgloss.Style) {
+	childNames := getSortedChildNames(node)
+
+	for _, childName := range childNames {
+		child := node.Children[childName]
+
+		if child.IsTask() {
+			// Add task as leaf
+			taskDisplay := formatTaskWithPadding(child.Name, child.Task.Description, maxLen, taskStyle, descStyle)
+			t.Child(taskDisplay)
+		} else {
+			// Add group as subtree
+			subTree := tree.New().
+				Root(groupStyle.Render(child.Name)).
+				Enumerator(tree.RoundedEnumerator)
+
+			// Recursively add children of this group
+			subMaxLen := calculateMaxLength(child)
+			addChildrenToTree(subTree, child, subMaxLen, taskStyle, descStyle, groupStyle)
+
+			t.Child(subTree)
+		}
+	}
+}
+
+// calculateMaxLength calculates the maximum name length among direct task children.
+func calculateMaxLength(node *registry.TreeNode) int {
+	maxLen := 0
+	for _, child := range node.Children {
+		if child.IsTask() && len(child.Name) > maxLen {
+			maxLen = len(child.Name)
+		}
+	}
+	return maxLen
+}
+
+// getSortedChildNames returns sorted child names for consistent ordering.
+func getSortedChildNames(node *registry.TreeNode) []string {
+	names := make([]string, 0, len(node.Children))
+	for name := range node.Children {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func formatTaskWithPadding(name, description string, maxLen int, nameStyle, descStyle lipgloss.Style) string {
