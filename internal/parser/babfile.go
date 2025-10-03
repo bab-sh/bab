@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/bab-sh/bab/internal/registry"
 	"gopkg.in/yaml.v3"
@@ -24,7 +25,8 @@ func New(reg registry.Registry) *Parser {
 
 // ParseFile parses a Babfile from the filesystem.
 func (p *Parser) ParseFile(filename string) error {
-	file, err := os.Open(filename) //nolint:gosec // filename is validated in findBabfile()
+	cleanPath := filepath.Clean(filename)
+	file, err := os.Open(cleanPath)
 	if err != nil {
 		return fmt.Errorf("failed to open babfile: %w", err)
 	}
@@ -116,8 +118,18 @@ func (p *Parser) registerTask(name string, taskMap map[string]interface{}) error
 
 func isTask(node map[string]interface{}) bool {
 	_, hasDesc := node["desc"]
-	_, hasRun := node["run"]
-	return hasDesc || hasRun
+	runValue, hasRun := node["run"]
+
+	if hasRun {
+		switch runValue.(type) {
+		case string, []interface{}:
+			return true
+		case map[interface{}]interface{}, map[string]interface{}:
+			return hasDesc
+		}
+	}
+
+	return hasDesc
 }
 
 func convertMap(m map[interface{}]interface{}) map[string]interface{} {
