@@ -1,0 +1,56 @@
+@echo off
+REM Auto-generated from Babfile by bab - DO NOT EDIT
+REM https://github.com/bab/bab
+
+setlocal enabledelayedexpansion
+
+if "%~1"=="" goto list_tasks
+
+set "TASK_NAME=%~1"
+shift
+
+REM Task dispatcher
+{{range .Tasks}}
+if "%TASK_NAME%"=="{{.Name}}" goto task_{{.SafeName}}
+{{end}}
+
+echo Error: Task '%TASK_NAME%' not found.
+echo.
+echo Run 'bab.bat' to see available tasks.
+exit /b 1
+
+REM Task implementations
+{{range .Tasks}}
+:task_{{.SafeName}}
+echo ^> Running task: {{.Name}}
+{{range .Commands}}
+{{.}}
+if errorlevel 1 (
+    echo Task failed with exit code !errorlevel!
+    exit /b !errorlevel!
+)
+{{end}}
+echo + Task completed: {{.Name}}
+goto :eof
+{{end}}
+
+:list_tasks
+echo.
+echo Available tasks:
+echo.
+{{if .RootTasks}}
+echo  Root tasks:
+{{range .RootTasks}}
+echo   {{.Name}}{{if .Description}}  {{.Description}}{{end}}
+{{end}}
+echo.
+{{end}}
+{{range $group, $tasks := .GroupedTasks}}
+echo  {{$group}}:
+{{range $tasks}}
+echo   {{.Name}}{{if .Description}}  {{.Description}}{{end}}
+{{end}}
+echo.
+{{end}}
+echo Run 'bab.bat ^<task^>' to execute a task
+goto :eof
