@@ -35,5 +35,4 @@ formatters:
     - goimports
 
 output:
-  formats: colored-line-number
   sort-results: true
