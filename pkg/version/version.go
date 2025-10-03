@@ -1,7 +1,16 @@
 package version
 
-var Version = "1.0.0"
+var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+	BuiltBy = "source"
+)
 
 func GetVersion() string {
 	return Version
+}
+
+func GetFullVersion() string {
+	return Version + " (" + Commit + ") built on " + Date + " by " + BuiltBy
 }
