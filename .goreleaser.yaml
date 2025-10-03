@@ -43,7 +43,6 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     files:
       - README.md
-      - LICENSE
 
 checksum:
   name_template: 'checksums.txt'
