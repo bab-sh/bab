@@ -1,3 +1,4 @@
+// Package compiler provides functionality for compiling Babfiles to standalone shell scripts.
 package compiler
 
 import (
@@ -200,7 +201,11 @@ func (c *Compiler) generateShellScript(data TemplateData) error {
 	if err != nil {
 		return fmt.Errorf("failed to create shell script: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Error("Failed to close shell script file", "error", closeErr)
+		}
+	}()
 
 	if err := tmpl.Execute(file, data); err != nil {
 		return fmt.Errorf("failed to execute shell template: %w", err)
@@ -228,7 +233,11 @@ func (c *Compiler) generateBatchFile(data TemplateData) error {
 	if err != nil {
 		return fmt.Errorf("failed to create batch file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Error("Failed to close batch file", "error", closeErr)
+		}
+	}()
 
 	if err := tmpl.Execute(file, data); err != nil {
 		return fmt.Errorf("failed to execute batch template: %w", err)

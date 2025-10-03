@@ -1,3 +1,4 @@
+// Package executor provides functionality for executing tasks with configurable options.
 package executor
 
 import (
@@ -110,7 +111,11 @@ func (e *Executor) runCommand(command string, current, total int) error {
 }
 
 func (e *Executor) streamOutput(pipe io.ReadCloser, isStderr bool) {
-	defer pipe.Close()
+	defer func() {
+		if closeErr := pipe.Close(); closeErr != nil {
+			log.Error("Failed to close pipe", "error", closeErr)
+		}
+	}()
 	scanner := bufio.NewScanner(pipe)
 
 	for scanner.Scan() {

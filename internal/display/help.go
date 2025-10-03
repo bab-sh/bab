@@ -1,3 +1,4 @@
+// Package display provides functionality for displaying task lists and help information.
 package display
 
 import (

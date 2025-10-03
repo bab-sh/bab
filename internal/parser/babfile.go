@@ -1,3 +1,4 @@
+// Package parser provides functionality for parsing Babfiles and registering tasks.
 package parser
 
 import (
@@ -27,7 +28,11 @@ func (p *Parser) ParseFile(filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open babfile: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close babfile: %v\n", closeErr)
+		}
+	}()
 
 	return p.Parse(file)
 }

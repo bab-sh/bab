@@ -1,3 +1,4 @@
+// Package templates contains embedded template files for generating shell scripts.
 package templates
 
 import (
