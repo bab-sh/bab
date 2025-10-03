@@ -1,3 +1,4 @@
+// Package version provides version information for bab.
 package version
 
 var (

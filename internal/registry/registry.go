@@ -1,3 +1,4 @@
+// Package registry manages task registration and retrieval.
 package registry
 
 import (

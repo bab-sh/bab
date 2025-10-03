@@ -1,3 +1,4 @@
+// Package cmd provides the command-line interface for bab.
 package cmd
 
 import (
@@ -15,7 +16,7 @@ func newCompileCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "Compile Babfile to standalone shell scripts",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return runCompile(outputDir, noColor)
 		},
 	}

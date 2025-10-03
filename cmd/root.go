@@ -40,7 +40,7 @@ func init() {
 	rootCmd.AddCommand(newCompileCmd())
 }
 
-func runRoot(cmd *cobra.Command, args []string) error {
+func runRoot(_ *cobra.Command, args []string) error {
 	if verbose {
 		log.SetLevel(log.DebugLevel)
 	}
