@@ -65,9 +65,6 @@ homebrew_casks:
     description: "Bab CLI"
     license: "MIT"
     directory: Casks
-    test: |
-      system "#{bin}/bab", "version"
-
     hooks:
       post:
         install: |
