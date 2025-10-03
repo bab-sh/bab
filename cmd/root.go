@@ -1,4 +1,4 @@
-package cli
+package cmd
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/bab/bab/internal/parser"
 	"github.com/bab/bab/internal/registry"
 	"github.com/bab/bab/pkg/version"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +40,10 @@ func init() {
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	reg, err := loadRegistry()
 	if err != nil {
 		return err
@@ -51,7 +56,8 @@ func runRoot(cmd *cobra.Command, args []string) error {
 	taskName := args[0]
 	task, err := reg.Get(taskName)
 	if err != nil {
-		fmt.Printf("Task '%s' not found.\n\nRun 'bab' to see available tasks.\n", taskName)
+		log.Error("Task not found", "task", taskName)
+		log.Info("Run 'bab' to see available tasks")
 		return err
 	}
 
