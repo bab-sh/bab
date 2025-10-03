@@ -10,21 +10,23 @@ import (
 
 func newCompileCmd() *cobra.Command {
 	var outputDir string
+	var noColor bool
 
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "Compile Babfile to standalone shell scripts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCompile(outputDir)
+			return runCompile(outputDir, noColor)
 		},
 	}
 
 	cmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory for generated scripts")
+	cmd.Flags().BoolVar(&noColor, "no-color", false, "Disable colors in generated scripts")
 
 	return cmd
 }
 
-func runCompile(outputDir string) error {
+func runCompile(outputDir string, noColor bool) error {
 	if verbose {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -41,6 +43,7 @@ func runCompile(outputDir string) error {
 	c := compiler.New(babfilePath,
 		compiler.WithOutputDir(outputDir),
 		compiler.WithVerbose(verbose),
+		compiler.WithNoColor(noColor),
 	)
 
 	return c.Compile()

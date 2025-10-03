@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/bab/bab/internal/registry"
 	"gopkg.in/yaml.v3"
@@ -125,16 +124,4 @@ func convertMap(m map[interface{}]interface{}) map[string]interface{} {
 		}
 	}
 	return result
-}
-
-func ParseBabfileData(data []byte) (registry.Registry, error) {
-	reg := registry.New()
-	parser := New(reg)
-
-	reader := strings.NewReader(string(data))
-	if err := parser.Parse(reader); err != nil {
-		return nil, err
-	}
-
-	return reg, nil
 }
