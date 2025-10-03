@@ -15,10 +15,25 @@ Write custom commands in YAML, execute them with bab. Just like Makefile but wit
 
 
 
-### 1. Install bab
+## Installation
+
+### Homebrew Cask (macOS)
 
 ```bash
-# Build bab from source
+brew tap bab-sh/tap
+```
+```bash
+brew install --cask bab
+```
+
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/bab-sh/bab.git
+cd bab
+
+# Build bab
 go build -o bab
 
 # Move to your PATH (optional)
