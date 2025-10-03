@@ -43,3 +43,5 @@ bab.bat
 
 # Task temp files
 .task/
+/docs/vitepress/node_modules
+/docs/vitepress/.vitepress/cache
