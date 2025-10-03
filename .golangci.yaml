@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
@@ -36,6 +36,6 @@ formatters:
 
 output:
   formats:
-    colored-line-number:
+    - format: colored-line-number
       path: stdout
   sort-results: true
