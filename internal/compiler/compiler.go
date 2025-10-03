@@ -120,49 +120,17 @@ func (c *Compiler) prepareTemplateData(reg registry.Registry) TemplateData {
 	}
 
 	rootTasks := make([]TemplateTask, 0)
-	if root, exists := tree[""]; exists {
-		for _, task := range root {
-			rootTasks = append(rootTasks, TemplateTask{
-				Name:        task.Name,
-				SafeName:    sanitizeName(task.Name),
-				Description: task.Description,
-				Commands:    task.Commands,
-			})
-		}
-	}
-
 	groupedTasks := make(map[string][]TemplateTask)
 	groupMaxNameLen := make(map[string]int)
+
+	// Recursively collect tasks from the tree
+	c.collectTasksFromNode(tree, "", &rootTasks, groupedTasks, groupMaxNameLen)
 
 	rootMaxNameLen := 0
 	for _, task := range rootTasks {
 		if len(task.Name) > rootMaxNameLen {
 			rootMaxNameLen = len(task.Name)
 		}
-	}
-
-	for group, groupTasks := range tree {
-		if group == "" {
-			continue
-		}
-		tasks := make([]TemplateTask, 0, len(groupTasks))
-		maxLen := 0
-
-		for _, task := range groupTasks {
-			shortName := strings.TrimPrefix(task.Name, group+":")
-			if len(shortName) > maxLen {
-				maxLen = len(shortName)
-			}
-
-			tasks = append(tasks, TemplateTask{
-				Name:        task.Name,
-				SafeName:    sanitizeName(task.Name),
-				Description: task.Description,
-				Commands:    task.Commands,
-			})
-		}
-		groupedTasks[group] = tasks
-		groupMaxNameLen[group] = maxLen
 	}
 
 	return TemplateData{
@@ -172,6 +140,51 @@ func (c *Compiler) prepareTemplateData(reg registry.Registry) TemplateData {
 		RootMaxNameLen:  rootMaxNameLen,
 		GroupMaxNameLen: groupMaxNameLen,
 		NoColor:         c.noColor,
+	}
+}
+
+// collectTasksFromNode recursively collects tasks from a tree node.
+func (c *Compiler) collectTasksFromNode(
+	node *registry.TreeNode,
+	currentGroup string,
+	rootTasks *[]TemplateTask,
+	groupedTasks map[string][]TemplateTask,
+	groupMaxNameLen map[string]int,
+) {
+	for _, child := range node.Children {
+		if child.IsTask() {
+			task := child.Task
+			templateTask := TemplateTask{
+				Name:        task.Name,
+				SafeName:    sanitizeName(task.Name),
+				Description: task.Description,
+				Commands:    task.Commands,
+			}
+
+			if currentGroup == "" {
+				// Root level task
+				*rootTasks = append(*rootTasks, templateTask)
+			} else {
+				// Grouped task
+				groupedTasks[currentGroup] = append(groupedTasks[currentGroup], templateTask)
+
+				// Update max name length for this group
+				shortName := strings.TrimPrefix(task.Name, currentGroup+":")
+				if len(shortName) > groupMaxNameLen[currentGroup] {
+					groupMaxNameLen[currentGroup] = len(shortName)
+				}
+			}
+		} else {
+			// This is a group node
+			groupName := child.Name
+			if currentGroup == "" {
+				// First level group
+				c.collectTasksFromNode(child, groupName, rootTasks, groupedTasks, groupMaxNameLen)
+			} else {
+				// Nested group and continue with the same top level group for flattening
+				c.collectTasksFromNode(child, currentGroup, rootTasks, groupedTasks, groupMaxNameLen)
+			}
+		}
 	}
 }
 
