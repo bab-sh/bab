@@ -1,9 +1,10 @@
-package cli
+package cmd
 
 import (
 	"fmt"
 
 	"github.com/bab/bab/internal/compiler"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
@@ -24,14 +25,18 @@ func newCompileCmd() *cobra.Command {
 }
 
 func runCompile(outputDir string) error {
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	babfilePath := findBabfile()
 	if babfilePath == "" {
 		return fmt.Errorf("no Babfile found")
 	}
 
-	fmt.Printf("Using Babfile: %s\n", babfilePath)
-	fmt.Printf("Output directory: %s\n", outputDir)
-	fmt.Println("\nCompiling Babfile to scripts...")
+	log.Info("Using Babfile", "path", babfilePath)
+	log.Info("Output directory", "path", outputDir)
+	log.Info("Compiling Babfile to scripts")
 
 	c := compiler.New(babfilePath,
 		compiler.WithOutputDir(outputDir),
