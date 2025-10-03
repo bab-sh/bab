@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/bab/bab/cmd"
+	"github.com/bab-sh/bab/cmd"
 	"github.com/charmbracelet/log"
 )
 
