@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// Compiler compiles Babfiles to standalone shell scripts.
 type Compiler struct {
 	babfilePath string
 	outputDir   string
@@ -21,6 +22,7 @@ type Compiler struct {
 	noColor     bool
 }
 
+// TemplateTask represents a task for template rendering.
 type TemplateTask struct {
 	Name        string
 	SafeName    string
@@ -28,6 +30,7 @@ type TemplateTask struct {
 	Commands    []string
 }
 
+// TemplateData holds all data needed for template execution.
 type TemplateData struct {
 	Tasks           []TemplateTask
 	RootTasks       []TemplateTask
@@ -37,6 +40,7 @@ type TemplateData struct {
 	NoColor         bool
 }
 
+// New creates a new Compiler instance.
 func New(babfilePath string, options ...Option) *Compiler {
 	c := &Compiler{
 		babfilePath: babfilePath,
@@ -50,26 +54,31 @@ func New(babfilePath string, options ...Option) *Compiler {
 	return c
 }
 
+// Option is a functional option for configuring the Compiler.
 type Option func(*Compiler)
 
+// WithOutputDir sets the output directory for generated scripts.
 func WithOutputDir(dir string) Option {
 	return func(c *Compiler) {
 		c.outputDir = dir
 	}
 }
 
+// WithVerbose enables verbose output.
 func WithVerbose(verbose bool) Option {
 	return func(c *Compiler) {
 		c.verbose = verbose
 	}
 }
 
+// WithNoColor disables color output in generated scripts.
 func WithNoColor(noColor bool) Option {
 	return func(c *Compiler) {
 		c.noColor = noColor
 	}
 }
 
+// Compile compiles the Babfile to standalone shell scripts.
 func (c *Compiler) Compile() error {
 	reg := registry.New()
 	p := parser.New(reg)
@@ -187,7 +196,7 @@ func (c *Compiler) generateShellScript(data TemplateData) error {
 	}
 
 	outputPath := filepath.Join(c.outputDir, "bab.sh")
-	file, err := os.Create(outputPath)
+	file, err := os.Create(outputPath) //nolint:gosec // outputPath is user-controlled via --output flag
 	if err != nil {
 		return fmt.Errorf("failed to create shell script: %w", err)
 	}
@@ -197,7 +206,7 @@ func (c *Compiler) generateShellScript(data TemplateData) error {
 		return fmt.Errorf("failed to execute shell template: %w", err)
 	}
 
-	if err := os.Chmod(outputPath, 0755); err != nil {
+	if err := os.Chmod(outputPath, 0755); err != nil { //nolint:gosec // executable permission needed for shell scripts
 		return fmt.Errorf("failed to make shell script executable: %w", err)
 	}
 
@@ -215,7 +224,7 @@ func (c *Compiler) generateBatchFile(data TemplateData) error {
 	}
 
 	outputPath := filepath.Join(c.outputDir, "bab.bat")
-	file, err := os.Create(outputPath)
+	file, err := os.Create(outputPath) //nolint:gosec // outputPath is user-controlled via --output flag
 	if err != nil {
 		return fmt.Errorf("failed to create batch file: %w", err)
 	}

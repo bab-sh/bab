@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Registry manages task registration and retrieval.
 type Registry interface {
 	Register(task *Task) error
 	Get(name string) (*Task, error)
@@ -17,12 +18,14 @@ type registry struct {
 	tasks map[string]*Task
 }
 
+// New creates a new task registry.
 func New() Registry {
 	return &registry{
 		tasks: make(map[string]*Task),
 	}
 }
 
+// Register adds a task to the registry.
 func (r *registry) Register(task *Task) error {
 	if task == nil {
 		return fmt.Errorf("cannot register nil task")
@@ -40,6 +43,7 @@ func (r *registry) Register(task *Task) error {
 	return nil
 }
 
+// Get retrieves a task by name from the registry.
 func (r *registry) Get(name string) (*Task, error) {
 	task, exists := r.tasks[name]
 	if !exists {
@@ -48,6 +52,7 @@ func (r *registry) Get(name string) (*Task, error) {
 	return task, nil
 }
 
+// List returns all tasks sorted by name.
 func (r *registry) List() []*Task {
 	tasks := make([]*Task, 0, len(r.tasks))
 	for _, task := range r.tasks {
@@ -61,6 +66,7 @@ func (r *registry) List() []*Task {
 	return tasks
 }
 
+// Tree organizes tasks into a hierarchical tree structure.
 func (r *registry) Tree() map[string][]*Task {
 	tree := make(map[string][]*Task)
 

@@ -26,6 +26,7 @@ var rootCmd = &cobra.Command{
 	RunE:  runRoot,
 }
 
+// Execute runs the root command.
 func Execute() error {
 	return rootCmd.Execute()
 }

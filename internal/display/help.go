@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// ListTasks displays all available tasks from the registry.
 func ListTasks(reg registry.Registry) error {
 	tasks := reg.List()
 	if len(tasks) == 0 {

@@ -9,18 +9,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Parser parses Babfiles and registers tasks.
 type Parser struct {
 	registry registry.Registry
 }
 
+// New creates a new Parser with the given registry.
 func New(reg registry.Registry) *Parser {
 	return &Parser{
 		registry: reg,
 	}
 }
 
+// ParseFile parses a Babfile from the filesystem.
 func (p *Parser) ParseFile(filename string) error {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) //nolint:gosec // filename is validated in findBabfile()
 	if err != nil {
 		return fmt.Errorf("failed to open babfile: %w", err)
 	}
@@ -29,6 +32,7 @@ func (p *Parser) ParseFile(filename string) error {
 	return p.Parse(file)
 }
 
+// Parse parses a Babfile from an io.Reader.
 func (p *Parser) Parse(reader io.Reader) error {
 	decoder := yaml.NewDecoder(reader)
 
