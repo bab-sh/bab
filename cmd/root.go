@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bab-sh/bab/internal/display"
 	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/bab-sh/bab/internal/registry"
+	"github.com/bab-sh/bab/internal/tui"
 	"github.com/bab-sh/bab/pkg/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -21,7 +21,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "bab [task]",
-	Short: "Simple task runner for your project",
+	Short: "Interactive task runner for your project",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runRoot,
 }
@@ -38,6 +38,7 @@ func init() {
 	rootCmd.Version = version.GetVersion()
 
 	rootCmd.AddCommand(newCompileCmd())
+	rootCmd.AddCommand(newListCmd())
 }
 
 func runRoot(_ *cobra.Command, args []string) error {
@@ -50,15 +51,18 @@ func runRoot(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	// If no task specified, launch interactive TUI
 	if len(args) == 0 {
-		return display.ListTasks(reg)
+		return tui.Run(reg, dryRun, verbose)
 	}
 
+	// Execute the specified task directly
 	taskName := args[0]
 	task, err := reg.Get(taskName)
 	if err != nil {
 		log.Error("Task not found", "task", taskName)
 		log.Info("Run 'bab' to see available tasks")
+		log.Info("Run 'bab list' for a non-interactive list")
 		return err
 	}
 
