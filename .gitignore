@@ -1,3 +1,45 @@
+# Binaries
+bab
+bab.exe
+*.exe
+*.dll
+*.so
+*.dylib
 
-/.idea
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Build artifacts
 dist/
+bin/
+build/
+*.tar.gz
+*.zip
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiled scripts (if generated)
+bab.sh
+bab.bat
+
+# Environment files
+.env
+.env.local
+
+# Task temp files
+.task/
