@@ -111,11 +111,6 @@ func (e *Executor) runCommand(command string, current, total int) error {
 }
 
 func (e *Executor) streamOutput(pipe io.ReadCloser, isStderr bool) {
-	defer func() {
-		if closeErr := pipe.Close(); closeErr != nil {
-			log.Error("Failed to close pipe", "error", closeErr)
-		}
-	}()
 	scanner := bufio.NewScanner(pipe)
 
 	for scanner.Scan() {
