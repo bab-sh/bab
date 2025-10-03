@@ -207,53 +207,181 @@ func TestRegistry_Tree(t *testing.T) {
 
 	tree := reg.Tree()
 
+	if tree == nil {
+		t.Fatal("Tree() returned nil")
+	}
+
+	if len(tree.Children) != 4 {
+		t.Errorf("Tree() root expected 4 children, got %d", len(tree.Children))
+	}
+
 	// Test root tasks
 	t.Run("root tasks", func(t *testing.T) {
-		rootTasks, exists := tree[""]
+		buildNode, exists := tree.Children["build"]
 		if !exists {
-			t.Fatal("Tree() missing root tasks")
+			t.Fatal("Tree() missing 'build' task")
 		}
-		if len(rootTasks) != 2 {
-			t.Errorf("Tree() expected 2 root tasks, got %d", len(rootTasks))
+		if !buildNode.IsTask() {
+			t.Error("'build' should be a task node")
+		}
+		if buildNode.Task == nil || buildNode.Task.Name != "build" {
+			t.Error("'build' node has incorrect task")
 		}
 
-		// Verify sorted order
-		expected := []string{"build", "test"}
-		for i, task := range rootTasks {
-			if task.Name != expected[i] {
-				t.Errorf("Tree()[%q][%d] name = %q, want %q", "", i, task.Name, expected[i])
-			}
+		testNode, exists := tree.Children["test"]
+		if !exists {
+			t.Fatal("Tree() missing 'test' task")
+		}
+		if !testNode.IsTask() {
+			t.Error("'test' should be a task node")
 		}
 	})
 
 	// Test grouped tasks
 	t.Run("dev group", func(t *testing.T) {
-		devTasks, exists := tree["dev"]
+		devNode, exists := tree.Children["dev"]
 		if !exists {
 			t.Fatal("Tree() missing 'dev' group")
 		}
-		if len(devTasks) != 2 {
-			t.Errorf("Tree() expected 2 dev tasks, got %d", len(devTasks))
+		if !devNode.IsGroup() {
+			t.Fatal("'dev' should be a group node")
 		}
 
-		expected := []string{"dev:start", "dev:watch"}
-		for i, task := range devTasks {
-			if task.Name != expected[i] {
-				t.Errorf("Tree()[%q][%d] name = %q, want %q", "dev", i, task.Name, expected[i])
-			}
+		if len(devNode.Children) != 2 {
+			t.Errorf("'dev' group expected 2 children, got %d", len(devNode.Children))
+		}
+
+		startNode, exists := devNode.Children["start"]
+		if !exists {
+			t.Fatal("'dev' group missing 'start' task")
+		}
+		if !startNode.IsTask() {
+			t.Error("'dev:start' should be a task node")
+		}
+
+		watchNode, exists := devNode.Children["watch"]
+		if !exists {
+			t.Fatal("'dev' group missing 'watch' task")
+		}
+		if !watchNode.IsTask() {
+			t.Error("'dev:watch' should be a task node")
 		}
 	})
 
 	t.Run("prod group", func(t *testing.T) {
-		prodTasks, exists := tree["prod"]
+		prodNode, exists := tree.Children["prod"]
 		if !exists {
 			t.Fatal("Tree() missing 'prod' group")
 		}
-		if len(prodTasks) != 1 {
-			t.Errorf("Tree() expected 1 prod task, got %d", len(prodTasks))
+		if !prodNode.IsGroup() {
+			t.Fatal("'prod' should be a group node")
 		}
-		if prodTasks[0].Name != "prod:deploy" {
-			t.Errorf("Tree()[%q][0] name = %q, want %q", "prod", prodTasks[0].Name, "prod:deploy")
+
+		if len(prodNode.Children) != 1 {
+			t.Errorf("'prod' group expected 1 child, got %d", len(prodNode.Children))
+		}
+
+		deployNode, exists := prodNode.Children["deploy"]
+		if !exists {
+			t.Fatal("'prod' group missing 'deploy' task")
+		}
+		if !deployNode.IsTask() {
+			t.Error("'prod:deploy' should be a task node")
+		}
+	})
+}
+
+func TestRegistry_TreeDeepNesting(t *testing.T) {
+	reg := New()
+
+	tasks := []*Task{
+		{Name: "build:platforms:linux:amd64", Commands: []string{"build linux amd64"}},
+		{Name: "build:platforms:linux:arm64", Commands: []string{"build linux arm64"}},
+		{Name: "build:platforms:windows:amd64", Commands: []string{"build windows amd64"}},
+		{Name: "build:platforms:macos:arm64", Commands: []string{"build macos arm64"}},
+		{Name: "test:unit:fast", Commands: []string{"test unit fast"}},
+		{Name: "test:unit:slow", Commands: []string{"test unit slow"}},
+		{Name: "test:integration:api", Commands: []string{"test integration api"}},
+	}
+
+	for _, task := range tasks {
+		if err := reg.Register(task); err != nil {
+			t.Fatalf("Register() failed: %v", err)
+		}
+	}
+
+	tree := reg.Tree()
+
+	// Test build hierarchy: build -> platforms -> (linux/windows/macos) -> (amd64/arm64)
+	t.Run("deep nesting - build platforms", func(t *testing.T) {
+		buildNode, exists := tree.Children["build"]
+		if !exists {
+			t.Fatal("Tree() missing 'build' group")
+		}
+		if !buildNode.IsGroup() {
+			t.Fatal("'build' should be a group node")
+		}
+
+		platformsNode, exists := buildNode.Children["platforms"]
+		if !exists {
+			t.Fatal("'build' missing 'platforms' group")
+		}
+		if !platformsNode.IsGroup() {
+			t.Fatal("'platforms' should be a group node")
+		}
+
+		// Check linux group
+		linuxNode, exists := platformsNode.Children["linux"]
+		if !exists {
+			t.Fatal("'platforms' missing 'linux' group")
+		}
+		if !linuxNode.IsGroup() {
+			t.Fatal("'linux' should be a group node")
+		}
+		if len(linuxNode.Children) != 2 {
+			t.Errorf("'linux' expected 2 children, got %d", len(linuxNode.Children))
+		}
+
+		// Check linux:amd64 task
+		amd64Node, exists := linuxNode.Children["amd64"]
+		if !exists {
+			t.Fatal("'linux' missing 'amd64' task")
+		}
+		if !amd64Node.IsTask() {
+			t.Error("'linux:amd64' should be a task node")
+		}
+
+		// Check linux:arm64 task
+		arm64Node, exists := linuxNode.Children["arm64"]
+		if !exists {
+			t.Fatal("'linux' missing 'arm64' task")
+		}
+		if !arm64Node.IsTask() {
+			t.Error("'linux:arm64' should be a task node")
+		}
+	})
+
+	// Test hierarchy: test -> (unit/integration) -> tasks
+	t.Run("deep nesting - test groups", func(t *testing.T) {
+		testNode, exists := tree.Children["test"]
+		if !exists {
+			t.Fatal("Tree() missing 'test' group")
+		}
+
+		unitNode, exists := testNode.Children["unit"]
+		if !exists {
+			t.Fatal("'test' missing 'unit' group")
+		}
+		if len(unitNode.Children) != 2 {
+			t.Errorf("'unit' expected 2 children, got %d", len(unitNode.Children))
+		}
+
+		integrationNode, exists := testNode.Children["integration"]
+		if !exists {
+			t.Fatal("'test' missing 'integration' group")
+		}
+		if len(integrationNode.Children) != 1 {
+			t.Errorf("'integration' expected 1 child, got %d", len(integrationNode.Children))
 		}
 	})
 }

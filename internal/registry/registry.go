@@ -4,15 +4,39 @@ package registry
 import (
 	"fmt"
 	"sort"
-	"strings"
 )
+
+// TreeNode represents a node in the hierarchical task tree.
+type TreeNode struct {
+	Name     string               // Name of this node (group or task name)
+	Task     *Task                // The task (nil if this is a group node)
+	Children map[string]*TreeNode // Child nodes (groups and tasks)
+}
+
+// NewTreeNode creates a new tree node.
+func NewTreeNode(name string) *TreeNode {
+	return &TreeNode{
+		Name:     name,
+		Children: make(map[string]*TreeNode),
+	}
+}
+
+// IsTask returns true if this node represents a task (leaf node).
+func (n *TreeNode) IsTask() bool {
+	return n.Task != nil
+}
+
+// IsGroup returns true if this node represents a group (non-leaf node).
+func (n *TreeNode) IsGroup() bool {
+	return !n.IsTask()
+}
 
 // Registry manages task registration and retrieval.
 type Registry interface {
 	Register(task *Task) error
 	Get(name string) (*Task, error)
 	List() []*Task
-	Tree() map[string][]*Task
+	Tree() *TreeNode
 }
 
 type registry struct {
@@ -68,23 +92,35 @@ func (r *registry) List() []*Task {
 }
 
 // Tree organizes tasks into a hierarchical tree structure.
-func (r *registry) Tree() map[string][]*Task {
-	tree := make(map[string][]*Task)
+func (r *registry) Tree() *TreeNode {
+	root := NewTreeNode("")
 
-	for _, task := range r.tasks {
-		if !task.IsGrouped() {
-			tree[""] = append(tree[""], task)
-		} else {
-			group := strings.Split(task.Name, ":")[0]
-			tree[group] = append(tree[group], task)
+	// Sort tasks by name for consistent ordering
+	tasks := r.List()
+
+	for _, task := range tasks {
+		insertTaskIntoTree(root, task)
+	}
+
+	return root
+}
+
+// insertTaskIntoTree inserts a task into the tree at the appropriate position.
+func insertTaskIntoTree(root *TreeNode, task *Task) {
+	// get the group path and leaf name
+	groupPath := task.GroupPath()
+	leafName := task.LeafName()
+
+	// navigate/create the path to the task
+	current := root
+	for _, segment := range groupPath {
+		if _, exists := current.Children[segment]; !exists {
+			current.Children[segment] = NewTreeNode(segment)
 		}
+		current = current.Children[segment]
 	}
 
-	for group := range tree {
-		sort.Slice(tree[group], func(i, j int) bool {
-			return tree[group][i].Name < tree[group][j].Name
-		})
-	}
-
-	return tree
+	taskNode := NewTreeNode(leafName)
+	taskNode.Task = task
+	current.Children[leafName] = taskNode
 }
