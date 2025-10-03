@@ -7,12 +7,12 @@ tasks:
   lint:
     desc: Run golangci-lint
     cmds:
-      - golangci-lint run --path-mode=abs --config=".golangci.yaml" --timeout=5m
+      - golangci-lint run --config=".golangci.yaml" --timeout=5m
 
   lint:fix:
     desc: Run golangci-lint and fix issues
     cmds:
-      - golangci-lint run --path-mode=abs --config=".golangci.yaml" --timeout=5m --fix
+      - golangci-lint run --config=".golangci.yaml" --timeout=5m --fix
 
   build:
     desc: Build the bab binary
