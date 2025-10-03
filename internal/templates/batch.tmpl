@@ -1,84 +1,104 @@
 @echo off
 REM Auto-generated from Babfile by bab - DO NOT EDIT
-REM https://github.com/bab/bab
+REM https://github.com/bab-sh/bab
 
 setlocal enabledelayedexpansion
 
-{{if not .NoColor}}
+
+REM =============================================================================
+REM COLOR DEFINITIONS
+REM =============================================================================
+{{if .NoColor}}
+set "COLOR_CYAN="
+set "COLOR_GREEN="
+set "COLOR_RED="
+set "COLOR_BOLD="
+set "COLOR_RESET="
+set "SYMBOL_RUNNING=>"
+set "SYMBOL_SUCCESS=+"
+set "SYMBOL_ERROR=Error:"
+{{else}}
 REM Enable ANSI escape sequences (Windows 10+)
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "COLOR_CYAN=%ESC%[96m"
+set "COLOR_GREEN=%ESC%[92m"
+set "COLOR_RED=%ESC%[91m"
+set "COLOR_BOLD=%ESC%[1m"
+set "COLOR_RESET=%ESC%[0m"
+set "SYMBOL_RUNNING=^>"
+set "SYMBOL_SUCCESS=+"
+set "SYMBOL_ERROR=Error:"
 {{end}}
+
+
+REM =============================================================================
+REM MAIN EXECUTION
+REM =============================================================================
 
 if "%~1"=="" goto list_tasks
 
 set "TASK_NAME=%~1"
 shift
 
+
 REM Task dispatcher
 {{range .Tasks}}
 if "%TASK_NAME%"=="{{.Name}}" goto task_{{.SafeName}}
 {{end}}
 
-{{if .NoColor}}
-echo Error: Task '%TASK_NAME%' not found. 1>&2
-{{else}}
-echo %ESC%[91mError:%ESC%[0m Task '%ESC%[1m%TASK_NAME%%ESC%[0m' not found. 1>&2
-{{end}}
+echo %COLOR_RED%%SYMBOL_ERROR%%COLOR_RESET% Task '%COLOR_BOLD%%TASK_NAME%%COLOR_RESET%' not found. 1>&2
 echo.
 echo Run 'bab.bat' to see available tasks.
 exit /b 1
 
-REM Task implementations
+
+REM =============================================================================
+REM TASK IMPLEMENTATIONS
+REM =============================================================================
 {{range .Tasks}}
+
 :task_{{.SafeName}}
-{{if $.NoColor}}
-echo ^> Running task: {{.Name}}
-{{else}}
-echo %ESC%[96m^>%ESC%[0m Running task: %ESC%[1m{{.Name}}%ESC%[0m
-{{end}}
+echo %COLOR_CYAN%%SYMBOL_RUNNING%%COLOR_RESET% Running task: %COLOR_BOLD%{{.Name}}%COLOR_RESET%
 {{range .Commands}}
 {{.}}
 if errorlevel 1 (
-{{if $.NoColor}}
-    echo Task failed with exit code !errorlevel! 1>&2
-{{else}}
-    echo %ESC%[91mTask failed with exit code !errorlevel!%ESC%[0m 1>&2
-{{end}}
+    echo %COLOR_RED%Task failed with exit code !errorlevel!%COLOR_RESET% 1>&2
     exit /b !errorlevel!
 )
 {{end}}
-{{if $.NoColor}}
-echo + Task completed: {{.Name}}
-{{else}}
-echo %ESC%[92m+%ESC%[0m Task completed: %ESC%[1m{{.Name}}%ESC%[0m
-{{end}}
+echo %COLOR_GREEN%%SYMBOL_SUCCESS%%COLOR_RESET% Task completed: %COLOR_BOLD%{{.Name}}%COLOR_RESET%
 goto :eof
 {{end}}
+
+
+REM =============================================================================
+REM TASK LISTING
+REM =============================================================================
 
 :list_tasks
 echo.
 echo Available tasks:
-{{if .RootTasks}}
-{{range $task := .RootTasks}}
-{{if $task.Description}}
+{{- if .RootTasks}}
+{{- range $task := .RootTasks}}
+{{- if $task.Description}}
 echo {{pad $task.Name $.RootMaxNameLen}} - {{$task.Description}}
-{{else}}
+{{- else}}
 echo {{$task.Name}}
-{{end}}
-{{end}}
-{{end}}
-{{range $group, $tasks := .GroupedTasks}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- range $group, $tasks := .GroupedTasks}}
 echo {{$group}}:
-{{$maxLen := index $.GroupMaxNameLen $group}}
-{{range $task := $tasks}}
-{{$shortName := trimPrefix $task.Name (printf "%s:" $group)}}
-{{if $task.Description}}
+{{- $maxLen := index $.GroupMaxNameLen $group}}
+{{- range $task := $tasks}}
+{{- $shortName := trimPrefix $task.Name (printf "%s:" $group)}}
+{{- if $task.Description}}
 echo   {{pad $shortName $maxLen}} - {{$task.Description}}
-{{else}}
+{{- else}}
 echo   {{$shortName}}
-{{end}}
-{{end}}
-{{end}}
+{{- end}}
+{{- end}}
+{{- end}}
 echo.
 echo Run 'bab.bat ^<task^>' to execute a task
 goto :eof
