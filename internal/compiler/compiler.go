@@ -11,13 +11,14 @@ import (
 	"github.com/bab/bab/internal/parser"
 	"github.com/bab/bab/internal/registry"
 	"github.com/bab/bab/internal/templates"
-	"github.com/fatih/color"
+	"github.com/charmbracelet/log"
 )
 
 type Compiler struct {
 	babfilePath string
 	outputDir   string
 	verbose     bool
+	noColor     bool
 }
 
 type TemplateTask struct {
@@ -28,9 +29,12 @@ type TemplateTask struct {
 }
 
 type TemplateData struct {
-	Tasks        []TemplateTask
-	RootTasks    []TemplateTask
-	GroupedTasks map[string][]TemplateTask
+	Tasks           []TemplateTask
+	RootTasks       []TemplateTask
+	GroupedTasks    map[string][]TemplateTask
+	RootMaxNameLen  int
+	GroupMaxNameLen map[string]int
+	NoColor         bool
 }
 
 func New(babfilePath string, options ...Option) *Compiler {
@@ -60,6 +64,12 @@ func WithVerbose(verbose bool) Option {
 	}
 }
 
+func WithNoColor(noColor bool) Option {
+	return func(c *Compiler) {
+		c.noColor = noColor
+	}
+}
+
 func (c *Compiler) Compile() error {
 	reg := registry.New()
 	p := parser.New(reg)
@@ -78,11 +88,9 @@ func (c *Compiler) Compile() error {
 		return fmt.Errorf("failed to generate batch file: %w", err)
 	}
 
-	success := color.New(color.FgGreen, color.Bold)
-	success.Println("\n✓ Successfully compiled Babfile to scripts!")
-	info := color.New(color.FgCyan)
-	info.Printf("  • %s\n", filepath.Join(c.outputDir, "bab.sh"))
-	info.Printf("  • %s\n", filepath.Join(c.outputDir, "bab.bat"))
+	log.Info("Successfully compiled Babfile to scripts!")
+	log.Info("Generated script", "path", filepath.Join(c.outputDir, "bab.sh"))
+	log.Info("Generated script", "path", filepath.Join(c.outputDir, "bab.bat"))
 
 	return nil
 }
@@ -114,12 +122,28 @@ func (c *Compiler) prepareTemplateData(reg registry.Registry) TemplateData {
 	}
 
 	groupedTasks := make(map[string][]TemplateTask)
+	groupMaxNameLen := make(map[string]int)
+
+	rootMaxNameLen := 0
+	for _, task := range rootTasks {
+		if len(task.Name) > rootMaxNameLen {
+			rootMaxNameLen = len(task.Name)
+		}
+	}
+
 	for group, groupTasks := range tree {
 		if group == "" {
 			continue
 		}
 		tasks := make([]TemplateTask, 0, len(groupTasks))
+		maxLen := 0
+
 		for _, task := range groupTasks {
+			shortName := strings.TrimPrefix(task.Name, group+":")
+			if len(shortName) > maxLen {
+				maxLen = len(shortName)
+			}
+
 			tasks = append(tasks, TemplateTask{
 				Name:        task.Name,
 				SafeName:    sanitizeName(task.Name),
@@ -128,17 +152,36 @@ func (c *Compiler) prepareTemplateData(reg registry.Registry) TemplateData {
 			})
 		}
 		groupedTasks[group] = tasks
+		groupMaxNameLen[group] = maxLen
 	}
 
 	return TemplateData{
-		Tasks:        templateTasks,
-		RootTasks:    rootTasks,
-		GroupedTasks: groupedTasks,
+		Tasks:           templateTasks,
+		RootTasks:       rootTasks,
+		GroupedTasks:    groupedTasks,
+		RootMaxNameLen:  rootMaxNameLen,
+		GroupMaxNameLen: groupMaxNameLen,
+		NoColor:         c.noColor,
+	}
+}
+
+func (c *Compiler) templateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"trimPrefix": strings.TrimPrefix,
+		"pad": func(s string, width int) string {
+			if len(s) >= width {
+				return s
+			}
+			return s + strings.Repeat(" ", width-len(s))
+		},
+		"index": func(m map[string]int, key string) int {
+			return m[key]
+		},
 	}
 }
 
 func (c *Compiler) generateShellScript(data TemplateData) error {
-	tmpl, err := template.New("shell").Parse(templates.ShellTemplate)
+	tmpl, err := template.New("shell").Funcs(c.templateFuncs()).Parse(templates.ShellTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse shell template: %w", err)
 	}
@@ -159,14 +202,14 @@ func (c *Compiler) generateShellScript(data TemplateData) error {
 	}
 
 	if c.verbose {
-		fmt.Printf("Generated: %s\n", outputPath)
+		log.Debug("Generated shell script", "path", outputPath)
 	}
 
 	return nil
 }
 
 func (c *Compiler) generateBatchFile(data TemplateData) error {
-	tmpl, err := template.New("batch").Parse(templates.BatchTemplate)
+	tmpl, err := template.New("batch").Funcs(c.templateFuncs()).Parse(templates.BatchTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to parse batch template: %w", err)
 	}
@@ -183,7 +226,7 @@ func (c *Compiler) generateBatchFile(data TemplateData) error {
 	}
 
 	if c.verbose {
-		fmt.Printf("Generated: %s\n", outputPath)
+		log.Debug("Generated batch file", "path", outputPath)
 	}
 
 	return nil

@@ -9,7 +9,7 @@ import (
 	"runtime"
 
 	"github.com/bab/bab/internal/registry"
-	"github.com/fatih/color"
+	"github.com/charmbracelet/log"
 )
 
 type Executor struct {
@@ -44,12 +44,10 @@ func (e *Executor) Execute(task *registry.Task) error {
 		return fmt.Errorf("cannot execute nil task")
 	}
 
-	header := color.New(color.FgCyan, color.Bold)
-	header.Printf("\n▶ Running task: %s\n", task.Name)
+	log.Info("▶ Running task", "name", task.Name)
 
 	if task.Description != "" && e.verbose {
-		desc := color.New(color.FgGreen)
-		desc.Printf("  %s\n", task.Description)
+		log.Debug("Task description", "desc", task.Description)
 	}
 
 	for i, command := range task.Commands {
@@ -58,16 +56,14 @@ func (e *Executor) Execute(task *registry.Task) error {
 		}
 	}
 
-	success := color.New(color.FgGreen, color.Bold)
-	success.Printf("✓ Task completed: %s\n\n", task.Name)
+	log.Info("Task completed", "name", task.Name)
 
 	return nil
 }
 
 func (e *Executor) runCommand(command string, current, total int) error {
-	cmdColor := color.New(color.FgYellow)
 	if e.verbose || e.dryRun {
-		cmdColor.Printf("  [%d/%d] $ %s\n", current, total, command)
+		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", current, total), "cmd", command)
 	}
 
 	if e.dryRun {
@@ -101,9 +97,7 @@ func (e *Executor) runCommand(command string, current, total int) error {
 	go e.streamOutput(stderr, true)
 
 	if err := cmd.Wait(); err != nil {
-		errColor := color.New(color.FgRed, color.Bold)
-		errColor.Printf("  ✗ Command failed with exit code: %v\n", err)
-		return err
+		return fmt.Errorf("command failed: %w", err)
 	}
 
 	return nil
@@ -113,12 +107,12 @@ func (e *Executor) streamOutput(pipe io.ReadCloser, isStderr bool) {
 	defer pipe.Close()
 	scanner := bufio.NewScanner(pipe)
 
-	prefix := "  "
-	if isStderr {
-		prefix = color.RedString("  ")
-	}
-
 	for scanner.Scan() {
-		fmt.Printf("%s%s\n", prefix, scanner.Text())
+		line := scanner.Text()
+		if isStderr {
+			log.Error(line)
+		} else {
+			fmt.Printf("  %s\n", line)
+		}
 	}
 }

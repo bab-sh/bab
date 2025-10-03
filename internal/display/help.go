@@ -2,38 +2,72 @@ package display
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
+	"strings"
 
 	"github.com/bab/bab/internal/registry"
-	"github.com/fatih/color"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/tree"
+	"github.com/charmbracelet/log"
 )
 
 func ListTasks(reg registry.Registry) error {
 	tasks := reg.List()
 	if len(tasks) == 0 {
-		fmt.Println("No tasks available")
+		log.Info("No tasks available")
 		return nil
 	}
 
-	header := color.New(color.FgCyan, color.Bold)
-	header.Println("\nAvailable tasks:")
+	taskNameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true)
+	descriptionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	groupNameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
+	enumeratorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 
-	tree := reg.Tree()
+	fmt.Println("\nAvailable tasks:")
 
-	if rootTasks, exists := tree[""]; exists && len(rootTasks) > 0 {
-		fmt.Println("\n Root tasks:")
-		printTaskList(rootTasks)
+	taskTree := reg.Tree()
+
+	if rootTasks, exists := taskTree[""]; exists && len(rootTasks) > 0 {
+		maxLen := 0
+		for _, task := range rootTasks {
+			if len(task.Name) > maxLen {
+				maxLen = len(task.Name)
+			}
+		}
+
+		for _, task := range rootTasks {
+			t := tree.New().
+				Root(formatTaskWithPadding(task.Name, task.Description, maxLen, taskNameStyle, descriptionStyle)).
+				Enumerator(tree.RoundedEnumerator).
+				EnumeratorStyle(enumeratorStyle)
+			fmt.Println(t)
+		}
 	}
 
-	for group, groupTasks := range tree {
+	for group, groupTasks := range taskTree {
 		if group == "" {
 			continue
 		}
 
-		groupHeader := color.New(color.FgYellow, color.Bold)
-		groupHeader.Printf("\n %s:\n", group)
-		printTaskList(groupTasks)
+		maxLen := 0
+		for _, task := range groupTasks {
+			shortName := strings.TrimPrefix(task.Name, group+":")
+			if len(shortName) > maxLen {
+				maxLen = len(shortName)
+			}
+		}
+
+		t := tree.New().
+			Root(groupNameStyle.Render(group)).
+			Enumerator(tree.RoundedEnumerator).
+			EnumeratorStyle(enumeratorStyle)
+
+		for _, task := range groupTasks {
+			shortName := strings.TrimPrefix(task.Name, group+":")
+			taskDisplay := formatTaskWithPadding(shortName, task.Description, maxLen, taskNameStyle, descriptionStyle)
+			t.Child(taskDisplay)
+		}
+
+		fmt.Println(t)
 	}
 
 	fmt.Println("\nRun 'bab <task>' to execute a task")
@@ -42,19 +76,10 @@ func ListTasks(reg registry.Registry) error {
 	return nil
 }
 
-func printTaskList(tasks []*registry.Task) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-
-	for _, task := range tasks {
-		taskColor := color.New(color.FgGreen)
-		name := taskColor.Sprint(task.Name)
-
-		if task.Description != "" {
-			fmt.Fprintf(w, "  %s\t%s\n", name, task.Description)
-		} else {
-			fmt.Fprintf(w, "  %s\t\n", name)
-		}
+func formatTaskWithPadding(name, description string, maxLen int, nameStyle, descStyle lipgloss.Style) string {
+	if description != "" {
+		padding := strings.Repeat(" ", maxLen-len(name))
+		return nameStyle.Render(name) + padding + " - " + descStyle.Render(description)
 	}
-
-	w.Flush()
+	return nameStyle.Render(name)
 }

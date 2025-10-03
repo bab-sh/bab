@@ -18,21 +18,28 @@ task_{{.SafeName}}() {
 list_tasks() {
     echo ""
     echo "Available tasks:"
-    echo ""
 {{if .RootTasks}}
-    echo " Root tasks:"
-{{range .RootTasks}}
-    printf "  \033[32m%-20s\033[0m %s\n" "{{.Name}}" "{{.Description}}"
+{{range $task := .RootTasks}}
+{{if $task.Description}}
+    printf "%-{{$.RootMaxNameLen}}s - %s\n" "{{$task.Name}}" "{{$task.Description}}"
+{{else}}
+    echo "{{$task.Name}}"
 {{end}}
-    echo ""
+{{end}}
 {{end}}
 {{range $group, $tasks := .GroupedTasks}}
-    echo " \033[33m{{$group}}:\033[0m"
-{{range $tasks}}
-    printf "  \033[32m%-20s\033[0m %s\n" "{{.Name}}" "{{.Description}}"
+    echo "{{$group}}:"
+{{$maxLen := index $.GroupMaxNameLen $group}}
+{{range $task := $tasks}}
+{{$shortName := trimPrefix $task.Name (printf "%s:" $group)}}
+{{if $task.Description}}
+    printf "  %-{{$maxLen}}s - %s\n" "{{$shortName}}" "{{$task.Description}}"
+{{else}}
+    echo "  {{$shortName}}"
+{{end}}
+{{end}}
 {{end}}
     echo ""
-{{end}}
     echo "Run './bab.sh <task>' to execute a task"
 }
 
@@ -48,13 +55,25 @@ shift
 case "$TASK_NAME" in
 {{range .Tasks}}
     "{{.Name}}")
+{{if $.NoColor}}
         echo "▶ Running task: {{.Name}}"
+{{else}}
+        printf "\033[36m▶\033[0m Running task: \033[1m{{.Name}}\033[0m\n"
+{{end}}
         task_{{.SafeName}} "$@"
+{{if $.NoColor}}
         echo "✓ Task completed: {{.Name}}"
+{{else}}
+        printf "\033[32m✓\033[0m Task completed: \033[1m{{.Name}}\033[0m\n"
+{{end}}
         ;;
 {{end}}
     *)
-        echo "Error: Task '$TASK_NAME' not found."
+{{if .NoColor}}
+        echo "Error: Task '$TASK_NAME' not found." >&2
+{{else}}
+        printf "\033[31mError:\033[0m Task '\033[1m%s\033[0m' not found.\n" "$TASK_NAME" >&2
+{{end}}
         echo ""
         echo "Run './bab.sh' to see available tasks."
         exit 1
