@@ -286,6 +286,39 @@ dev:
 			},
 			wantErr: false,
 		},
+		{
+			name: "very deep nesting (4 levels)",
+			input: `
+build:
+  platforms:
+    linux:
+      amd64:
+        desc: Build for Linux AMD64
+        run: GOOS=linux GOARCH=amd64 go build
+`,
+			wantTasks: map[string][]string{
+				"build:platforms:linux:amd64": {"GOOS=linux GOARCH=amd64 go build"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "mixed depth nesting",
+			input: `
+test:
+  unit:
+    desc: Unit tests
+    run: go test ./...
+  integration:
+    api:
+      desc: API integration tests
+      run: go test -tags=integration ./tests/api
+`,
+			wantTasks: map[string][]string{
+				"test:unit":            {"go test ./..."},
+				"test:integration:api": {"go test -tags=integration ./tests/api"},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
