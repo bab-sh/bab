@@ -1,0 +1,63 @@
+version: "3"
+
+env:
+  CGO_ENABLED: 0
+
+tasks:
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run --path-mode=abs --config=".golangci.yaml" --timeout=5m
+
+  lint:fix:
+    desc: Run golangci-lint and fix issues
+    cmds:
+      - golangci-lint run --path-mode=abs --config=".golangci.yaml" --timeout=5m --fix
+
+  build:
+    desc: Build the bab binary
+    cmds:
+      - go build -o bab .
+    generates:
+      - bab
+
+  run:
+    desc: Run bab from source
+    cmds:
+      - go run . {{.CLI_ARGS}}
+
+  test:
+    desc: Run tests with coverage
+    cmds:
+      - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./... {{.CLI_ARGS}}
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  clean:
+    desc: Clean build artifacts and generated files
+    cmds:
+      - rm -f bab bab.exe
+      - rm -f coverage.txt coverage.html
+      - rm -f bab.sh bab.bat
+      - rm -rf dist/
+
+  verify:
+    desc: Run all verification steps (vet, lint, test)
+    cmds:
+      - task: vet
+      - task: lint
+      - task: test
+
+  deps:
+    desc: Download dependencies
+    cmds:
+      - go mod download
+
+  help:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
