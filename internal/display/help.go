@@ -80,7 +80,11 @@ func ListTasks(reg registry.Registry) error {
 
 func formatTaskWithPadding(name, description string, maxLen int, nameStyle, descStyle lipgloss.Style) string {
 	if description != "" {
-		padding := strings.Repeat(" ", maxLen-len(name))
+		paddingLen := maxLen - len(name)
+		if paddingLen < 0 {
+			paddingLen = 0
+		}
+		padding := strings.Repeat(" ", paddingLen)
 		return nameStyle.Render(name) + padding + " - " + descStyle.Render(description)
 	}
 	return nameStyle.Render(name)
