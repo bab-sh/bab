@@ -1,0 +1,62 @@
+#!/bin/sh
+# Auto-generated from Babfile by bab - DO NOT EDIT
+# https://github.com/bab/bab
+
+set -e
+
+# Task functions
+{{range .Tasks}}
+# {{.Name}}{{if .Description}} - {{.Description}}{{end}}
+task_{{.SafeName}}() {
+{{- range $i, $cmd := .Commands}}
+    {{$cmd}}
+{{- end}}
+}
+{{end}}
+
+# List all available tasks
+list_tasks() {
+    echo ""
+    echo "Available tasks:"
+    echo ""
+{{if .RootTasks}}
+    echo " Root tasks:"
+{{range .RootTasks}}
+    printf "  \033[32m%-20s\033[0m %s\n" "{{.Name}}" "{{.Description}}"
+{{end}}
+    echo ""
+{{end}}
+{{range $group, $tasks := .GroupedTasks}}
+    echo " \033[33m{{$group}}:\033[0m"
+{{range $tasks}}
+    printf "  \033[32m%-20s\033[0m %s\n" "{{.Name}}" "{{.Description}}"
+{{end}}
+    echo ""
+{{end}}
+    echo "Run './bab.sh <task>' to execute a task"
+}
+
+# Main execution
+if [ $# -eq 0 ]; then
+    list_tasks
+    exit 0
+fi
+
+TASK_NAME="$1"
+shift
+
+case "$TASK_NAME" in
+{{range .Tasks}}
+    "{{.Name}}")
+        echo "▶ Running task: {{.Name}}"
+        task_{{.SafeName}} "$@"
+        echo "✓ Task completed: {{.Name}}"
+        ;;
+{{end}}
+    *)
+        echo "Error: Task '$TASK_NAME' not found."
+        echo ""
+        echo "Run './bab.sh' to see available tasks."
+        exit 1
+        ;;
+esac

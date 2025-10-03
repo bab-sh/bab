@@ -34,6 +34,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be executed without running")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose output")
 	rootCmd.Version = version.GetVersion()
+
+	rootCmd.AddCommand(newCompileCmd())
 }
 
 func runRoot(cmd *cobra.Command, args []string) error {
