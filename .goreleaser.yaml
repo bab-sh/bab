@@ -48,7 +48,7 @@ checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
 
-brews:
+homebrew_casks:
   - name: bab
     repository:
       owner: bab-sh
@@ -62,6 +62,15 @@ brews:
     homepage: "https://github.com/bab-sh/bab"
     description: "Bab CLI - A simple task runner"
     license: "MIT"
+    directory: Casks
+    url:
+      verified: github.com/bab-sh/bab
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
+          end
 
 release:
   github:
