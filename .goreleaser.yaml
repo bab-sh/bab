@@ -65,7 +65,6 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binary: bab
     hooks:
       post:
         install: |
@@ -88,7 +87,7 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binary: bab
+    binary: "bab:bab@{{ .Major }}.{{ .Minor }}"
     hooks:
       post:
         install: |
