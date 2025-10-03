@@ -33,6 +33,3 @@ formatters:
   enable:
     - gofmt
     - goimports
-
-output:
-  sort-results: true
