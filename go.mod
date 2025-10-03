@@ -1,4 +1,4 @@
-module github.com/bab/bab
+module github.com/bab-sh/bab
 
 go 1.21
 

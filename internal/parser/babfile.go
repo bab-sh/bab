@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/bab/bab/internal/registry"
+	"github.com/bab-sh/bab/internal/registry"
 	"gopkg.in/yaml.v3"
 )
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/bab/bab/internal/compiler"
+	"github.com/bab-sh/bab/internal/compiler"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )

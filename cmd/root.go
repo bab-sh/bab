@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bab/bab/internal/display"
-	"github.com/bab/bab/internal/executor"
-	"github.com/bab/bab/internal/parser"
-	"github.com/bab/bab/internal/registry"
-	"github.com/bab/bab/pkg/version"
+	"github.com/bab-sh/bab/internal/display"
+	"github.com/bab-sh/bab/internal/executor"
+	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/registry"
+	"github.com/bab-sh/bab/pkg/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/bab/bab/internal/parser"
-	"github.com/bab/bab/internal/registry"
-	"github.com/bab/bab/internal/templates"
+	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/registry"
+	"github.com/bab-sh/bab/internal/templates"
 	"github.com/charmbracelet/log"
 )
 
