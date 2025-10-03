@@ -64,6 +64,93 @@ func TestTask_IsGrouped(t *testing.T) {
 	}
 }
 
+func TestTask_GroupPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskName string
+		want     []string
+	}{
+		{
+			name:     "simple task without groups",
+			taskName: "build",
+			want:     []string{},
+		},
+		{
+			name:     "single level group",
+			taskName: "dev:start",
+			want:     []string{"dev"},
+		},
+		{
+			name:     "two level group",
+			taskName: "build:platforms:linux",
+			want:     []string{"build", "platforms"},
+		},
+		{
+			name:     "deep nesting (4 levels)",
+			taskName: "build:platforms:linux:amd64:optimized",
+			want:     []string{"build", "platforms", "linux", "amd64"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := &Task{Name: tt.taskName}
+			got := task.GroupPath()
+
+			if len(got) != len(tt.want) {
+				t.Errorf("GroupPath() length = %d, want %d", len(got), len(tt.want))
+				return
+			}
+
+			for i, segment := range tt.want {
+				if got[i] != segment {
+					t.Errorf("GroupPath()[%d] = %q, want %q", i, got[i], segment)
+				}
+			}
+		})
+	}
+}
+
+func TestTask_LeafName(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskName string
+		want     string
+	}{
+		{
+			name:     "simple task",
+			taskName: "build",
+			want:     "build",
+		},
+		{
+			name:     "single level group",
+			taskName: "dev:start",
+			want:     "start",
+		},
+		{
+			name:     "two level group",
+			taskName: "build:platforms:linux",
+			want:     "linux",
+		},
+		{
+			name:     "deep nesting",
+			taskName: "build:platforms:linux:amd64:optimized",
+			want:     "optimized",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := &Task{Name: tt.taskName}
+			got := task.LeafName()
+
+			if got != tt.want {
+				t.Errorf("LeafName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTask_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
