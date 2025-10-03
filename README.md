@@ -13,6 +13,11 @@ Write custom commands in YAML, execute them with bab. Just like Makefile but wit
 - [ ] Homepage
 - [ ] Being a good markdown/taskfile replacement
 
+### IDEAS
+- [ ] Performance profiling
+- [ ] Interactive mode (fuzzy search or something)
+- [ ] Modules (multi babfile support in module format)
+- [ ] Generate babfiles/generate and add new commands to babfile via forms
 
 
 ## Installation
