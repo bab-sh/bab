@@ -48,6 +48,34 @@ checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
 
+homebrew_casks:
+  - name: bab
+    repository:
+      owner: bab-sh
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: [email protected]
+
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+
+    homepage: "https://github.com/bab-sh/bab"
+    description: "Bab CLI"
+    license: "MIT"
+    directory: Casks
+    test: |
+      system "#{bin}/bab", "version"
+
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr",
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
+          end
+
 release:
   github:
     owner: bab-sh
