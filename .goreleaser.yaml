@@ -71,6 +71,28 @@ homebrew_casks:
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
           end
+  - name: "bab@{{ .Major }}.{{ .Minor }}"
+    repository:
+      owner: bab-sh
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "chore: add {{ .ProjectName }}@{{ .Major }}.{{ .Minor }} ({{ .Tag }})"
+    homepage: "https://github.com/bab-sh/bab"
+    description: "Bab CLI - A simple task runner (version {{ .Major }}.{{ .Minor }}.x)"
+    license: "MIT"
+    directory: Casks
+    url:
+      verified: github.com/bab-sh/bab
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
+          end
 
 release:
   github:
