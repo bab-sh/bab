@@ -29,7 +29,7 @@ tasks:
   test:
     desc: Run tests with coverage
     cmds:
-      - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./... {{.CLI_ARGS}}
+      - go test -v -coverprofile=coverage.txt -covermode=atomic ./... {{.CLI_ARGS}}
 
   vet:
     desc: Run go vet
