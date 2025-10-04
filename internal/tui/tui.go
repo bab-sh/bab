@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bab-sh/bab/internal/executor"
+	"github.com/bab-sh/bab/internal/history"
 	"github.com/bab-sh/bab/internal/registry"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
@@ -23,7 +24,17 @@ func Run(reg registry.Registry, projectRoot string, dryRun bool, verbose bool) e
 		return fmt.Errorf("interactive mode requires a TTY")
 	}
 
-	model := NewModel(reg)
+	var historyManager *history.Manager
+	if projectRoot != "" {
+		hm, err := history.NewManager(projectRoot)
+		if err != nil {
+			log.Debug("Failed to initialize history manager for TUI", "error", err)
+		} else {
+			historyManager = hm
+		}
+	}
+
+	model := NewModel(reg, historyManager)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	finalModel, err := p.Run()
