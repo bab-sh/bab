@@ -8,15 +8,19 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 
+	"github.com/bab-sh/bab/internal/history"
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/log"
 )
 
 // Executor executes tasks with configurable options.
 type Executor struct {
-	dryRun  bool
-	verbose bool
+	dryRun         bool
+	verbose        bool
+	projectRoot    string
+	historyManager *history.Manager
 }
 
 // New creates a new Executor with the given options.
@@ -25,6 +29,16 @@ func New(options ...Option) *Executor {
 	for _, opt := range options {
 		opt(e)
 	}
+
+	if e.projectRoot != "" {
+		historyManager, err := history.NewManager(e.projectRoot)
+		if err != nil {
+			log.Debug("Failed to initialize history manager", "error", err)
+		} else {
+			e.historyManager = historyManager
+		}
+	}
+
 	return e
 }
 
@@ -45,27 +59,67 @@ func WithVerbose(verbose bool) Option {
 	}
 }
 
+// WithProjectRoot sets the project root directory for history tracking.
+func WithProjectRoot(projectRoot string) Option {
+	return func(e *Executor) {
+		e.projectRoot = projectRoot
+	}
+}
+
 // Execute runs the given task.
 func (e *Executor) Execute(task *registry.Task) error {
 	if task == nil {
 		return fmt.Errorf("cannot execute nil task")
 	}
 
+	startTime := time.Now()
 	log.Info("▶ Running task", "name", task.Name)
 
 	if task.Description != "" && e.verbose {
 		log.Debug("Task description", "desc", task.Description)
 	}
 
+	var execErr error
 	for i, command := range task.Commands {
 		if err := e.runCommand(command, i+1, len(task.Commands)); err != nil {
-			return fmt.Errorf("command failed: %w", err)
+			execErr = fmt.Errorf("command failed: %w", err)
+			break
 		}
+	}
+
+	// Record history entry
+	e.recordHistory(task, startTime, execErr)
+
+	if execErr != nil {
+		return execErr
 	}
 
 	log.Info("Task completed", "name", task.Name)
 
 	return nil
+}
+
+func (e *Executor) recordHistory(task *registry.Task, startTime time.Time, execErr error) {
+	if e.historyManager == nil {
+		return
+	}
+
+	workDir, err := os.Getwd()
+	if err != nil {
+		workDir = ""
+	}
+
+	duration := time.Since(startTime)
+	status := history.StatusSuccess
+	if execErr != nil {
+		status = history.StatusFailure
+	}
+
+	entry := history.NewEntry(task.Name, task.Description, workDir, status, duration, execErr)
+
+	if err := e.historyManager.Record(entry); err != nil {
+		log.Debug("Failed to record history", "error", err)
+	}
 }
 
 func (e *Executor) runCommand(command string, current, total int) error {

@@ -16,7 +16,7 @@ func newListCmd() *cobra.Command {
 }
 
 func runList(_ *cobra.Command, _ []string) error {
-	reg, err := loadRegistry()
+	reg, _, err := loadRegistry()
 	if err != nil {
 		return err
 	}
