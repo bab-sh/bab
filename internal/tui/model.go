@@ -100,10 +100,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if completion != "" {
 				m.textInput.SetValue(completion)
 				m.textInput.SetCursor(len(completion))
-				m.filterTasks(completion)
+				m = m.filterTasks(completion)
 				m.cursor = 0
 			}
 			return m, nil
+		default:
+			panic("unhandled default case")
 		}
 	}
 
@@ -112,7 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	newValue := m.textInput.Value()
 
 	if oldValue != newValue {
-		m.filterTasks(newValue)
+		m = m.filterTasks(newValue)
 		if len(m.filteredTasks) > 0 {
 			m.cursor = 0
 		}
@@ -121,10 +123,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) filterTasks(query string) {
+func (m Model) filterTasks(query string) Model {
 	if query == "" {
 		m.filteredTasks = m.allTasks
-		return
+		return m
 	}
 
 	searchStrings := make([]string, len(m.allTasks))
@@ -158,6 +160,8 @@ func (m *Model) filterTasks(query string) {
 	for i, mt := range matched {
 		m.filteredTasks[i] = mt.task
 	}
+
+	return m
 }
 
 func (m Model) getCompletion() string {
