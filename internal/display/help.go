@@ -12,6 +12,13 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+var (
+	taskNameStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true)
+	descriptionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	groupNameStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
+	enumeratorStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
+)
+
 // ListTasks displays all available tasks from the registry.
 func ListTasks(reg registry.Registry) error {
 	tasks := reg.List()
@@ -19,11 +26,6 @@ func ListTasks(reg registry.Registry) error {
 		log.Info("No tasks available")
 		return nil
 	}
-
-	taskNameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true)
-	descriptionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
-	groupNameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
-	enumeratorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 
 	fmt.Println("\nAvailable tasks:")
 
@@ -34,7 +36,7 @@ func ListTasks(reg registry.Registry) error {
 
 	for _, childName := range childNames {
 		child := root.Children[childName]
-		displayNode(child, taskNameStyle, descriptionStyle, groupNameStyle, enumeratorStyle)
+		displayNode(child)
 	}
 
 	fmt.Println("\nRun 'bab <task>' to execute a task")
@@ -44,33 +46,33 @@ func ListTasks(reg registry.Registry) error {
 }
 
 // displayNode recursively displays a tree node and its children.
-func displayNode(node *registry.TreeNode, taskStyle, descStyle, groupStyle, enumStyle lipgloss.Style) {
+func displayNode(node *registry.TreeNode) {
 	if node.IsTask() {
 		// Display as a standalone task
 		t := tree.New().
-			Root(formatTaskWithPadding(node.Name, node.Task.Description, 0, taskStyle, descStyle)).
+			Root(formatTaskWithPadding(node.Name, node.Task.Description, 0)).
 			Enumerator(tree.RoundedEnumerator).
-			EnumeratorStyle(enumStyle)
+			EnumeratorStyle(enumeratorStyle)
 		fmt.Println(t)
 	} else {
 		// Display as a group with children
 		t := tree.New().
-			Root(groupStyle.Render(node.Name)).
+			Root(groupNameStyle.Render(node.Name)).
 			Enumerator(tree.RoundedEnumerator).
-			EnumeratorStyle(enumStyle)
+			EnumeratorStyle(enumeratorStyle)
 
 		// Calculate max length for padding
 		maxLen := calculateMaxLength(node)
 
 		// Add children recursively
-		addChildrenToTree(t, node, maxLen, taskStyle, descStyle, groupStyle)
+		addChildrenToTree(t, node, maxLen)
 
 		fmt.Println(t)
 	}
 }
 
 // addChildrenToTree recursively adds children to a tree.
-func addChildrenToTree(t *tree.Tree, node *registry.TreeNode, maxLen int, taskStyle, descStyle, groupStyle lipgloss.Style) {
+func addChildrenToTree(t *tree.Tree, node *registry.TreeNode, maxLen int) {
 	childNames := getSortedChildNames(node)
 
 	for _, childName := range childNames {
@@ -78,17 +80,17 @@ func addChildrenToTree(t *tree.Tree, node *registry.TreeNode, maxLen int, taskSt
 
 		if child.IsTask() {
 			// Add task as leaf
-			taskDisplay := formatTaskWithPadding(child.Name, child.Task.Description, maxLen, taskStyle, descStyle)
+			taskDisplay := formatTaskWithPadding(child.Name, child.Task.Description, maxLen)
 			t.Child(taskDisplay)
 		} else {
 			// Add group as subtree
 			subTree := tree.New().
-				Root(groupStyle.Render(child.Name)).
+				Root(groupNameStyle.Render(child.Name)).
 				Enumerator(tree.RoundedEnumerator)
 
 			// Recursively add children of this group
 			subMaxLen := calculateMaxLength(child)
-			addChildrenToTree(subTree, child, subMaxLen, taskStyle, descStyle, groupStyle)
+			addChildrenToTree(subTree, child, subMaxLen)
 
 			t.Child(subTree)
 		}
@@ -116,14 +118,14 @@ func getSortedChildNames(node *registry.TreeNode) []string {
 	return names
 }
 
-func formatTaskWithPadding(name, description string, maxLen int, nameStyle, descStyle lipgloss.Style) string {
+func formatTaskWithPadding(name, description string, maxLen int) string {
 	if description != "" {
 		paddingLen := maxLen - len(name)
 		if paddingLen < 0 {
 			paddingLen = 0
 		}
 		padding := strings.Repeat(" ", paddingLen)
-		return nameStyle.Render(name) + padding + " - " + descStyle.Render(description)
+		return taskNameStyle.Render(name) + padding + " - " + descriptionStyle.Render(description)
 	}
-	return nameStyle.Render(name)
+	return taskNameStyle.Render(name)
 }

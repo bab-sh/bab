@@ -26,11 +26,6 @@ func (n *TreeNode) IsTask() bool {
 	return n.Task != nil
 }
 
-// IsGroup returns true if this node represents a group (non-leaf node).
-func (n *TreeNode) IsGroup() bool {
-	return !n.IsTask()
-}
-
 // Registry manages task registration and retrieval.
 type Registry interface {
 	Register(task *Task) error
