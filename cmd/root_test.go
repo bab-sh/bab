@@ -132,7 +132,7 @@ test:
 			babfile = tt.babfile
 			defer func() { babfile = oldBabfile }()
 
-			reg, err := loadRegistry()
+			reg, _, err := loadRegistry()
 
 			if tt.wantErr {
 				if err == nil {
@@ -179,7 +179,7 @@ func TestLoadRegistryNoBabfile(t *testing.T) {
 	babfile = ""
 	defer func() { babfile = oldBabfile }()
 
-	_, err = loadRegistry()
+	_, _, err = loadRegistry()
 	if err == nil {
 		t.Error("loadRegistry() expected error when no Babfile found, got nil")
 	}

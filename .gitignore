@@ -45,3 +45,4 @@ bab.bat
 .task/
 /docs/vitepress/node_modules
 /docs/vitepress/.vitepress/cache
+.bab/

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/parser"
@@ -46,14 +47,17 @@ func runRoot(_ *cobra.Command, args []string) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	reg, err := loadRegistry()
+	reg, babfilePath, err := loadRegistry()
 	if err != nil {
 		return err
 	}
 
+	// Get project root (directory containing the Babfile)
+	projectRoot := filepath.Dir(babfilePath)
+
 	// If no task specified, launch interactive TUI
 	if len(args) == 0 {
-		return tui.Run(reg, dryRun, verbose)
+		return tui.Run(reg, projectRoot, dryRun, verbose)
 	}
 
 	// Execute the specified task directly
@@ -69,28 +73,35 @@ func runRoot(_ *cobra.Command, args []string) error {
 	exec := executor.New(
 		executor.WithDryRun(dryRun),
 		executor.WithVerbose(verbose),
+		executor.WithProjectRoot(projectRoot),
 	)
 
 	return exec.Execute(task)
 }
 
-func loadRegistry() (registry.Registry, error) {
+func loadRegistry() (registry.Registry, string, error) {
 	if babfile == "" {
 		babfile = findBabfile()
 	}
 
 	if babfile == "" {
-		return nil, fmt.Errorf("no Babfile found")
+		return nil, "", fmt.Errorf("no Babfile found")
+	}
+
+	// Get absolute path to the Babfile
+	absPath, err := filepath.Abs(babfile)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	reg := registry.New()
 	p := parser.New(reg)
 
-	if err := p.ParseFile(babfile); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", babfile, err)
+	if err := p.ParseFile(absPath); err != nil {
+		return nil, "", fmt.Errorf("failed to parse %s: %w", absPath, err)
 	}
 
-	return reg, nil
+	return reg, absPath, nil
 }
 
 func findBabfile() string {
