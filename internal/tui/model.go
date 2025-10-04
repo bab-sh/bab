@@ -9,14 +9,15 @@ import (
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 )
 
 // Model represents the Bubble Tea model for the interactive task selector.
 type Model struct {
 	textInput     textinput.Model
-	allTasks      []TaskItem
-	filteredTasks []TaskItem
+	allTasks      []*registry.Task
+	filteredTasks []*registry.Task
 	cursor        int
 	selectedTask  *registry.Task
 	quitting      bool
@@ -33,19 +34,15 @@ func NewModel(reg registry.Registry) Model {
 	ti.Width = 50
 
 	tasks := reg.List()
-	items := make([]TaskItem, len(tasks))
-	for i, task := range tasks {
-		items[i] = NewTaskItem(task)
-	}
 
-	sort.Slice(items, func(i, j int) bool {
-		return len(items[i].Title()) < len(items[j].Title())
+	sort.Slice(tasks, func(i, j int) bool {
+		return len(tasks[i].Name) < len(tasks[j].Name)
 	})
 
 	return Model{
 		textInput:     ti,
-		allTasks:      items,
-		filteredTasks: items,
+		allTasks:      tasks,
+		filteredTasks: tasks,
 		cursor:        0,
 		width:         80,
 		height:        24,
@@ -76,21 +73,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyEnter:
 			if len(m.filteredTasks) > 0 && m.cursor < len(m.filteredTasks) {
-				m.selectedTask = m.filteredTasks[m.cursor].Task()
+				m.selectedTask = m.filteredTasks[m.cursor]
 				m.quitting = true
 				return m, tea.Quit
 			}
 			return m, nil
 
 		case tea.KeyUp, tea.KeyCtrlK:
-			if len(m.filteredTasks) > 0 && m.cursor < len(m.filteredTasks)-1 {
-				m.cursor++
+			if m.cursor > 0 {
+				m.cursor--
 			}
 			return m, nil
 
 		case tea.KeyDown, tea.KeyCtrlJ:
-			if m.cursor > 0 {
-				m.cursor--
+			if len(m.filteredTasks) > 0 && m.cursor < len(m.filteredTasks)-1 {
+				m.cursor++
 			}
 			return m, nil
 
@@ -99,7 +96,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if completion != "" {
 				m.textInput.SetValue(completion)
 				m.textInput.SetCursor(len(completion))
-				m.filterTasks(completion)
+				m = m.filterTasks(completion)
 				m.cursor = 0
 			}
 			return m, nil
@@ -111,7 +108,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	newValue := m.textInput.Value()
 
 	if oldValue != newValue {
-		m.filterTasks(newValue)
+		m = m.filterTasks(newValue)
 		if len(m.filteredTasks) > 0 {
 			m.cursor = 0
 		}
@@ -120,43 +117,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) filterTasks(query string) {
+func (m Model) filterTasks(query string) Model {
 	if query == "" {
 		m.filteredTasks = m.allTasks
-		return
+		return m
 	}
 
 	searchStrings := make([]string, len(m.allTasks))
 	for i, task := range m.allTasks {
-		searchStrings[i] = task.FilterValue()
+		searchStrings[i] = task.Name
 	}
 
 	matches := fuzzy.Find(query, searchStrings)
 
-	type match struct {
-		task  TaskItem
-		score int
-	}
-
-	matched := make([]match, len(matches))
+	m.filteredTasks = make([]*registry.Task, len(matches))
 	for i, fm := range matches {
-		matched[i] = match{
-			task:  m.allTasks[fm.Index],
-			score: fm.Score,
-		}
+		m.filteredTasks[i] = m.allTasks[fm.Index]
 	}
 
-	sort.Slice(matched, func(i, j int) bool {
-		if matched[i].score != matched[j].score {
-			return matched[i].score > matched[j].score
+	// Sort by fuzzy score (descending), then by name length
+	sort.Slice(m.filteredTasks, func(i, j int) bool {
+		scoreI := matches[i].Score
+		scoreJ := matches[j].Score
+		if scoreI != scoreJ {
+			return scoreI > scoreJ
 		}
-		return len(matched[i].task.Title()) < len(matched[j].task.Title())
+		return len(m.filteredTasks[i].Name) < len(m.filteredTasks[j].Name)
 	})
 
-	m.filteredTasks = make([]TaskItem, len(matched))
-	for i, mt := range matched {
-		m.filteredTasks[i] = mt.task
-	}
+	return m
 }
 
 func (m Model) getCompletion() string {
@@ -169,9 +158,8 @@ func (m Model) getCompletion() string {
 	inputLower := strings.ToLower(input)
 
 	for _, task := range m.filteredTasks {
-		name := task.Title()
-		if strings.HasPrefix(strings.ToLower(name), inputLower) {
-			matches = append(matches, name)
+		if strings.HasPrefix(strings.ToLower(task.Name), inputLower) {
+			matches = append(matches, task.Name)
 		}
 	}
 
@@ -199,20 +187,15 @@ func (m Model) getCompletion() string {
 }
 
 func commonPrefix(a, b string) string {
+	aLower := strings.ToLower(a)
+	bLower := strings.ToLower(b)
 	minLen := len(a)
 	if len(b) < minLen {
 		minLen = len(b)
 	}
 
 	for i := 0; i < minLen; i++ {
-		ac, bc := a[i], b[i]
-		if ac >= 'A' && ac <= 'Z' {
-			ac += 32
-		}
-		if bc >= 'A' && bc <= 'Z' {
-			bc += 32
-		}
-		if ac != bc {
+		if aLower[i] != bLower[i] {
 			return a[:i]
 		}
 	}
@@ -269,7 +252,7 @@ func (m Model) renderStatusBar() string {
 	return StatusStyle.Render(status + " " + separator)
 }
 
-func (m Model) renderTask(task TaskItem, isSelected bool) string {
+func (m Model) renderTask(task *registry.Task, isSelected bool) string {
 	var b strings.Builder
 
 	if isSelected {
@@ -278,33 +261,117 @@ func (m Model) renderTask(task TaskItem, isSelected bool) string {
 		b.WriteString("  ")
 	}
 
-	style := NormalTaskStyle
-	if isSelected {
-		style = SelectedTaskStyle
-	}
+	b.WriteString(m.renderTaskName(task.Name))
 
-	if task.IsGrouped() {
-		b.WriteString(GroupStyle.Render(task.GroupName() + ":"))
-		b.WriteString(style.Render(task.ShortName()))
-	} else {
-		b.WriteString(style.Render(task.Title()))
-	}
-
-	if task.Description() != "" {
+	if task.Description != "" {
 		b.WriteString(" ")
-		b.WriteString(DescriptionStyle.Render("- " + task.Description()))
+		b.WriteString(DescriptionStyle.Render("- " + task.Description))
 	}
 
 	return b.String()
+}
+
+func (m Model) renderTaskName(taskName string) string {
+	var b strings.Builder
+	input := m.textInput.Value()
+	currentSegment := m.getCurrentSegmentLevel()
+	matchStart, matchEnd := m.findExactMatch(taskName, input)
+	segmentBounds := m.getSegmentBoundaries(taskName)
+
+	for i, char := range taskName {
+		style := m.getCharStyle(i, matchStart, matchEnd, currentSegment, segmentBounds)
+		b.WriteString(style.Render(string(char)))
+	}
+
+	return b.String()
+}
+
+func (m Model) findExactMatch(taskName, input string) (int, int) {
+	if input == "" {
+		return -1, -1
+	}
+	inputLower := strings.ToLower(input)
+	taskLower := strings.ToLower(taskName)
+	matchStart := strings.Index(taskLower, inputLower)
+	if matchStart >= 0 {
+		return matchStart, matchStart + len(input)
+	}
+	return -1, -1
+}
+
+func (m Model) getCharStyle(charPos, matchStart, matchEnd, currentSegment int, segmentBounds [][]int) lipgloss.Style {
+	// Exact match takes priority
+	if matchStart >= 0 && charPos >= matchStart && charPos < matchEnd {
+		return ExactMatchStyle
+	}
+
+	// Otherwise, use segment-based styling
+	segmentIdx := m.getSegmentIndex(charPos, segmentBounds)
+	if segmentIdx == currentSegment {
+		return ActiveSegmentStyle
+	}
+	return InactiveSegmentStyle
+}
+
+// getCurrentSegmentLevel returns the segment level to highlight based on the current input.
+func (m Model) getCurrentSegmentLevel() int {
+	input := m.textInput.Value()
+	if input == "" {
+		return 0
+	}
+
+	// Count colons to determine segment level
+	colonCount := strings.Count(input, ":")
+
+	return colonCount
+}
+
+// getSegmentBoundaries returns the start and end positions of each segment in the task name.
+func (m Model) getSegmentBoundaries(taskName string) [][]int {
+	segments := strings.Split(taskName, ":")
+	bounds := make([][]int, 0, len(segments))
+	pos := 0
+
+	for i, seg := range segments {
+		start := pos
+		end := pos + len(seg)
+		bounds = append(bounds, []int{start, end})
+		pos = end + 1 // +1 for the colon separator
+
+		// no add extra for last segment
+		if i == len(segments)-1 {
+			break
+		}
+	}
+
+	return bounds
+}
+
+// getSegmentIndex returns which segment index a character position belongs to.
+func (m Model) getSegmentIndex(charPos int, segmentBounds [][]int) int {
+	for i, bounds := range segmentBounds {
+		if charPos >= bounds[0] && charPos < bounds[1] {
+			return i
+		}
+	}
+	// If its a colon separator, return the segment before it
+	if len(segmentBounds) > 0 {
+		for i := 0; i < len(segmentBounds)-1; i++ {
+			if charPos == segmentBounds[i][1] {
+				return i
+			}
+		}
+	}
+	return 0
 }
 
 func (m Model) renderPrompt() string {
 	return m.textInput.View()
 }
 
-func (m Model) getVisibleWindow() ([]TaskItem, int) {
+func (m Model) getVisibleWindow() ([]*registry.Task, int) {
 	if len(m.filteredTasks) == 0 {
-		return []TaskItem{}, 0
+		return []*registry.Task{}, 0
 	}
 
 	maxVisible := m.height - 2

@@ -243,7 +243,7 @@ func TestRegistry_Tree(t *testing.T) {
 		if !exists {
 			t.Fatal("Tree() missing 'dev' group")
 		}
-		if !devNode.IsGroup() {
+		if devNode.IsTask() {
 			t.Fatal("'dev' should be a group node")
 		}
 
@@ -273,7 +273,7 @@ func TestRegistry_Tree(t *testing.T) {
 		if !exists {
 			t.Fatal("Tree() missing 'prod' group")
 		}
-		if !prodNode.IsGroup() {
+		if prodNode.IsTask() {
 			t.Fatal("'prod' should be a group node")
 		}
 
@@ -318,7 +318,7 @@ func TestRegistry_TreeDeepNesting(t *testing.T) {
 		if !exists {
 			t.Fatal("Tree() missing 'build' group")
 		}
-		if !buildNode.IsGroup() {
+		if buildNode.IsTask() {
 			t.Fatal("'build' should be a group node")
 		}
 
@@ -326,7 +326,7 @@ func TestRegistry_TreeDeepNesting(t *testing.T) {
 		if !exists {
 			t.Fatal("'build' missing 'platforms' group")
 		}
-		if !platformsNode.IsGroup() {
+		if platformsNode.IsTask() {
 			t.Fatal("'platforms' should be a group node")
 		}
 
@@ -335,7 +335,7 @@ func TestRegistry_TreeDeepNesting(t *testing.T) {
 		if !exists {
 			t.Fatal("'platforms' missing 'linux' group")
 		}
-		if !linuxNode.IsGroup() {
+		if linuxNode.IsTask() {
 			t.Fatal("'linux' should be a group node")
 		}
 		if len(linuxNode.Children) != 2 {
