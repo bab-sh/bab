@@ -11,7 +11,7 @@ import (
 )
 
 // Run starts the interactive TUI for task selection and executes the selected task.
-func Run(reg registry.Registry, dryRun bool, verbose bool) error {
+func Run(reg registry.Registry, projectRoot string, dryRun bool, verbose bool) error {
 	tasks := reg.List()
 	if len(tasks) == 0 {
 		log.Info("No tasks available")
@@ -44,6 +44,7 @@ func Run(reg registry.Registry, dryRun bool, verbose bool) error {
 	exec := executor.New(
 		executor.WithDryRun(dryRun),
 		executor.WithVerbose(verbose),
+		executor.WithProjectRoot(projectRoot),
 	)
 
 	return exec.Execute(selectedTask)
