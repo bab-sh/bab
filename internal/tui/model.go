@@ -49,7 +49,7 @@ func NewModel(reg registry.Registry, historyManager *history.Manager) Model {
 	}
 }
 
-// sortTasksByHistory sorts tasks by most recent execution in history first,.
+// sortTasksByHistory sorts tasks by most recent execution in history first.
 func sortTasksByHistory(tasks []*registry.Task, historyManager *history.Manager) {
 	lastRun := make(map[string]time.Time)
 
