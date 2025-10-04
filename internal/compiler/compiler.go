@@ -197,67 +197,65 @@ func (c *Compiler) templateFuncs() template.FuncMap {
 			}
 			return s + strings.Repeat(" ", width-len(s))
 		},
-		"index": func(m map[string]int, key string) int {
-			return m[key]
-		},
 	}
 }
 
 func (c *Compiler) generateShellScript(data TemplateData) error {
-	tmpl, err := template.New("shell").Funcs(c.templateFuncs()).Parse(templates.ShellTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to parse shell template: %w", err)
-	}
-
-	outputPath := filepath.Join(c.outputDir, "bab.sh")
-	file, err := os.Create(outputPath) //nolint:gosec // outputPath is user-controlled via --output flag
-	if err != nil {
-		return fmt.Errorf("failed to create shell script: %w", err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			log.Error("Failed to close shell script file", "error", closeErr)
-		}
-	}()
-
-	if err := tmpl.Execute(file, data); err != nil {
-		return fmt.Errorf("failed to execute shell template: %w", err)
-	}
-
-	if err := os.Chmod(outputPath, 0755); err != nil { //nolint:gosec // executable permission needed for shell scripts
-		return fmt.Errorf("failed to make shell script executable: %w", err)
-	}
-
-	if c.verbose {
-		log.Debug("Generated shell script", "path", outputPath)
-	}
-
-	return nil
+	return c.generateScript("shell", templates.ShellTemplate, "bab.sh", data, 0700)
 }
 
 func (c *Compiler) generateBatchFile(data TemplateData) error {
-	tmpl, err := template.New("batch").Funcs(c.templateFuncs()).Parse(templates.BatchTemplate)
+	return c.generateScript("batch", templates.BatchTemplate, "bab.bat", data, 0600)
+}
+
+func (c *Compiler) generateScript(name, templateStr, filename string, data TemplateData, fileMode os.FileMode) error {
+	tmpl, err := template.New(name).Funcs(c.templateFuncs()).Parse(templateStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse batch template: %w", err)
+		return fmt.Errorf("failed to parse %s template: %w", name, err)
 	}
 
-	outputPath := filepath.Join(c.outputDir, "bab.bat")
-	file, err := os.Create(outputPath) //nolint:gosec // outputPath is user-controlled via --output flag
+	// Write to temp file first
+	tmpFile, err := os.CreateTemp(c.outputDir, ".bab-*.tmp")
 	if err != nil {
-		return fmt.Errorf("failed to create batch file: %w", err)
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+	tmpPath := tmpFile.Name()
+
+	// Ensure cleanup on error
 	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			log.Error("Failed to close batch file", "error", closeErr)
+		if tmpFile != nil {
+			if err := tmpFile.Close(); err != nil {
+				log.Error("Failed to close temp file", "error", err)
+			}
+			if err := os.Remove(tmpPath); err != nil {
+				log.Error("Failed to remove temp file", "path", tmpPath, "error", err)
+			}
 		}
 	}()
 
-	if err := tmpl.Execute(file, data); err != nil {
-		return fmt.Errorf("failed to execute batch template: %w", err)
+	// Write content to temp file
+	if err := tmpl.Execute(tmpFile, data); err != nil {
+		return fmt.Errorf("failed to execute %s template: %w", name, err)
 	}
 
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+
+	if err := os.Chmod(tmpPath, fileMode); err != nil {
+		return fmt.Errorf("failed to set permissions: %w", err)
+	}
+
+	// Move to final location
+	finalPath := filepath.Join(filepath.Clean(c.outputDir), filepath.Base(filename))
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		return fmt.Errorf("failed to move file to final location: %w", err)
+	}
+
+	tmpFile = nil
+
 	if c.verbose {
-		log.Debug("Generated batch file", "path", outputPath)
+		log.Debug("Generated script", "type", name, "path", finalPath)
 	}
 
 	return nil

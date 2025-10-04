@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bab-sh/bab/internal/registry"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestListTasks(t *testing.T) {
@@ -116,9 +115,7 @@ func TestFormatTaskWithPadding(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// We can't easily test the styled output, but we can verify it doesn't panic
-			nameStyle := lipgloss.NewStyle()
-			descStyle := lipgloss.NewStyle()
-			result := formatTaskWithPadding(tt.taskName, tt.description, tt.maxLen, nameStyle, descStyle)
+			result := formatTaskWithPadding(tt.taskName, tt.description, tt.maxLen)
 
 			if result == "" && tt.taskName != "" {
 				t.Error("formatTaskWithPadding() returned empty string for non-empty task name")
