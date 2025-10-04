@@ -9,6 +9,7 @@ import (
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 )
 
@@ -278,16 +279,42 @@ func (m Model) renderTask(task TaskItem, isSelected bool) string {
 		b.WriteString("  ")
 	}
 
-	style := NormalTaskStyle
-	if isSelected {
-		style = SelectedTaskStyle
+	taskName := task.Title()
+	input := m.textInput.Value()
+	currentSegment := m.getCurrentSegmentLevel()
+
+	matchStart := -1
+	matchEnd := -1
+	if input != "" {
+		inputLower := strings.ToLower(input)
+		taskLower := strings.ToLower(taskName)
+		matchStart = strings.Index(taskLower, inputLower)
+		if matchStart >= 0 {
+			matchEnd = matchStart + len(input)
+		}
 	}
 
-	if task.IsGrouped() {
-		b.WriteString(GroupStyle.Render(task.GroupName() + ":"))
-		b.WriteString(style.Render(task.ShortName()))
-	} else {
-		b.WriteString(style.Render(task.Title()))
+	// Calculate segment boundaries
+	segmentBounds := m.getSegmentBoundaries(taskName)
+
+	// Render character by character with appropriate styling
+	for i, char := range taskName {
+		var style lipgloss.Style
+
+		// check if this character is part of exact match
+		if matchStart >= 0 && i >= matchStart && i < matchEnd {
+			style = ExactMatchStyle
+		} else {
+			// determine which segment this character belongs to
+			segmentIdx := m.getSegmentIndex(i, segmentBounds)
+			if segmentIdx == currentSegment {
+				style = ActiveSegmentStyle
+			} else {
+				style = InactiveSegmentStyle
+			}
+		}
+
+		b.WriteString(style.Render(string(char)))
 	}
 
 	if task.Description() != "" {
@@ -296,6 +323,58 @@ func (m Model) renderTask(task TaskItem, isSelected bool) string {
 	}
 
 	return b.String()
+}
+
+// getCurrentSegmentLevel returns the segment level to highlight based on the current input.
+func (m Model) getCurrentSegmentLevel() int {
+	input := m.textInput.Value()
+	if input == "" {
+		return 0
+	}
+
+	// Count colons to determine segment level
+	colonCount := strings.Count(input, ":")
+
+	return colonCount
+}
+
+// getSegmentBoundaries returns the start and end positions of each segment in the task name.
+func (m Model) getSegmentBoundaries(taskName string) [][]int {
+	segments := strings.Split(taskName, ":")
+	bounds := make([][]int, 0, len(segments))
+	pos := 0
+
+	for i, seg := range segments {
+		start := pos
+		end := pos + len(seg)
+		bounds = append(bounds, []int{start, end})
+		pos = end + 1 // +1 for the colon separator
+
+		// no add extra for last segment
+		if i == len(segments)-1 {
+			break
+		}
+	}
+
+	return bounds
+}
+
+// getSegmentIndex returns which segment index a character position belongs to.
+func (m Model) getSegmentIndex(charPos int, segmentBounds [][]int) int {
+	for i, bounds := range segmentBounds {
+		if charPos >= bounds[0] && charPos < bounds[1] {
+			return i
+		}
+	}
+	// If its a colon separator, return the segment before it
+	if len(segmentBounds) > 0 {
+		for i := 0; i < len(segmentBounds)-1; i++ {
+			if charPos == segmentBounds[i][1] {
+				return i
+			}
+		}
+	}
+	return 0
 }
 
 func (m Model) renderPrompt() string {
