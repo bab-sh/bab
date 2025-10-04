@@ -5,6 +5,7 @@
 Write custom commands in YAML, execute them with bab. Just like Makefile but with more features and Zero dependencies. (soon)
 
 ### TODOS
+- [ ] Last commands executed history
 - [ ] Basic babfile schema
 - [ ] Advanced nesting and multi Babfile support
 - [ ] Platform flags for commands so you can define commands specifically for OS
