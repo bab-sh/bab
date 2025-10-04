@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/bab-sh/bab/internal/history"
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,7 +28,7 @@ type Model struct {
 }
 
 // NewModel creates a new Model with all tasks from the registry.
-func NewModel(reg registry.Registry) Model {
+func NewModel(reg registry.Registry, historyManager *history.Manager) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Type to search..."
 	ti.Focus()
@@ -35,9 +37,7 @@ func NewModel(reg registry.Registry) Model {
 
 	tasks := reg.List()
 
-	sort.Slice(tasks, func(i, j int) bool {
-		return len(tasks[i].Name) < len(tasks[j].Name)
-	})
+	sortTasksByHistory(tasks, historyManager)
 
 	return Model{
 		textInput:     ti,
@@ -47,6 +47,41 @@ func NewModel(reg registry.Registry) Model {
 		width:         80,
 		height:        24,
 	}
+}
+
+// sortTasksByHistory sorts tasks by most recent execution in history first,
+func sortTasksByHistory(tasks []*registry.Task, historyManager *history.Manager) {
+	lastRun := make(map[string]time.Time)
+
+	if historyManager != nil {
+		entries, err := historyManager.List(0)
+		if err == nil {
+			for _, entry := range entries {
+				if existing, ok := lastRun[entry.Task]; !ok || entry.Timestamp.After(existing) {
+					lastRun[entry.Task] = entry.Timestamp
+				}
+			}
+		}
+	}
+
+	sort.Slice(tasks, func(i, j int) bool {
+		iTime, iHasHistory := lastRun[tasks[i].Name]
+		jTime, jHasHistory := lastRun[tasks[j].Name]
+
+		if iHasHistory && jHasHistory {
+			return iTime.After(jTime)
+		}
+
+		if iHasHistory {
+			return true
+		}
+
+		if jHasHistory {
+			return false
+		}
+
+		return len(tasks[i].Name) < len(tasks[j].Name)
+	})
 }
 
 // Init initializes the model and returns the initial command.
