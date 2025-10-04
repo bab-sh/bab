@@ -104,8 +104,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = 0
 			}
 			return m, nil
-		default:
-			panic("unhandled default case")
 		}
 	}
 
