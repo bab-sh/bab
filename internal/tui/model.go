@@ -115,14 +115,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case tea.KeyUp, tea.KeyCtrlK:
-			if m.cursor > 0 {
-				m.cursor--
+			if len(m.filteredTasks) > 0 && m.cursor < len(m.filteredTasks)-1 {
+				m.cursor++
 			}
 			return m, nil
 
 		case tea.KeyDown, tea.KeyCtrlJ:
-			if len(m.filteredTasks) > 0 && m.cursor < len(m.filteredTasks)-1 {
-				m.cursor++
+			if m.cursor > 0 {
+				m.cursor--
 			}
 			return m, nil
 
