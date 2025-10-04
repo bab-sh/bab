@@ -58,31 +58,24 @@ func (p *Parser) parseNode(node map[string]interface{}, prefix string) error {
 			fullName = prefix + ":" + key
 		}
 
+		var taskMap map[string]interface{}
 		switch v := value.(type) {
 		case map[interface{}]interface{}:
-			converted := convertMap(v)
-			if isTask(converted) {
-				if err := p.registerTask(fullName, converted); err != nil {
-					return err
-				}
-			} else {
-				if err := p.parseNode(converted, fullName); err != nil {
-					return err
-				}
-			}
-
+			taskMap = convertMap(v)
 		case map[string]interface{}:
-			if isTask(v) {
-				if err := p.registerTask(fullName, v); err != nil {
-					return err
-				}
-			} else {
-				if err := p.parseNode(v, fullName); err != nil {
-					return err
-				}
-			}
-
+			taskMap = v
 		default:
+			continue
+		}
+
+		if isTask(taskMap) {
+			if err := p.registerTask(fullName, taskMap); err != nil {
+				return err
+			}
+		} else {
+			if err := p.parseNode(taskMap, fullName); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -124,8 +117,6 @@ func isTask(node map[string]interface{}) bool {
 		switch runValue.(type) {
 		case string, []interface{}:
 			return true
-		case map[interface{}]interface{}, map[string]interface{}:
-			return hasDesc
 		}
 	}
 
