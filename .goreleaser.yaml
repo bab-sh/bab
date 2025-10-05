@@ -215,3 +215,14 @@ release:
     owner: bab-sh
     name: bab
   mode: append
+
+announce:
+  discord:
+    enabled: true
+    message_template: |
+      🚀 **{{ .ProjectName }} {{ .Tag }}** is now available!
+      
+      🔗 **Release:** {{ .ReleaseURL }}
+    author: "Bab Releases"
+    color: "3447003"
+    icon_url: "https://avatars.githubusercontent.com/u/191529825"
