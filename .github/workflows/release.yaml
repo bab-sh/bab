@@ -45,4 +45,4 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           repository: bab-sh/aur-bab
           event-type: release-published
-          client-payload: '{"version": "${{ github.event.release.tag_name }}", "release_url": "${{ github.event.release.html_url }}"}'
+          client-payload: '{"version": "${{ github.event.release.tag_name }}", "release_url": "${{ github.event.release.html_url }}", "prerelease": ${{ github.event.release.prerelease }}}'
