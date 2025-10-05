@@ -48,18 +48,6 @@ jobs:
           echo "**Pre-release:** ${{ github.event.release.prerelease }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-      - name: Trigger AUR package validation
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          repository: bab-sh/aur-bab
-          event-type: release-published
-          client-payload: '{"version": "${{ github.event.release.tag_name }}", "release_url": "${{ github.event.release.html_url }}", "prerelease": ${{ github.event.release.prerelease }}}'
-
-      - name: Annotate AUR trigger
-        run: |
-          echo "::notice title=AUR Package Update::Triggered validation for AUR package at bab-sh/aur-bab with version ${{ github.event.release.tag_name }}"
-
       - name: Success notification
         if: success()
         run: |
