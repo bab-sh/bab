@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -23,13 +23,13 @@ jobs:
       - name: Fetch all tags
         run: git fetch --force --tags
 
-      - name: Set up Go
+      - name: Set up Go environment
         uses: actions/setup-go@v6
         with:
           go-version: stable
           cache: true
 
-      - name: Run GoReleaser
+      - name: Build and release with GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -39,6 +39,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
+      - name: Generate release summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Tag:** \`${{ github.event.release.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ github.event.release.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Pre-release:** ${{ github.event.release.prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
       - name: Trigger AUR package validation
         uses: peter-evans/repository-dispatch@v3
         with:
@@ -46,3 +55,17 @@ jobs:
           repository: bab-sh/aur-bab
           event-type: release-published
           client-payload: '{"version": "${{ github.event.release.tag_name }}", "release_url": "${{ github.event.release.html_url }}", "prerelease": ${{ github.event.release.prerelease }}}'
+
+      - name: Annotate AUR trigger
+        run: |
+          echo "::notice title=AUR Package Update::Triggered validation for AUR package at bab-sh/aur-bab with version ${{ github.event.release.tag_name }}"
+
+      - name: Success notification
+        if: success()
+        run: |
+          echo "::notice title=Release Complete::Successfully built and published release ${{ github.event.release.tag_name }}"
+
+      - name: Failure notification
+        if: failure()
+        run: |
+          echo "::error title=Release Failed::Failed to complete release process for ${{ github.event.release.tag_name }}"
