@@ -205,7 +205,7 @@ homebrew_casks:
       owner: bab-sh
       name: homebrew-tap
       branch: main
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+      token: "{{ .Env.PAT_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: "[email protected]"
@@ -313,7 +313,7 @@ snapcrafts:
 
     description: A Simple Task Runner
 
-    publish: true
+    publish: false  # Only build snap, don't publish to store (requires SNAPCRAFT_STORE_CREDENTIALS)
     grade: stable
     confinement: strict
     base: core22
@@ -346,6 +346,7 @@ aurs:
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
+    skip_upload: auto  # Skip for pre-releases; may fail in CI due to network restrictions
 
     commit_author:
       name: goreleaserbot
@@ -375,6 +376,7 @@ aur_sources:
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab.git"
+    skip_upload: auto  # Skip for pre-releases; may fail in CI due to network restrictions
 
     commit_author:
       name: goreleaserbot
