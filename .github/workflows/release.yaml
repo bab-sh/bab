@@ -29,6 +29,9 @@ jobs:
           go-version: stable
           cache: true
 
+      - name: Install Snapcraft
+        run: sudo snap install snapcraft --classic
+
       - name: Build and release with GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -37,10 +40,11 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          DISCORD_WEBHOOK_ID: ${{secrets.DISCORD_WEBHOOK_ID}}
-          DISCORD_WEBHOOK_TOKEN: ${{secrets.DISCORD_WEBHOOK_TOKEN}}
+          DISCORD_WEBHOOK_ID: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          DISCORD_WEBHOOK_TOKEN: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
 
       - name: Generate release summary
         run: |
