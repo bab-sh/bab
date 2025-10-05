@@ -307,7 +307,7 @@ winget:
     skip_upload: auto
 
 snapcrafts:
-  - name: bab
+  - name: bab-cli
 
     summary: A simple task runner
 
