@@ -234,7 +234,7 @@ scoops:
       owner: bab-sh
       name: scoop-bucket
       branch: main
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.PAT_TOKEN }}"
 
     commit_author:
       name: goreleaserbot
@@ -291,7 +291,7 @@ winget:
       owner: bab-sh
       name: winget-pkgs-fork
       branch: "bab-{{ .Version }}"
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.PAT_TOKEN }}"
 
       pull_request:
         enabled: true
