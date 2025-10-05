@@ -96,6 +96,25 @@ homebrew_casks:
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
           end
 
+aurs:
+  - name: bab
+    homepage: "https://github.com/bab-sh/bab"
+    description: "Bab CLI - A simple task runner"
+    maintainers:
+      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/bab.git"
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+    package: |-
+      # bin
+      install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
+      # license
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+
 release:
   github:
     owner: bab-sh
