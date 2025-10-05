@@ -26,10 +26,10 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/bab-sh/bab/pkg/version.Version={{.Version}}
-      - -X github.com/bab-sh/bab/pkg/version.Commit={{.Commit}}
-      - -X github.com/bab-sh/bab/pkg/version.Date={{.Date}}
-      - -X github.com/bab-sh/bab/pkg/version.BuiltBy=goreleaser
+      - -X github.com/bab-sh/bab/internal/version.Version={{.Version}}
+      - -X github.com/bab-sh/bab/internal/version.Commit={{.Commit}}
+      - -X github.com/bab-sh/bab/internal/version.Date={{.Date}}
+      - -X github.com/bab-sh/bab/internal/version.BuiltBy=goreleaser
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 archives:
