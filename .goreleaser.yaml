@@ -103,3 +103,4 @@ release:
   mode: append
   skip_upload: false
   make_latest: false
+  prerelease: auto
