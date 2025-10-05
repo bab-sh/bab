@@ -313,7 +313,6 @@ snapcrafts:
 
     description: A Simple Task Runner
 
-    publish: false  # Only build snap, don't publish to store (requires SNAPCRAFT_STORE_CREDENTIALS)
     grade: stable
     confinement: strict
     base: core22
@@ -346,7 +345,7 @@ aurs:
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
-    skip_upload: auto  # Skip for pre-releases; may fail in CI due to network restrictions
+    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
 
     commit_author:
       name: goreleaserbot
@@ -376,7 +375,7 @@ aur_sources:
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab.git"
-    skip_upload: auto  # Skip for pre-releases; may fail in CI due to network restrictions
+    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
 
     commit_author:
       name: goreleaserbot
