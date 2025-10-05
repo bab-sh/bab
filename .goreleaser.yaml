@@ -297,8 +297,8 @@ winget:
         enabled: true
         draft: false
         base:
-          owner: bab-sh
-          name: winget-pkgs-fork
+          owner: microsoft
+          name: winget-pkgs
           branch: master
 
     release_notes: "{{ .Changelog }}"
