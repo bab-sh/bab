@@ -9,7 +9,7 @@ import (
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/bab-sh/bab/internal/tui"
-	"github.com/bab-sh/bab/pkg/version"
+	"github.com/bab-sh/bab/internal/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
