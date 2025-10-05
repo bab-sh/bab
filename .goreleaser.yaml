@@ -97,6 +97,25 @@ homebrew_casks:
           end
 
 aurs:
+  - name: bab-bin
+    homepage: "https://github.com/bab-sh/bab"
+    description: "Bab CLI - A simple task runner"
+    maintainers:
+      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+    package: |-
+      # bin
+      install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
+      # license
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+
+aur_sources:
   - name: bab
     homepage: "https://github.com/bab-sh/bab"
     description: "Bab CLI - A simple task runner"
@@ -109,11 +128,34 @@ aurs:
       name: goreleaserbot
       email: "[email protected]"
     commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+    provides:
+      - bab
+    conflicts:
+      - bab-bin
+    depends:
+      - glibc
+    makedepends:
+      - go
+      - git
+    build: |-
+      cd "${pkgname}_${pkgver}"
+      export CGO_ENABLED=0
+      export CGO_CPPFLAGS="${CPPFLAGS}"
+      export CGO_CFLAGS="${CFLAGS}"
+      export CGO_CXXFLAGS="${CXXFLAGS}"
+      export CGO_LDFLAGS="${LDFLAGS}"
+      export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+      go build \
+        -ldflags="-s -w -buildid='' -linkmode=external \
+          -X github.com/bab-sh/bab/internal/version.Version=${pkgver} \
+          -X github.com/bab-sh/bab/internal/version.Commit={{ .Commit }} \
+          -X github.com/bab-sh/bab/internal/version.Date={{ .Date }} \
+          -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
+        -o bab .
     package: |-
-      # bin
-      install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
-      # license
-      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+      cd "${pkgname}_${pkgver}"
+      install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
+      install -Dm644 ./README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 
 release:
   github:
