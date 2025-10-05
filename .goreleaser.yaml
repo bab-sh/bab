@@ -307,7 +307,7 @@ scoops:
 #    skip_upload: auto
 
 snapcrafts:
-  - name: bab-cli
+  - name: bab-sh
 
     summary: A simple task runner
 
