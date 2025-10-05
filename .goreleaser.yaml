@@ -334,8 +334,6 @@ snapcrafts:
       - beta
       - candidate
       - stable
-      - "{{ .Major }}.{{ .Minor }}/stable"
-      - "{{ .Major }}.{{ .Minor }}/candidate"
 
 aurs:
   - name: bab-bin
