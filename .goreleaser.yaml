@@ -191,7 +191,7 @@ aur_sources:
       - go
       - git
     build: |-
-      cd "${pkgname}_${pkgver}"
+      cd "${pkgname}-${pkgver}"
       export CGO_ENABLED=0
       export CGO_CPPFLAGS="${CPPFLAGS}"
       export CGO_CFLAGS="${CFLAGS}"
@@ -206,7 +206,7 @@ aur_sources:
           -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
         -o bab .
     package: |-
-      cd "${pkgname}_${pkgver}"
+      cd "${pkgname}-${pkgver}"
       install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
       install -Dm644 ./README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
 
