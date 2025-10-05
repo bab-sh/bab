@@ -97,14 +97,14 @@ homebrew_casks:
           end
 
 aurs:
-  - name: bab
+  - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
     description: "Bab CLI - A simple task runner"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/bab.git"
+    git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
     commit_author:
       name: goreleaserbot
       email: "[email protected]"
