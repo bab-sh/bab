@@ -271,40 +271,40 @@ scoops:
 #    skip_publish: false
 #
 #    release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
-
-winget:
-  - name: bab
-    publisher: bab-sh
-    short_description: "A Simple Task Runner"
-    license: "MIT"
-    homepage: "https://github.com/bab-sh/bab"
-
-    package_identifier: bab-sh.bab
-
-    tags:
-      - cli
-      - task-runner
-      - productivity
-      - developer-tools
-
-    repository:
-      owner: bab-sh
-      name: winget-pkgs-fork
-      branch: "bab-{{ .Version }}"
-      token: "{{ .Env.PAT_TOKEN }}"
-
-      pull_request:
-        enabled: true
-        draft: false
-        base:
-          owner: microsoft
-          name: winget-pkgs
-          branch: master
-
-    release_notes: "{{ .Changelog }}"
-    release_notes_url: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
-
-    skip_upload: auto
+#
+#winget:
+#  - name: bab
+#    publisher: bab-sh
+#    short_description: "A Simple Task Runner"
+#    license: "MIT"
+#    homepage: "https://github.com/bab-sh/bab"
+#
+#    package_identifier: bab-sh.bab
+#
+#    tags:
+#      - cli
+#      - task-runner
+#      - productivity
+#      - developer-tools
+#
+#    repository:
+#      owner: bab-sh
+#      name: winget-pkgs-fork
+#      branch: "bab-{{ .Version }}"
+#      token: "{{ .Env.PAT_TOKEN }}"
+#
+#      pull_request:
+#        enabled: true
+#        draft: false
+#        base:
+#          owner: microsoft
+#          name: winget-pkgs
+#          branch: master
+#
+#    release_notes: "{{ .Changelog }}"
+#    release_notes_url: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
+#
+#    skip_upload: auto
 
 snapcrafts:
   - name: bab-cli
