@@ -4,6 +4,8 @@
 
 Write custom commands in YAML, execute them with bab. Just like Makefile but with more features and Zero dependencies. (soon)
 
+ITS PRE PRE ALPHA DO NOT USE IT FRFR
+
 ### TODOS
 - [x] Last commands executed history
 - [ ] Basic babfile schema
