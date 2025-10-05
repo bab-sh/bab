@@ -333,99 +333,99 @@ snapcrafts:
       - stable
       - "{{ .Major }}.{{ .Minor }}/stable"
       - "{{ .Major }}.{{ .Minor }}/candidate"
-#
-#aurs:
-#  - name: bab-bin
-#    homepage: "https://github.com/bab-sh/bab"
-#    description: "A Simple Task Runner"
-#    maintainers:
-#      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
-#    license: "MIT"
-#    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
-#    git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
-#    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
-#
-#    commit_author:
-#      name: goreleaserbot
-#      email: "[email protected]"
-#
-#    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
-#
-#    package: |-
-#      # Binary
-#      install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
-#
-#      # Documentation
-#      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-#      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-#
-#      # Shell completions
-#      install -Dm644 "./completions/bab.bash" "${pkgdir}/usr/share/bash-completion/completions/bab"
-#      install -Dm644 "./completions/bab.zsh" "${pkgdir}/usr/share/zsh/site-functions/_bab"
-#      install -Dm644 "./completions/bab.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
-#
-#aur_sources:
-#  - name: bab
-#    homepage: "https://github.com/bab-sh/bab"
-#    description: "A Simple Task Runner"
-#    maintainers:
-#      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
-#    license: "MIT"
-#    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
-#    git_url: "ssh://aur@aur.archlinux.org/bab.git"
-#    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
-#
-#    commit_author:
-#      name: goreleaserbot
-#      email: "[email protected]"
-#    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
-#    url_template: "https://github.com/bab-sh/bab/archive/refs/tags/{{ .Tag }}.tar.gz"
-#    provides:
-#      - bab
-#    conflicts:
-#      - bab-bin
-#    depends:
-#      - glibc
-#    makedepends:
-#      - go
-#      - git
-#    build: |-
-#      cd "${pkgname}-${pkgver}"
-#      export CGO_ENABLED=0
-#      export CGO_CPPFLAGS="${CPPFLAGS}"
-#      export CGO_CFLAGS="${CFLAGS}"
-#      export CGO_CXXFLAGS="${CXXFLAGS}"
-#      export CGO_LDFLAGS="${LDFLAGS}"
-#      export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
-#
-#      go build \
-#        -ldflags="-s -w -buildid='' -linkmode=external \
-#          -X github.com/bab-sh/bab/internal/version.Version=${pkgver} \
-#          -X github.com/bab-sh/bab/internal/version.Commit={{ .Commit }} \
-#          -X github.com/bab-sh/bab/internal/version.Date={{ .Date }} \
-#          -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
-#        -o bab .
-#
-#      # Generate shell completions
-#      mkdir -p completions
-#      ./bab completion bash > completions/bab.bash
-#      ./bab completion zsh > completions/bab.zsh
-#      ./bab completion fish > completions/bab.fish
-#
-#    package: |-
-#      cd "${pkgname}-${pkgver}"
-#
-#      # Binary
-#      install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
-#
-#      # Documentation
-#      install -Dm644 ./README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-#      install -Dm644 ./LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-#
-#      # Shell completions
-#      install -Dm644 ./completions/bab.bash "${pkgdir}/usr/share/bash-completion/completions/bab"
-#      install -Dm644 ./completions/bab.zsh "${pkgdir}/usr/share/zsh/site-functions/_bab"
-#      install -Dm644 ./completions/bab.fish "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
+
+aurs:
+  - name: bab-bin
+    homepage: "https://github.com/bab-sh/bab"
+    description: "A Simple Task Runner"
+    maintainers:
+      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
+    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
+
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+
+    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+
+    package: |-
+      # Binary
+      install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
+
+      # Documentation
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+      # Shell completions
+      install -Dm644 "./completions/bab.bash" "${pkgdir}/usr/share/bash-completion/completions/bab"
+      install -Dm644 "./completions/bab.zsh" "${pkgdir}/usr/share/zsh/site-functions/_bab"
+      install -Dm644 "./completions/bab.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
+
+aur_sources:
+  - name: bab
+    homepage: "https://github.com/bab-sh/bab"
+    description: "A Simple Task Runner"
+    maintainers:
+      - "Sebastian Stepper <sebastian-stepper@gmx.de>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/bab.git"
+    skip_upload: true  # TODO REMOVE IT WHEN FUCKING AUR GETS ITS SHIT TOGETHER
+
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+    url_template: "https://github.com/bab-sh/bab/archive/refs/tags/{{ .Tag }}.tar.gz"
+    provides:
+      - bab
+    conflicts:
+      - bab-bin
+    depends:
+      - glibc
+    makedepends:
+      - go
+      - git
+    build: |-
+      cd "${pkgname}-${pkgver}"
+      export CGO_ENABLED=0
+      export CGO_CPPFLAGS="${CPPFLAGS}"
+      export CGO_CFLAGS="${CFLAGS}"
+      export CGO_CXXFLAGS="${CXXFLAGS}"
+      export CGO_LDFLAGS="${LDFLAGS}"
+      export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+
+      go build \
+        -ldflags="-s -w -buildid='' -linkmode=external \
+          -X github.com/bab-sh/bab/internal/version.Version=${pkgver} \
+          -X github.com/bab-sh/bab/internal/version.Commit={{ .Commit }} \
+          -X github.com/bab-sh/bab/internal/version.Date={{ .Date }} \
+          -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
+        -o bab .
+
+      # Generate shell completions
+      mkdir -p completions
+      ./bab completion bash > completions/bab.bash
+      ./bab completion zsh > completions/bab.zsh
+      ./bab completion fish > completions/bab.fish
+
+    package: |-
+      cd "${pkgname}-${pkgver}"
+      
+      # Binary
+      install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
+      
+      # Documentation
+      install -Dm644 ./README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+      install -Dm644 ./LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+      # Shell completions
+      install -Dm644 ./completions/bab.bash "${pkgdir}/usr/share/bash-completion/completions/bab"
+      install -Dm644 ./completions/bab.zsh "${pkgdir}/usr/share/zsh/site-functions/_bab"
+      install -Dm644 ./completions/bab.fish "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
