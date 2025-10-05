@@ -2,9 +2,19 @@ version: 2
 
 project_name: bab
 
+env:
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - ./scripts/completions.sh
+
 builds:
   - id: default
     binary: bab
+    main: .
     env:
       - CGO_ENABLED=0
     goos:
@@ -27,29 +37,69 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/bab-sh/bab/internal/version.Version={{.Version}}
-      - -X github.com/bab-sh/bab/internal/version.Commit={{.Commit}}
+      - -X github.com/bab-sh/bab/internal/version.Commit={{.FullCommit}}
       - -X github.com/bab-sh/bab/internal/version.Date={{.Date}}
       - -X github.com/bab-sh/bab/internal/version.BuiltBy=goreleaser
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+universal_binaries:
+  - id: bab-universal
+    ids:
+      - default
+    replace: false
+    name_template: 'bab'
+
 archives:
   - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "windows" }}Windows
+      {{- else if eq .Os "darwin" }}macOS
+      {{- else }}{{ title .Os }}{{ end }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "all" }}universal
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     files:
       - README.md
+      - LICENSE
+      - completions/*
 
 checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
+  extra_files:
+    - glob: ./LICENSE
+    - glob: ./README.md
 
 source:
   enabled: true
+
+signs:
+  - id: checksum-sign
+    cmd: cosign
+    certificate: "${artifact}.pem"
+    artifacts: checksum
+    output: true
+    args:
+      - sign-blob
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+      - "--yes"
+
+release:
+  github:
+    owner: bab-sh
+    name: bab
+  mode: append
 
 nfpms:
   - id: packages
@@ -57,15 +107,20 @@ nfpms:
     vendor: bab-sh
     homepage: https://github.com/bab-sh/bab
     maintainer: Sebastian Stepper <sebastian-stepper@gmx.de>
-    description: Bab CLI - A simple task runner
+    description: A Simple Task Runner
     license: MIT
 
     formats:
       - deb
       - rpm
       - apk
+      - archlinux
 
     bindir: /usr/bin
+
+    dependencies: []
+    recommends: []
+    suggests: []
 
     contents:
       - src: ./LICENSE
@@ -76,6 +131,22 @@ nfpms:
         dst: /usr/share/doc/bab/README.md
         file_info:
           mode: 0644
+      - src: ./completions/bab.bash
+        dst: /usr/share/bash-completion/completions/bab
+        file_info:
+          mode: 0644
+      - src: ./completions/bab.zsh
+        dst: /usr/share/zsh/vendor-completions/_bab
+        file_info:
+          mode: 0644
+      - src: ./completions/bab.fish
+        dst: /usr/share/fish/vendor_completions.d/bab.fish
+        file_info:
+          mode: 0644
+
+    scripts:
+      postinstall: "scripts/postinstall.sh"
+      preremove: "scripts/preremove.sh"
 
     overrides:
       deb:
@@ -112,18 +183,23 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/bab-sh/bab"
-    description: "Bab CLI - A simple task runner"
+    description: "A Simple Task Runner"
     license: "MIT"
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
     binary: bab
+    completions:
+      bash: completions/bab.bash
+      zsh: completions/bab.zsh
+      fish: completions/bab.fish
     hooks:
       post:
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
           end
+
   - name: "bab@{{ .Major }}.{{ .Minor }}"
     repository:
       owner: bab-sh
@@ -135,12 +211,16 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: add {{ .ProjectName }}@{{ .Major }}.{{ .Minor }} ({{ .Tag }})"
     homepage: "https://github.com/bab-sh/bab"
-    description: "Bab CLI - A simple task runner (version {{ .Major }}.{{ .Minor }}.x)"
+    description: "A Simple Task Runner (version {{ .Major }}.{{ .Minor }}.x)"
     license: "MIT"
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
     binary: bab
+    completions:
+      bash: completions/bab.bash
+      zsh: completions/bab.zsh
+      fish: completions/bab.fish
     hooks:
       post:
         install: |
@@ -148,34 +228,154 @@ homebrew_casks:
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bab"]
           end
 
+scoops:
+  - name: bab
+    repository:
+      owner: bab-sh
+      name: scoop-bucket
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+
+    homepage: "https://github.com/bab-sh/bab"
+    description: "A Simple Task Runner"
+    license: MIT
+
+    shortcuts:
+      - ["bab.exe", "Bab CLI"]
+
+chocolateys:
+  - name: bab
+
+    title: Bab CLI Tool
+    authors: Sebastian Stepper
+    project_url: https://github.com/bab-sh/bab
+    copyright: 2024 bab-sh
+    license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
+    project_source_url: https://github.com/bab-sh/bab
+    docs_url: https://github.com/bab-sh/bab#readme
+    bug_tracker_url: https://github.com/bab-sh/bab/issues
+
+    tags: "cli task-runner productivity developer-tools"
+    summary: A simple and efficient task runner for developers
+
+    description: A Simple Task Runner
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    source_repo: "https://push.chocolatey.org/"
+
+    skip_publish: false
+
+    release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
+
+winget:
+  - name: bab
+    publisher: bab-sh
+    short_description: "A Simple Task Runner"
+    license: "MIT"
+    homepage: "https://github.com/bab-sh/bab"
+
+    package_identifier: bab-sh.bab
+
+    tags:
+      - cli
+      - task-runner
+      - productivity
+      - developer-tools
+
+    repository:
+      owner: bab-sh
+      name: winget-pkgs-fork
+      branch: "bab-{{ .Version }}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
+
+      pull_request:
+        enabled: true
+        draft: false
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+
+    release_notes: "{{ .Changelog }}"
+    release_notes_url: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
+
+    skip_upload: auto
+
+snapcrafts:
+  - name: bab
+
+    summary: A simple task runner
+
+    description: A Simple Task Runner
+
+    publish: true
+    grade: stable
+    confinement: strict
+    base: core22
+
+    license: MIT
+
+    apps:
+      bab:
+        command: bab
+        plugs:
+          - home
+          - network
+          - network-bind
+          - removable-media
+
+    channel_templates:
+      - edge
+      - beta
+      - candidate
+      - stable
+      - "{{ .Major }}.{{ .Minor }}/stable"
+      - "{{ .Major }}.{{ .Minor }}/candidate"
+
 aurs:
   - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
-    description: "Bab CLI - A simple task runner"
+    description: "A Simple Task Runner"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
+
     commit_author:
       name: goreleaserbot
       email: "[email protected]"
+
     commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
+
     package: |-
-      # bin
+      # Binary
       install -Dm755 "./bab" "${pkgdir}/usr/bin/bab"
-      # license
+
+      # Documentation
       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+      # Shell completions
+      install -Dm644 "./completions/bab.bash" "${pkgdir}/usr/share/bash-completion/completions/bab"
+      install -Dm644 "./completions/bab.zsh" "${pkgdir}/usr/share/zsh/site-functions/_bab"
+      install -Dm644 "./completions/bab.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
 
 aur_sources:
   - name: bab
     homepage: "https://github.com/bab-sh/bab"
-    description: "Bab CLI - A simple task runner"
+    description: "A Simple Task Runner"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab.git"
+
     commit_author:
       name: goreleaserbot
       email: "[email protected]"
@@ -198,6 +398,7 @@ aur_sources:
       export CGO_CXXFLAGS="${CXXFLAGS}"
       export CGO_LDFLAGS="${LDFLAGS}"
       export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+
       go build \
         -ldflags="-s -w -buildid='' -linkmode=external \
           -X github.com/bab-sh/bab/internal/version.Version=${pkgver} \
@@ -205,16 +406,30 @@ aur_sources:
           -X github.com/bab-sh/bab/internal/version.Date={{ .Date }} \
           -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
         -o bab .
+
+      # Generate shell completions
+      mkdir -p completions
+      ./bab completion bash > completions/bab.bash
+      ./bab completion zsh > completions/bab.zsh
+      ./bab completion fish > completions/bab.fish
+
     package: |-
       cd "${pkgname}-${pkgver}"
+      
+      # Binary
       install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
+      
+      # Documentation
       install -Dm644 ./README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+      install -Dm644 ./LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
-release:
-  github:
-    owner: bab-sh
-    name: bab
-  mode: append
+      # Shell completions
+      install -Dm644 ./completions/bab.bash "${pkgdir}/usr/share/bash-completion/completions/bab"
+      install -Dm644 ./completions/bab.zsh "${pkgdir}/usr/share/zsh/site-functions/_bab"
+      install -Dm644 ./completions/bab.fish "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
 
 announce:
   discord:
@@ -222,7 +437,10 @@ announce:
     message_template: |
       🚀 **{{ .ProjectName }} {{ .Tag }}** is now available!
       
-      🔗 **Release:** {{ .ReleaseURL }}
+      📋 **Changelog**: {{ .ReleaseURL }}
     author: "Bab Releases"
     color: "3447003"
     icon_url: "https://avatars.githubusercontent.com/u/191529825"
+
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
