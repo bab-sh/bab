@@ -313,6 +313,7 @@ snapcrafts:
 
     description: A Simple Task Runner
 
+    publish: true
     grade: stable
     confinement: strict
     base: core22
