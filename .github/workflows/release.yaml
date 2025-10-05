@@ -39,8 +39,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          DISCORD_WEBHOOK_ID: ${{DISCORD_WEBHOOK_ID}}
-          DISCORD_WEBHOOK_TOKEN: ${{DISCORD_WEBHOOK_TOKEN}}
+          DISCORD_WEBHOOK_ID: ${{secrets.DISCORD_WEBHOOK_ID}}
+          DISCORD_WEBHOOK_TOKEN: ${{secrets.DISCORD_WEBHOOK_TOKEN}}
 
       - name: Generate release summary
         run: |
