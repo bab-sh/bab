@@ -48,6 +48,9 @@ checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
 
+source:
+  enabled: true
+
 homebrew_casks:
   - name: bab
     repository:
