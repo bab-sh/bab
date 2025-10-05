@@ -42,7 +42,7 @@ jobs:
       - name: Trigger AUR package validation
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           repository: bab-sh/aur-bab
           event-type: release-published
           client-payload: '{"version": "${{ github.event.release.tag_name }}", "release_url": "${{ github.event.release.html_url }}"}'
