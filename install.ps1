@@ -42,6 +42,33 @@ function Test-CommandExists {
     return $?
 }
 
+function Get-InstalledVersion {
+    if (Test-CommandExists $BinaryName) {
+        try {
+            $output = & $BinaryName --version 2>&1 | Out-String
+            if ($output -match 'v?(\d+\.\d+\.\d+)') {
+                return $matches[1]
+            }
+        }
+        catch {
+            return $null
+        }
+    }
+    return $null
+}
+
+function Compare-Versions {
+    param(
+        [string]$TargetVersion,
+        [string]$InstalledVersion
+    )
+
+    $targetClean = $TargetVersion -replace '^v', ''
+    $installedClean = $InstalledVersion -replace '^v', ''
+
+    return $targetClean -eq $installedClean
+}
+
 function Verify-Checksum {
     param(
         [string]$FilePath,
@@ -77,7 +104,20 @@ if (-not $Version) {
     $Version = Get-LatestRelease
 }
 
-Write-Host "`nInstalling $BinaryName $Version" -ForegroundColor Green
+$installedVersion = Get-InstalledVersion
+if ($installedVersion) {
+    Write-Host "Currently installed: $installedVersion" -ForegroundColor Cyan
+    if (Compare-Versions -TargetVersion $Version -InstalledVersion $installedVersion) {
+        Write-Host "$BinaryName $Version is already installed and up to date" -ForegroundColor Green
+        exit 0
+    }
+    else {
+        Write-Host "Updating $BinaryName from $installedVersion to $Version" -ForegroundColor Yellow
+    }
+}
+else {
+    Write-Host "`nInstalling $BinaryName $Version" -ForegroundColor Green
+}
 
 $arch = Get-Architecture
 $os = "Windows"
