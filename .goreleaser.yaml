@@ -307,37 +307,37 @@ scoops:
 
 chocolateys:
   - name: bab
+    ids:
+      - default
 
     owners: bab-sh
-    icon_url: https://avatars.githubusercontent.com/u/191529825
-    title: Bab - A Simple Task Runner
     authors: Sebastian Stepper
+    title: Bab - A Simple Task Runner
+
     project_url: https://bab.sh
-    copyright: 2025 bab-sh
-    license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
-    require_license_acceptance: false
     project_source_url: https://github.com/bab-sh/bab
+    package_source_url: https://github.com/bab-sh/bab
+    icon_url: https://i.ibb.co/SXSxwHsz/bab.png
+    license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
     docs_url: https://github.com/bab-sh/bab#readme
     bug_tracker_url: https://github.com/bab-sh/bab/issues
 
-    tags: "cli task-runner productivity developer-tools automation build-tool"
+    copyright: 2025 bab.sh
+    require_license_acceptance: false
 
+    tags: "cli task-runner productivity developer-tools automation build-tool yaml"
     summary: A simple and efficient task runner for developers
     description: |
-      Bab is a simple and efficient task runner for developers, in other words project commands defined in yaml.
-      It helps automate repetitive tasks, manage build processes, and streamline your development workflow.
-      Perfect for CLI automation and developer productivity.
-
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-
-    source_repo: "https://push.chocolatey.org/"
-
-    skip_publish: false
+      Bab is a simple task runner that lets you define project commands in YAML.
+      Automate repetitive tasks and streamline your development workflow.
 
     release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
 
-    ids:
-      - default
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    source_repo: "https://push.chocolatey.org/"
+    skip_publish: false
+
+    goamd64: v1
 
 snapcrafts:
   - name: bab-sh
