@@ -1,8 +1,9 @@
 package registry
 
 import (
-	"fmt"
 	"strings"
+
+	baberrors "github.com/bab-sh/bab/internal/errors"
 )
 
 // Task represents a runnable task with commands.
@@ -46,10 +47,10 @@ func (t *Task) LeafName() string {
 // Validate checks if the task is valid.
 func (t *Task) Validate() error {
 	if t.Name == "" {
-		return fmt.Errorf("task name cannot be empty")
+		return baberrors.ErrEmptyTaskName
 	}
 	if len(t.Commands) == 0 {
-		return fmt.Errorf("task %s has no commands", t.Name)
+		return baberrors.NewTaskValidationError(t.Name, "commands", "task has no commands")
 	}
 	return nil
 }

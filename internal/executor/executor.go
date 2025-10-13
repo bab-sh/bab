@@ -3,6 +3,7 @@ package executor
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	baberrors "github.com/bab-sh/bab/internal/errors"
 	"github.com/bab-sh/bab/internal/history"
 	"github.com/bab-sh/bab/internal/registry"
 	"github.com/charmbracelet/log"
@@ -21,11 +23,14 @@ type Executor struct {
 	verbose        bool
 	projectRoot    string
 	historyManager *history.Manager
+	ctx            context.Context
 }
 
 // New creates a new Executor with the given options.
 func New(options ...Option) *Executor {
-	e := &Executor{}
+	e := &Executor{
+		ctx: context.Background(),
+	}
 	for _, opt := range options {
 		opt(e)
 	}
@@ -59,10 +64,15 @@ func WithVerbose(verbose bool) Option {
 	}
 }
 
-// WithProjectRoot sets the project root directory for history tracking.
 func WithProjectRoot(projectRoot string) Option {
 	return func(e *Executor) {
 		e.projectRoot = projectRoot
+	}
+}
+
+func WithContext(ctx context.Context) Option {
+	return func(e *Executor) {
+		e.ctx = ctx
 	}
 }
 
@@ -133,9 +143,9 @@ func (e *Executor) runCommand(command string, current, total int) error {
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", command)
+		cmd = exec.CommandContext(e.ctx, "cmd", "/c", command)
 	} else {
-		cmd = exec.Command("sh", "-c", command)
+		cmd = exec.CommandContext(e.ctx, "sh", "-c", command)
 	}
 
 	cmd.Stdin = os.Stdin
@@ -151,14 +161,14 @@ func (e *Executor) runCommand(command string, current, total int) error {
 	}
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start command: %w", err)
+		return baberrors.NewExecutionError("", command, fmt.Errorf("failed to start: %w", err))
 	}
 
 	go e.streamOutput(stdout, false)
 	go e.streamOutput(stderr, true)
 
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("command failed: %w", err)
+		return baberrors.NewExecutionError("", command, err)
 	}
 
 	return nil

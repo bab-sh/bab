@@ -38,7 +38,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose output")
 	rootCmd.Version = version.GetVersion()
 
-	rootCmd.AddCommand(newCompileCmd())
 	rootCmd.AddCommand(newListCmd())
 }
 

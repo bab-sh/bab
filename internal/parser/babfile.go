@@ -1,34 +1,47 @@
-// Package parser provides functionality for parsing Babfiles and registering tasks.
 package parser
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	baberrors "github.com/bab-sh/bab/internal/errors"
 	"github.com/bab-sh/bab/internal/registry"
 	"gopkg.in/yaml.v3"
 )
 
-// Parser parses Babfiles and registers tasks.
 type Parser struct {
 	registry registry.Registry
+	ctx      context.Context
 }
 
-// New creates a new Parser with the given registry.
 func New(reg registry.Registry) *Parser {
 	return &Parser{
 		registry: reg,
+		ctx:      context.Background(),
 	}
 }
 
-// ParseFile parses a Babfile from the filesystem.
+func NewWithContext(ctx context.Context, reg registry.Registry) *Parser {
+	return &Parser{
+		registry: reg,
+		ctx:      ctx,
+	}
+}
+
 func (p *Parser) ParseFile(filename string) error {
+	select {
+	case <-p.ctx.Done():
+		return p.ctx.Err()
+	default:
+	}
+
 	cleanPath := filepath.Clean(filename)
 	file, err := os.Open(cleanPath)
 	if err != nil {
-		return fmt.Errorf("failed to open babfile: %w", err)
+		return baberrors.NewParseError(cleanPath, fmt.Errorf("failed to open file: %w", err))
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
@@ -39,13 +52,18 @@ func (p *Parser) ParseFile(filename string) error {
 	return p.Parse(file)
 }
 
-// Parse parses a Babfile from an io.Reader.
 func (p *Parser) Parse(reader io.Reader) error {
+	select {
+	case <-p.ctx.Done():
+		return p.ctx.Err()
+	default:
+	}
+
 	decoder := yaml.NewDecoder(reader)
 
 	var root map[string]interface{}
 	if err := decoder.Decode(&root); err != nil {
-		return fmt.Errorf("failed to parse YAML: %w", err)
+		return baberrors.NewParseError("", fmt.Errorf("failed to parse YAML: %w", err))
 	}
 
 	return p.parseNode(root, "")
@@ -83,6 +101,12 @@ func (p *Parser) parseNode(node map[string]interface{}, prefix string) error {
 }
 
 func (p *Parser) registerTask(name string, taskMap map[string]interface{}) error {
+	select {
+	case <-p.ctx.Done():
+		return p.ctx.Err()
+	default:
+	}
+
 	task := registry.NewTask(name)
 
 	if desc, ok := taskMap["desc"].(string); ok {
@@ -103,7 +127,7 @@ func (p *Parser) registerTask(name string, taskMap map[string]interface{}) error
 	}
 
 	if len(task.Commands) == 0 {
-		return fmt.Errorf("task %s has no 'run' commands", name)
+		return baberrors.NewTaskValidationError(name, "run", "task has no commands")
 	}
 
 	return p.registry.Register(task)
