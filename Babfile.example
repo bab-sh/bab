@@ -1,0 +1,578 @@
+
+hello:
+  desc: Simple hello world task
+  run: echo "Hello, World!"
+
+goodbye:
+  desc: Simple goodbye task
+  run: echo "Goodbye!"
+
+test1:
+  test2:
+    desc: Build Docker image
+    run: docker build -t myapp:latest .
+  test3:
+    test4:
+      desc: test4
+      run: echo test
+  run:
+    desc: Run Docker container
+    run: docker run -p 8080:8080 myapp:latest
+
+  stop:
+    desc: Stop all containers
+    run: docker stop $(docker ps -q)
+
+cloud:
+  aws:
+    login:
+      desc: Login to AWS ECR
+      run: aws ecr get-login-password | docker login --username AWS
+
+    deploy:
+      desc: Deploy to AWS
+      run: aws deploy create-deployment --application-name myapp
+
+  gcp:
+    login:
+      desc: Login to GCP
+      run: gcloud auth login
+
+    deploy:
+      desc: Deploy to GCP
+      run: gcloud app deploy
+
+build:
+  platforms:
+    linux:
+      amd64:
+        desc: Build for Linux AMD64
+        run: GOOS=linux GOARCH=amd64 go build -o bin/app-linux-amd64
+
+      arm64:
+        desc: Build for Linux ARM64
+        run: GOOS=linux GOARCH=arm64 go build -o bin/app-linux-arm64
+
+      386:
+        desc: Build for Linux 386
+        run: GOOS=linux GOARCH=386 go build -o bin/app-linux-386
+
+    windows:
+      amd64:
+        desc: Build for Windows AMD64
+        run: GOOS=windows GOARCH=amd64 go build -o bin/app-windows-amd64.exe
+
+      arm64:
+        desc: Build for Windows ARM64
+        run: GOOS=windows GOARCH=arm64 go build -o bin/app-windows-arm64.exe
+
+    macos:
+      amd64:
+        desc: Build for macOS AMD64
+        run: GOOS=darwin GOARCH=amd64 go build -o bin/app-macos-amd64
+
+      arm64:
+        desc: Build for macOS ARM64 (M1/M2)
+        run: GOOS=darwin GOARCH=arm64 go build -o bin/app-macos-arm64
+
+test:
+  unit:
+    backend:
+      api:
+        desc: Test backend API units
+        run: go test ./internal/api/...
+
+      services:
+        desc: Test backend services
+        run: go test ./internal/services/...
+
+      database:
+        desc: Test database layer
+        run: go test ./internal/db/...
+
+    frontend:
+      components:
+        desc: Test React components
+        run: npm test -- --testPathPattern=components
+
+      hooks:
+        desc: Test React hooks
+        run: npm test -- --testPathPattern=hooks
+
+      utils:
+        desc: Test utility functions
+        run: npm test -- --testPathPattern=utils
+
+  integration:
+    api:
+      rest:
+        desc: Test REST API integration
+        run: go test -tags=integration ./tests/api/rest/...
+
+      graphql:
+        desc: Test GraphQL API integration
+        run: go test -tags=integration ./tests/api/graphql/...
+
+    database:
+      postgres:
+        desc: Test PostgreSQL integration
+        run: go test -tags=integration ./tests/db/postgres/...
+
+      redis:
+        desc: Test Redis integration
+        run: go test -tags=integration ./tests/db/redis/...
+
+    external:
+      aws:
+        desc: Test AWS services integration
+        run: go test -tags=integration ./tests/external/aws/...
+
+      stripe:
+        desc: Test Stripe integration
+        run: go test -tags=integration ./tests/external/stripe/...
+
+  e2e:
+    web:
+      chrome:
+        desc: E2E tests in Chrome
+        run: cypress run --browser chrome
+
+      firefox:
+        desc: E2E tests in Firefox
+        run: cypress run --browser firefox
+
+    mobile:
+      ios:
+        desc: E2E tests on iOS simulator
+        run: detox test --configuration ios.sim.debug
+
+      android:
+        desc: E2E tests on Android emulator
+        run: detox test --configuration android.emu.debug
+
+deploy:
+  environments:
+    production:
+      regions:
+        us:
+          east:
+            desc: Deploy to US East production
+            run: |
+              echo "Deploying to us-east-1..."
+              terraform apply -var-file=prod-us-east.tfvars
+
+          west:
+            desc: Deploy to US West production
+            run: |
+              echo "Deploying to us-west-2..."
+              terraform apply -var-file=prod-us-west.tfvars
+
+        eu:
+          central:
+            desc: Deploy to EU Central production
+            run: |
+              echo "Deploying to eu-central-1..."
+              terraform apply -var-file=prod-eu-central.tfvars
+
+          west:
+            desc: Deploy to EU West production
+            run: |
+              echo "Deploying to eu-west-1..."
+              terraform apply -var-file=prod-eu-west.tfvars
+
+        asia:
+          pacific:
+            desc: Deploy to Asia Pacific production
+            run: |
+              echo "Deploying to ap-southeast-1..."
+              terraform apply -var-file=prod-ap-southeast.tfvars
+
+    staging:
+      regions:
+        us:
+          east:
+            desc: Deploy to US East staging
+            run: terraform apply -var-file=staging-us-east.tfvars
+
+        eu:
+          west:
+            desc: Deploy to EU West staging
+            run: terraform apply -var-file=staging-eu-west.tfvars
+
+    development:
+      local:
+        docker:
+          desc: Deploy to local Docker
+          run: docker-compose up -d
+
+        kubernetes:
+          desc: Deploy to local k8s
+          run: kubectl apply -f k8s/dev/
+
+database:
+  migrate:
+    desc: Run all migrations
+    run: migrate -path ./migrations -database $DATABASE_URL up
+
+  migrations:
+    create:
+      initial:
+        desc: Create initial migration
+        run: migrate create -ext sql -dir migrations -seq initial
+
+      users:
+        desc: Create users migration
+        run: migrate create -ext sql -dir migrations -seq create_users
+
+    rollback:
+      one:
+        desc: Rollback one migration
+        run: migrate -path ./migrations -database $DATABASE_URL down 1
+
+      all:
+        desc: Rollback all migrations
+        run: migrate -path ./migrations -database $DATABASE_URL down
+
+  seed:
+    desc: Seed database with test data
+    run: go run ./cmd/seed
+
+  backup:
+    create:
+      desc: Create database backup
+      run: pg_dump $DATABASE_URL > backup-$(date +%Y%m%d-%H%M%S).sql
+
+    restore:
+      latest:
+        desc: Restore latest backup
+        run: psql $DATABASE_URL < $(ls -t backup-*.sql | head -1)
+
+monitoring:prometheus:scrape:
+  desc: Configure Prometheus scraping
+  run: kubectl apply -f monitoring/prometheus-scrape.yaml
+
+monitoring:prometheus:alerts:
+  desc: Configure Prometheus alerts
+  run: kubectl apply -f monitoring/prometheus-alerts.yaml
+
+monitoring:grafana:dashboards:import:
+  desc: Import Grafana dashboards
+  run: |
+    for dashboard in monitoring/dashboards/*.json; do
+      curl -X POST http://grafana:3000/api/dashboards/db -d @$dashboard
+    done
+
+ci:
+  full:
+    desc: Run full CI pipeline
+    run:
+      - echo "Starting CI pipeline..."
+      - go fmt ./...
+      - go vet ./...
+      - golangci-lint run
+      - go test -race -coverprofile=coverage.txt ./...
+      - go build -o bin/app
+      - echo "CI pipeline completed!"
+
+  quick:
+    desc: Run quick CI checks
+    run:
+      - go fmt ./...
+      - go vet ./...
+      - go test -short ./...
+
+
+services:
+  api:
+    start:
+      desc: Start API service
+      run: go run ./services/api
+
+    test:
+      unit:
+        desc: API unit tests
+        run: go test ./services/api/...
+
+      integration:
+        desc: API integration tests
+        run: go test -tags=integration ./services/api/...
+
+  auth:
+    start:
+      desc: Start auth service
+      run: go run ./services/auth
+
+    test:
+      unit:
+        desc: Auth unit tests
+        run: go test ./services/auth/...
+
+  worker:
+    queues:
+      emails:
+        start:
+          desc: Start email worker
+          run: go run ./services/worker/queues/emails
+
+      notifications:
+        start:
+          desc: Start notification worker
+          run: go run ./services/worker/queues/notifications
+
+      reports:
+        start:
+          desc: Start report generation worker
+          run: go run ./services/worker/queues/reports
+
+perf:
+  benchmark:
+    cpu:
+      intensive:
+        desc: Benchmark CPU-intensive operations
+        run: go test -bench=CPU -benchtime=10s -cpuprofile=cpu.prof
+
+      parallel:
+        desc: Benchmark parallel CPU operations
+        run: go test -bench=Parallel -benchtime=10s -cpu=1,2,4,8
+
+    memory:
+      allocation:
+        desc: Benchmark memory allocations
+        run: go test -bench=Alloc -benchmem -memprofile=mem.prof
+
+      gc:
+        desc: Benchmark with GC stress
+        run: GOGC=10 go test -bench=. -benchmem
+
+  profile:
+    cpu:
+      collect:
+        desc: Collect CPU profile
+        run: go test -cpuprofile=cpu.prof -bench=.
+
+      analyze:
+        desc: Analyze CPU profile
+        run: go tool pprof -http=:8080 cpu.prof
+
+    memory:
+      collect:
+        desc: Collect memory profile
+        run: go test -memprofile=mem.prof -bench=.
+
+      analyze:
+        desc: Analyze memory profile
+        run: go tool pprof -http=:8080 mem.prof
+
+security:
+  scan:
+    code:
+      static:
+        desc: Static code analysis
+        run: gosec ./...
+
+      dependencies:
+        desc: Scan dependencies for vulnerabilities
+        run: go list -json -m all | nancy sleuth
+
+    containers:
+      images:
+        desc: Scan container images
+        run: trivy image myapp:latest
+
+      configs:
+        desc: Scan Kubernetes configs
+        run: trivy config ./k8s/
+
+  audit:
+    compliance:
+      pci:
+        desc: PCI compliance audit
+        run: ./scripts/audit-pci.sh
+
+      hipaa:
+        desc: HIPAA compliance audit
+        run: ./scripts/audit-hipaa.sh
+
+    access:
+      logs:
+        desc: Audit access logs
+        run: ./scripts/audit-access-logs.sh
+
+docs:
+  api:
+    openapi:
+      generate:
+        desc: Generate OpenAPI specs
+        run: swag init -g ./cmd/api/main.go
+
+      validate:
+        desc: Validate OpenAPI specs
+        run: swagger validate ./docs/swagger.yaml
+
+    graphql:
+      generate:
+        desc: Generate GraphQL schema
+        run: go run github.com/99designs/gqlgen generate
+
+  code:
+    godoc:
+      serve:
+        desc: Serve Go documentation
+        run: godoc -http=:6060
+
+      generate:
+        desc: Generate static documentation
+        run: godoc -html=true > docs/godoc.html
+
+    markdown:
+      readme:
+        desc: Generate README from template
+        run: gomplate -f templates/README.md.tmpl -o README.md
+
+infra:
+  terraform:
+    plan:
+      dev:
+        desc: Terraform plan for dev
+        run: cd infra && terraform plan -var-file=dev.tfvars
+
+      prod:
+        desc: Terraform plan for prod
+        run: cd infra && terraform plan -var-file=prod.tfvars
+
+    apply:
+      dev:
+        desc: Terraform apply for dev
+        run: cd infra && terraform apply -var-file=dev.tfvars
+
+      prod:
+        desc: Terraform apply for prod
+        run: cd infra && terraform apply -var-file=prod.tfvars
+
+  kubernetes:
+    manifests:
+      validate:
+        desc: Validate Kubernetes manifests
+        run: kubectl apply --dry-run=client -f k8s/
+
+      apply:
+        dev:
+          desc: Apply manifests to dev cluster
+          run: kubectl apply -f k8s/ --context=dev
+
+        prod:
+          desc: Apply manifests to prod cluster
+          run: kubectl apply -f k8s/ --context=prod
+
+release:
+  version:
+    bump:
+      major:
+        desc: Bump major version
+        run: |
+          echo "Bumping major version..."
+          npm version major
+
+      minor:
+        desc: Bump minor version
+        run: npm version minor
+
+      patch:
+        desc: Bump patch version
+        run: npm version patch
+
+  changelog:
+    generate:
+      desc: Generate changelog
+      run: git-chglog -o CHANGELOG.md
+
+    validate:
+      desc: Validate changelog format
+      run: ./scripts/validate-changelog.sh
+
+  publish:
+    npm:
+      desc: Publish to npm
+      run: npm publish
+
+    docker:
+      hub:
+        desc: Push to Docker Hub
+        run: docker push myapp:latest
+
+      ghcr:
+        desc: Push to GitHub Container Registry
+        run: docker push ghcr.io/myorg/myapp:latest
+
+dev:
+  setup:
+    tools:
+      install:
+        desc: Install development tools
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go install github.com/cosmtrek/air@latest
+          npm install -g @vscode/vsce
+
+    env:
+      create:
+        desc: Create development environment
+        run: cp .env.example .env
+
+  watch:
+    backend:
+      desc: Watch and reload backend
+      run: air
+
+    frontend:
+      desc: Watch and reload frontend
+      run: npm run dev
+
+  debug:
+    attach:
+      vscode:
+        desc: Attach debugger in VS Code
+        run: echo "Use F5 to attach debugger"
+
+      delve:
+        desc: Start Delve debugger
+        run: dlv debug ./cmd/api
+
+clean:
+  build:
+    artifacts:
+      desc: Clean build artifacts
+      run: rm -rf bin/ dist/
+
+    cache:
+      go:
+        desc: Clean Go build cache
+        run: go clean -cache
+
+      npm:
+        desc: Clean npm cache
+        run: npm cache clean --force
+
+  docker:
+    containers:
+      stopped:
+        desc: Remove stopped containers
+        run: docker container prune -f
+
+      all:
+        desc: Remove all containers
+        run: docker rm -f $(docker ps -aq)
+
+    images:
+      dangling:
+        desc: Remove dangling images
+        run: docker image prune -f
+
+      unused:
+        desc: Remove unused images
+        run: docker image prune -a -f
+
+  logs:
+    old:
+      desc: Clean old log files
+      run: find ./logs -name "*.log" -mtime +30 -delete
