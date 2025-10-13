@@ -85,6 +85,8 @@ func loadRegistry() (registry.Registry, string, error) {
 	}
 
 	if babfile == "" {
+		log.Error("No Babfile found in current directory")
+		log.Info("Looking for: Babfile, Babfile.yaml, Babfile.yml")
 		return nil, "", fmt.Errorf("no Babfile found")
 	}
 
@@ -98,7 +100,8 @@ func loadRegistry() (registry.Registry, string, error) {
 	p := parser.New(reg)
 
 	if err := p.ParseFile(absPath); err != nil {
-		return nil, "", fmt.Errorf("failed to parse %s: %w", absPath, err)
+		log.Error("Failed to parse Babfile", "path", absPath, "error", err)
+		return nil, "", err
 	}
 
 	return reg, absPath, nil
