@@ -312,8 +312,8 @@ chocolateys:
 
     title: Bab - A Simple Task Runner
     authors: Sebastian Stepper
-    project_url: https://github.com/bab-sh/bab
-    copyright: 2024 bab-sh
+    project_url: https://bab.sh
+    copyright: 2025 bab-sh
     license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
     require_license_acceptance: false
     project_source_url: https://github.com/bab-sh/bab
@@ -324,7 +324,7 @@ chocolateys:
 
     summary: A simple and efficient task runner for developers
     description: |
-      Bab is a simple and efficient task runner for developers.
+      Bab is a simple and efficient task runner for developers, in other words project commands defined in yaml.
       It helps automate repetitive tasks, manage build processes, and streamline your development workflow.
       Perfect for CLI automation and developer productivity.
 
