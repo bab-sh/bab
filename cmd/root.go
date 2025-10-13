@@ -41,10 +41,16 @@ func Execute() {
 		return
 	}
 
+	if len(os.Args) < 2 {
+		log.Error("No command or task specified")
+		os.Exit(1)
+	}
+
 	checkVerboseFlag()
 
-	log.Debug("No cobra command matched, attempting to execute as task", "arg", os.Args[1])
-	if err := executeTask(os.Args[1]); err != nil {
+	taskName := os.Args[1]
+	log.Debug("No command matched, attempting to execute as task", "arg", taskName)
+	if err := executeTask(taskName); err != nil {
 		os.Exit(1)
 	}
 	log.Debug("Task executed successfully")

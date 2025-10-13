@@ -74,21 +74,21 @@ func runList(_ *cobra.Command, _ []string) error {
 	itemStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Bold(true)
 	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Italic(true)
 
-	var build func(*node, string) *tree.Tree
-	build = func(n *node, name string) *tree.Tree {
+	var buildTree func(*node, string) *tree.Tree
+	buildTree = func(n *node, name string) *tree.Tree {
 		label := name
 		if n.desc != "" {
 			label += " " + descStyle.Render(n.desc)
 		}
 		t := tree.Root(label)
-		for _, k := range sorted(n.children) {
-			t.Child(build(n.children[k], k))
+		for _, childName := range sortedKeys(n.children) {
+			t.Child(buildTree(n.children[childName], childName))
 		}
 		return t
 	}
 
-	for _, name := range sorted(root.children) {
-		fmt.Println(build(root.children[name], name).
+	for _, name := range sortedKeys(root.children) {
+		fmt.Println(buildTree(root.children[name], name).
 			EnumeratorStyle(enumStyle).
 			ItemStyle(itemStyle))
 	}
@@ -96,7 +96,7 @@ func runList(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func sorted(m map[string]*node) []string {
+func sortedKeys(m map[string]*node) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
