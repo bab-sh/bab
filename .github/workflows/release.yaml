@@ -33,6 +33,15 @@ jobs:
       - name: Install Snapcraft
         run: sudo snap install snapcraft --classic
 
+      - name: Install Chocolatey
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-devel
+          curl -Lo /tmp/choco.tar.gz https://github.com/chocolatey/choco/releases/latest/download/chocolatey.tar.gz
+          sudo tar -xzf /tmp/choco.tar.gz -C /opt
+          sudo ln -sf /opt/chocolatey/choco /usr/local/bin/choco
+          choco --version
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
