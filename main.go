@@ -11,7 +11,7 @@ func main() {
 	log.SetDefault(log.NewWithOptions(os.Stderr, log.Options{
 		ReportCaller:    false,
 		ReportTimestamp: false,
-		Level:           log.InfoLevel, // Default to Info, verbose flag will set to Debug
+		Level:           log.InfoLevel,
 	}))
 
 	cmd.Execute()
