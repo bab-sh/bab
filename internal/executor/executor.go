@@ -64,12 +64,14 @@ func WithVerbose(verbose bool) Option {
 	}
 }
 
+// WithProjectRoot sets the project root directory for the executor.
 func WithProjectRoot(projectRoot string) Option {
 	return func(e *Executor) {
 		e.projectRoot = projectRoot
 	}
 }
 
+// WithContext sets the context for the executor.
 func WithContext(ctx context.Context) Option {
 	return func(e *Executor) {
 		e.ctx = ctx
