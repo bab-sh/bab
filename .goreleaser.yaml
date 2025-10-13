@@ -468,22 +468,9 @@ announce:
     message_template: |
       🚀 **{{ .ProjectName }} {{ .Tag }}** has been released!
 
-      **📦 Update now**
-      ```
-      # Homebrew
-      brew upgrade bab
-
-      # Chocolatey
-      choco upgrade bab
-
-      # Scoop
-      scoop update bab
-
-      # AUR
-      yay -Syu bab-bin
-      ```
-
-      **📋 [View Release Notes]({{ .ReleaseURL }})**
+      📋 [Release]({{ .ReleaseURL }})
+      📦 [Installation Guide](https://github.com/bab-sh/bab#installation)
+      🔄 [Update Guide](https://github.com/bab-sh/bab#update)
     author: "Bab Releases"
     color: "3447003"
     icon_url: "https://avatars.githubusercontent.com/u/191529825"
