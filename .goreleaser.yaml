@@ -171,6 +171,29 @@ nfpms:
         replaces:
           - bab-bin
 
+brews:
+  - name: bab
+    repository:
+      owner: bab-sh
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.PAT_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+    homepage: "https://github.com/bab-sh/bab"
+    description: "A Simple Task Runner"
+    license: "MIT"
+    directory: Formula
+    install: |
+      bin.install "bab"
+      bash_completion.install "completions/bab.bash" => "bab"
+      zsh_completion.install "completions/bab.zsh" => "_bab"
+      fish_completion.install "completions/bab.fish"
+    test: |
+      system "#{bin}/bab", "--version"
+
 homebrew_casks:
   - name: bab
     repository:
