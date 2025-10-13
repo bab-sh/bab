@@ -466,9 +466,24 @@ announce:
   discord:
     enabled: true
     message_template: |
-      🚀 **{{ .ProjectName }} {{ .Tag }}** is now available!
-      
-      📋 **Changelog**: {{ .ReleaseURL }}
+      🚀 **{{ .ProjectName }} {{ .Tag }}** has been released!
+
+      **📦 Update now**
+      ```
+      # Homebrew
+      brew upgrade bab
+
+      # Chocolatey
+      choco upgrade bab
+
+      # Scoop
+      scoop update bab
+
+      # AUR
+      yay -Syu bab-bin
+      ```
+
+      **📋 [View Release Notes]({{ .ReleaseURL }})**
     author: "Bab Releases"
     color: "3447003"
     icon_url: "https://avatars.githubusercontent.com/u/191529825"
