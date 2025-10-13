@@ -42,6 +42,7 @@ jobs:
           echo '#!/bin/bash' | sudo tee /usr/local/bin/choco
           echo 'mono /opt/chocolatey/choco.exe "$@"' | sudo tee -a /usr/local/bin/choco
           sudo chmod +x /usr/local/bin/choco
+          sudo mkdir -p /opt/chocolatey/lib
           choco --version
         env:
           CHOCOLATEY_VERSION: 2.5.1

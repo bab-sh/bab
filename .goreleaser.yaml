@@ -323,6 +323,10 @@ chocolateys:
     tags: "cli task-runner productivity developer-tools automation build-tool"
 
     summary: A simple and efficient task runner for developers
+    description: |
+      Bab is a simple and efficient task runner for developers.
+      It helps automate repetitive tasks, manage build processes, and streamline your development workflow.
+      Perfect for CLI automation and developer productivity.
 
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
 
