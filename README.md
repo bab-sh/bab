@@ -33,23 +33,23 @@ One line install script for all platforms
 
 ```bash
 # Install latest version
-curl -sSfL https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh
+curl -sSfL https://bab.sh/install.sh | sh
 
 # Install specific version
-curl -sSfL https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh -s v1.0.0
+curl -sSfL https://bab.sh/install.sh | sh -s v1.0.0
 
 # Using wget
-wget -qO- https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh
+wget -qO- https://bab.sh/install.sh | sh
 ```
 
 #### Windows (PowerShell)
 
 ```powershell
 # Install latest version
-iwr -useb https://raw.githubusercontent.com/bab-sh/bab/main/install.ps1 | iex
+iwr -useb https://bab.sh/install.ps1 | iex
 
 # Install specific version
-$version="v1.0.0"; iwr -useb https://raw.githubusercontent.com/bab-sh/bab/main/install.ps1 | iex
+$version="v1.0.0"; iwr -useb https://bab.sh/install.ps1 | iex
 ```
 
 ### Package Managers
