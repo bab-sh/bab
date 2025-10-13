@@ -271,30 +271,6 @@ scoops:
 
     shortcuts:
       - ["bab.exe", "Bab CLI"]
-# TODO
-#chocolateys:
-#  - name: bab
-#
-#    title: Bab CLI Tool
-#    authors: Sebastian Stepper
-#    project_url: https://github.com/bab-sh/bab
-#    copyright: 2024 bab-sh
-#    license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
-#    project_source_url: https://github.com/bab-sh/bab
-#    docs_url: https://github.com/bab-sh/bab#readme
-#    bug_tracker_url: https://github.com/bab-sh/bab/issues
-#
-#    tags: "cli task-runner productivity developer-tools"
-#    summary: A simple and efficient task runner for developers
-#
-#    description: A Simple Task Runner
-#    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-#    source_repo: "https://push.chocolatey.org/"
-#
-#    skip_publish: false
-#
-#    release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
-#
 #winget:
 #  - name: bab
 #    publisher: bab-sh
