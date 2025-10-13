@@ -1,3 +1,4 @@
+// Package parser provides functionality for parsing Babfile configuration files.
 package parser
 
 import (
@@ -12,11 +13,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Parser parses Babfile YAML configuration and registers tasks.
 type Parser struct {
 	registry registry.Registry
 	ctx      context.Context
 }
 
+// New creates a new Parser with the given registry.
 func New(reg registry.Registry) *Parser {
 	return &Parser{
 		registry: reg,
@@ -24,6 +27,7 @@ func New(reg registry.Registry) *Parser {
 	}
 }
 
+// NewWithContext creates a new Parser with the given context and registry.
 func NewWithContext(ctx context.Context, reg registry.Registry) *Parser {
 	return &Parser{
 		registry: reg,
@@ -31,6 +35,7 @@ func NewWithContext(ctx context.Context, reg registry.Registry) *Parser {
 	}
 }
 
+// ParseFile parses a Babfile from the given filename.
 func (p *Parser) ParseFile(filename string) error {
 	select {
 	case <-p.ctx.Done():
@@ -52,6 +57,7 @@ func (p *Parser) ParseFile(filename string) error {
 	return p.Parse(file)
 }
 
+// Parse parses a Babfile from the given reader.
 func (p *Parser) Parse(reader io.Reader) error {
 	select {
 	case <-p.ctx.Done():
