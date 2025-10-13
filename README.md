@@ -2,7 +2,7 @@
 
 <img src="assets/bab.png" alt="Bab Logo" width="200"/>
 
-<span style="font-size: 40px; font-weight: 600;">Bab</span>
+# Bab
 
 **A modern task runner for developers who value simplicity**
 
