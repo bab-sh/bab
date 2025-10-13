@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to **Bab** - the simple, cross-platform task runner for your projects!
+Welcome to **Bab** - a modern task runner from simple to scaled!
 
 ## What is Bab?
 

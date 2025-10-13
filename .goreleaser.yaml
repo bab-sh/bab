@@ -107,7 +107,7 @@ nfpms:
     vendor: bab-sh
     homepage: https://github.com/bab-sh/bab
     maintainer: Sebastian Stepper <sebastian-stepper@gmx.de>
-    description: A Simple Task Runner
+    description: A modern task runner from simple to scaled
     license: MIT
 
     formats:
@@ -183,7 +183,7 @@ brews:
       email: "[email protected]"
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner"
+    description: "A modern task runner from simple to scaled"
     license: "MIT"
     directory: Formula
     install: |
@@ -206,7 +206,7 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner"
+    description: "A modern task runner from simple to scaled"
     license: "MIT"
     directory: Casks
     url:
@@ -234,7 +234,7 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: add {{ .ProjectName }}@{{ .Major }}.{{ .Minor }} ({{ .Tag }})"
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner (version {{ .Major }}.{{ .Minor }}.x)"
+    description: "A modern task runner from simple to scaled (version {{ .Major }}.{{ .Minor }}.x)"
     license: "MIT"
     directory: Casks
     url:
@@ -266,7 +266,7 @@ scoops:
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
 
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner"
+    description: "A modern task runner from simple to scaled"
     license: MIT
 
     shortcuts:
@@ -312,7 +312,7 @@ chocolateys:
 
     owners: bab-sh
     authors: Sebastian Stepper
-    title: Bab - A Simple Task Runner
+    title: Bab - A modern task runner from simple to scaled
 
     project_url: https://bab.sh
     project_source_url: https://github.com/bab-sh/bab
@@ -326,7 +326,7 @@ chocolateys:
     require_license_acceptance: false
 
     tags: "cli task-runner productivity developer-tools automation build-tool yaml"
-    summary: A simple and efficient task runner for developers
+    summary: A modern task runner from simple to scaled
     description: |
       Bab is a simple task runner that lets you define project commands in YAML.
       Automate repetitive tasks and streamline your development workflow.
@@ -342,9 +342,9 @@ chocolateys:
 snapcrafts:
   - name: bab-sh
 
-    summary: A simple task runner
+    summary: A modern task runner from simple to scaled
 
-    description: A Simple Task Runner
+    description: A modern task runner from simple to scaled
 
     publish: true
     grade: stable
@@ -371,7 +371,7 @@ snapcrafts:
 aurs:
   - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner"
+    description: "A modern task runner from simple to scaled"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
@@ -400,7 +400,7 @@ aurs:
 aur_sources:
   - name: bab
     homepage: "https://github.com/bab-sh/bab"
-    description: "A Simple Task Runner"
+    description: "A modern task runner from simple to scaled"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"

@@ -22,7 +22,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "bab [task]",
-	Short: "Interactive task runner for your project",
+	Short: "A modern task runner from simple to scaled",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runRoot,
 }
