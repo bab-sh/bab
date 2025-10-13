@@ -2,8 +2,9 @@
 package registry
 
 import (
-	"fmt"
 	"sort"
+
+	baberrors "github.com/bab-sh/bab/internal/errors"
 )
 
 // TreeNode represents a node in the hierarchical task tree.
@@ -48,15 +49,15 @@ func New() Registry {
 // Register adds a task to the registry.
 func (r *registry) Register(task *Task) error {
 	if task == nil {
-		return fmt.Errorf("cannot register nil task")
+		return baberrors.NewTaskValidationError("", "task", "cannot register nil task")
 	}
 
 	if err := task.Validate(); err != nil {
-		return fmt.Errorf("invalid task: %w", err)
+		return err
 	}
 
 	if _, exists := r.tasks[task.Name]; exists {
-		return fmt.Errorf("task %s already registered", task.Name)
+		return baberrors.ErrTaskAlreadyExists
 	}
 
 	r.tasks[task.Name] = task
@@ -67,7 +68,7 @@ func (r *registry) Register(task *Task) error {
 func (r *registry) Get(name string) (*Task, error) {
 	task, exists := r.tasks[name]
 	if !exists {
-		return nil, fmt.Errorf("task %s not found", name)
+		return nil, baberrors.NewTaskNotFoundError(name)
 	}
 	return task, nil
 }
