@@ -42,7 +42,6 @@ tasks:
     cmds:
       - rm -f bab bab.exe
       - rm -f coverage.txt coverage.html
-      - rm -f bab.sh bab.bat
       - rm -rf dist/
 
   verify:
