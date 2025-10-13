@@ -182,7 +182,7 @@ func TestTask_Validate(t *testing.T) {
 				Commands: []string{},
 			},
 			wantErr: true,
-			errMsg:  "task build has no commands",
+			errMsg:  "task 'build' validation failed: commands - task has no commands",
 		},
 		{
 			name: "task with nil commands",
@@ -191,7 +191,7 @@ func TestTask_Validate(t *testing.T) {
 				Commands: nil,
 			},
 			wantErr: true,
-			errMsg:  "task build has no commands",
+			errMsg:  "task 'build' validation failed: commands - task has no commands",
 		},
 		{
 			name: "task with multiple commands",

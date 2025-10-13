@@ -35,7 +35,7 @@ func TestRegistry_Register(t *testing.T) {
 			name:    "register nil task",
 			task:    nil,
 			wantErr: true,
-			errMsg:  "cannot register nil task",
+			errMsg:  "task '' validation failed: task - cannot register nil task",
 		},
 		{
 			name: "register invalid task with empty name",
@@ -44,7 +44,7 @@ func TestRegistry_Register(t *testing.T) {
 				Commands: []string{"go build"},
 			},
 			wantErr: true,
-			errMsg:  "invalid task: task name cannot be empty",
+			errMsg:  "task name cannot be empty",
 		},
 		{
 			name: "register invalid task with no commands",
@@ -53,7 +53,7 @@ func TestRegistry_Register(t *testing.T) {
 				Commands: []string{},
 			},
 			wantErr: true,
-			errMsg:  "invalid task: task build has no commands",
+			errMsg:  "task 'build' validation failed: commands - task has no commands",
 		},
 	}
 
@@ -95,7 +95,7 @@ func TestRegistry_RegisterDuplicate(t *testing.T) {
 		t.Fatal("Register() expected error for duplicate task, got nil")
 	}
 
-	expected := "task build already registered"
+	expected := "task already exists"
 	if err.Error() != expected {
 		t.Errorf("Register() error = %q, want %q", err.Error(), expected)
 	}
@@ -140,7 +140,7 @@ func TestRegistry_Get(t *testing.T) {
 			t.Error("Get() expected nil task for non-existent task")
 		}
 
-		expected := "task nonexistent not found"
+		expected := "task 'nonexistent' not found"
 		if err.Error() != expected {
 			t.Errorf("Get() error = %q, want %q", err.Error(), expected)
 		}
