@@ -329,6 +329,38 @@ scoops:
 #
 #    skip_upload: auto
 
+chocolateys:
+  - name: bab
+
+    owners: bab-sh
+
+    title: Bab - A Simple Task Runner
+    authors: Sebastian Stepper
+    project_url: https://github.com/bab-sh/bab
+    copyright: 2024 bab-sh
+    license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/bab-sh/bab
+    docs_url: https://github.com/bab-sh/bab#readme
+    bug_tracker_url: https://github.com/bab-sh/bab/issues
+
+    tags: "cli task-runner productivity developer-tools automation build-tool"
+
+    summary: A simple and efficient task runner for developers
+
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+
+    source_repo: "https://push.chocolatey.org/"
+
+    skip_publish: false
+
+    release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
+
+    url_template: "https://github.com/bab-sh/bab/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    ids:
+      - default
+
 snapcrafts:
   - name: bab-sh
 
