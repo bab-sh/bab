@@ -2,7 +2,7 @@
 
 <img src="assets/bab.png" alt="Bab Logo" width="200"/>
 
-# Bab
+<h1>Bab</h1>
 
 **A modern task runner for developers who value simplicity**
 
