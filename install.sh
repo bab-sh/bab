@@ -65,6 +65,27 @@ check_path() {
   esac
 }
 
+get_installed_version() {
+  if is_command "${BINARY}"; then
+    installed_version=$("${BINARY}" --version 2>/dev/null | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+    echo "${installed_version}"
+  fi
+}
+
+compare_versions() {
+  target_version="$1"
+  installed_version="$2"
+
+  target_clean=$(echo "${target_version}" | sed 's/^v//')
+  installed_clean=$(echo "${installed_version}" | sed 's/^v//')
+
+  if [ "${target_clean}" = "${installed_clean}" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 execute() {
   tmpdir=$(mktemp -d)
   log_debug "downloading files into ${tmpdir}"
@@ -383,6 +404,17 @@ adjust_os
 adjust_arch
 
 log_info "found version: ${VERSION} for ${TAG}/${OS}/${ARCH}"
+
+INSTALLED_VERSION=$(get_installed_version)
+if [ -n "${INSTALLED_VERSION}" ]; then
+  log_info "currently installed: ${INSTALLED_VERSION}"
+  if compare_versions "${TAG}" "${INSTALLED_VERSION}"; then
+    log_info "${BINARY} ${TAG} is already installed and up to date"
+    exit 0
+  else
+    log_info "updating ${BINARY} from ${INSTALLED_VERSION} to ${TAG}"
+  fi
+fi
 
 NAME=${PROJECT_NAME}_${VERSION}_${ADJUSTED_OS}_${ADJUSTED_ARCH}
 TARBALL=${NAME}.${FORMAT}
