@@ -36,11 +36,15 @@ jobs:
       - name: Install Chocolatey
         run: |
           sudo apt-get update
-          sudo apt-get install -y mono-devel
-          curl -Lo /tmp/choco.tar.gz https://github.com/chocolatey/choco/releases/latest/download/chocolatey.tar.gz
-          sudo tar -xzf /tmp/choco.tar.gz -C /opt
-          sudo ln -sf /opt/chocolatey/choco /usr/local/bin/choco
+          sudo apt-get install -y mono-devel wget
+          mkdir -p /opt/chocolatey
+          wget -q -O - "https://github.com/chocolatey/choco/releases/download/${CHOCOLATEY_VERSION}/chocolatey.v${CHOCOLATEY_VERSION}.tar.gz" | tar -xz -C "/opt/chocolatey"
+          echo '#!/bin/bash' | sudo tee /usr/local/bin/choco
+          echo 'mono /opt/chocolatey/choco.exe "$@"' | sudo tee -a /usr/local/bin/choco
+          sudo chmod +x /usr/local/bin/choco
           choco --version
+        env:
+          CHOCOLATEY_VERSION: 2.5.1
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -56,6 +60,7 @@ jobs:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
           DISCORD_WEBHOOK_ID: ${{ secrets.DISCORD_WEBHOOK_ID }}
           DISCORD_WEBHOOK_TOKEN: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
 
