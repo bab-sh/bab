@@ -46,11 +46,18 @@ func Execute() {
 		os.Exit(1)
 	}
 
+	commandName := os.Args[1]
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == commandName || containsString(cmd.Aliases, commandName) {
+			log.Debug("Command error occurred", "command", commandName)
+			os.Exit(1)
+		}
+	}
+
 	checkVerboseFlag()
 
-	taskName := os.Args[1]
-	log.Debug("No command matched, attempting to execute as task", "arg", taskName)
-	if err := executeTask(taskName); err != nil {
+	log.Debug("No command matched, attempting to execute as task", "arg", commandName)
+	if err := executeTask(commandName); err != nil {
 		os.Exit(1)
 	}
 	log.Debug("Task executed successfully")
@@ -64,6 +71,15 @@ func checkVerboseFlag() {
 			break
 		}
 	}
+}
+
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 func executeTask(taskName string) error {
