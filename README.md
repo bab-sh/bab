@@ -25,7 +25,36 @@ ITS PRE PRE ALPHA DO NOT USE IT FRFR
 
 ## Installation
 
-### Homebrew (macOS/Linux)
+### Quick Install (Recommended)
+
+One line install script for all platforms
+
+#### macOS / Linux
+
+```bash
+# Install latest version
+curl -sSfL https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh
+
+# Install specific version
+curl -sSfL https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh -s v1.0.0
+
+# Using wget
+wget -qO- https://raw.githubusercontent.com/bab-sh/bab/main/install.sh | sh
+```
+
+#### Windows (PowerShell)
+
+```powershell
+# Install latest version
+iwr -useb https://raw.githubusercontent.com/bab-sh/bab/main/install.ps1 | iex
+
+# Install specific version
+$version="v1.0.0"; iwr -useb https://raw.githubusercontent.com/bab-sh/bab/main/install.ps1 | iex
+```
+
+### Package Managers
+
+#### Homebrew (macOS/Linux)
 
 ```bash
 # Tap the repository

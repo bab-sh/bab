@@ -20,7 +20,6 @@ go.work.sum
 
 # Build artifacts
 dist/
-bin/
 build/
 *.tar.gz
 *.zip
@@ -47,3 +46,7 @@ bab.bat
 /docs/vitepress/.vitepress/cache
 .bab/
 completions/
+
+Babfile
+Babfile.*
+!Babfile.example
