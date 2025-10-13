@@ -12,23 +12,40 @@ usage() {
 $this: download ${PROJECT_NAME} binary from GitHub releases
 
 Usage: $this [-b bindir] [-d] [tag]
-  -b sets bindir or installation directory, Defaults to ./bin
+  -b sets bindir or installation directory, Defaults to ~/.local/bin
   -d turns on debug logging
   [tag] is a tag from https://github.com/${OWNER}/${REPO}/releases
         If tag is missing, then the latest will be used.
 
 Examples:
+  # Install to ~/.local/bin (default, no sudo required)
   curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh
-  curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh -s -- -b /usr/local/bin v1.0.0
-  wget -qO- https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh
-  curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh -s -- -b ~/.local/bin
+
+  # Install to /usr/local/bin (system-wide, requires sudo)
+  curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sudo sh -s -- -b /usr/local/bin
+
+  # Install specific version
+  curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh -s -- v0.0.7
+
+  # Install to custom directory
+  curl -sSfL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/install.sh | sh -s -- -b /custom/path
 
 EOF
   exit 2
 }
 
+get_default_bindir() {
+  if [ -d "$HOME/.local/bin" ]; then
+    echo "$HOME/.local/bin"
+  elif [ -w "/usr/local/bin" ] 2>/dev/null; then
+    echo "/usr/local/bin"
+  else
+    echo "$HOME/.local/bin"
+  fi
+}
+
 parse_args() {
-  BINDIR=${BINDIR:-./bin}
+  BINDIR=${BINDIR:-$(get_default_bindir)}
   while getopts "b:dh?x" arg; do
     case "$arg" in
       b) BINDIR="$OPTARG" ;;
@@ -39,6 +56,13 @@ parse_args() {
   done
   shift $((OPTIND - 1))
   TAG=$1
+}
+
+check_path() {
+  case ":${PATH}:" in
+    *":${BINDIR}:"*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 execute() {
@@ -58,6 +82,26 @@ execute() {
     log_info "installed ${BINDIR}/${binexe}"
   done
   rm -rf "${tmpdir}"
+
+  if ! check_path; then
+    log_info ""
+    log_info "==============================================="
+    log_info "${BINDIR} is not in your PATH."
+    log_info "Add it to your PATH by running one of these:"
+    log_info ""
+    if [ -f "$HOME/.bashrc" ]; then
+      log_info "  echo 'export PATH=\"${BINDIR}:\$PATH\"' >> ~/.bashrc"
+      log_info "  source ~/.bashrc"
+    fi
+    if [ -f "$HOME/.zshrc" ]; then
+      log_info "  echo 'export PATH=\"${BINDIR}:\$PATH\"' >> ~/.zshrc"
+      log_info "  source ~/.zshrc"
+    fi
+    if [ -f "$HOME/.config/fish/config.fish" ]; then
+      log_info "  fish_add_path ${BINDIR}"
+    fi
+    log_info "==============================================="
+  fi
 }
 
 is_command() {
@@ -340,7 +384,7 @@ adjust_arch
 
 log_info "found version: ${VERSION} for ${TAG}/${OS}/${ARCH}"
 
-NAME=${PROJECT_NAME}_${TAG}_${ADJUSTED_OS}_${ADJUSTED_ARCH}
+NAME=${PROJECT_NAME}_${VERSION}_${ADJUSTED_OS}_${ADJUSTED_ARCH}
 TARBALL=${NAME}.${FORMAT}
 TARBALL_URL=https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${TARBALL}
 CHECKSUM=checksums.txt

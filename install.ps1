@@ -82,7 +82,8 @@ Write-Host "`nInstalling $BinaryName $Version" -ForegroundColor Green
 $arch = Get-Architecture
 $os = "Windows"
 
-$fileName = "${BinaryName}_${Version}_${os}_${arch}.zip"
+$versionNumber = $Version -replace '^v', ''
+$fileName = "${BinaryName}_${versionNumber}_${os}_${arch}.zip"
 $downloadUrl = "https://github.com/$Owner/$Repo/releases/download/$Version/$fileName"
 $checksumUrl = "https://github.com/$Owner/$Repo/releases/download/$Version/checksums.txt"
 
