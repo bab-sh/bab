@@ -1,4 +1,3 @@
-// Package main is the entry point for the bab task runner.
 package main
 
 import (
@@ -9,25 +8,11 @@ import (
 )
 
 func main() {
-	logger := log.NewWithOptions(os.Stderr, log.Options{
+	log.SetDefault(log.NewWithOptions(os.Stderr, log.Options{
 		ReportCaller:    false,
 		ReportTimestamp: false,
-		Level:           log.InfoLevel,
-	})
+		Level:           log.InfoLevel, // Default to Info, verbose flag will set to Debug
+	}))
 
-	if os.Getenv("NO_COLOR") != "" {
-		styles := log.DefaultStyles()
-		for i := range styles.Levels {
-			styles.Levels[i] = styles.Levels[i].UnsetBackground().UnsetForeground().UnsetBold()
-		}
-		styles.Key = styles.Key.UnsetForeground()
-		styles.Value = styles.Value.UnsetForeground()
-		logger.SetStyles(styles)
-	}
-
-	log.SetDefault(logger)
-
-	if err := cmd.Execute(); err != nil {
-		log.Fatal("Error", "err", err)
-	}
+	cmd.Execute()
 }
