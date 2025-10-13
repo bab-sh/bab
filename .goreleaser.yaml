@@ -39,7 +39,7 @@ builds:
       - -X github.com/bab-sh/bab/internal/version.Version={{.Version}}
       - -X github.com/bab-sh/bab/internal/version.Commit={{.FullCommit}}
       - -X github.com/bab-sh/bab/internal/version.Date={{.Date}}
-      - -X github.com/bab-sh/bab/internal/version.BuiltBy=goreleaser
+      - -X github.com/bab-sh/bab/internal/version.BuiltBy=bab-sh
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 universal_binaries:
