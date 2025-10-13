@@ -335,7 +335,7 @@ chocolateys:
 
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
-    skip_publish: false
+    skip_publish: true
 
     goamd64: v1
 
