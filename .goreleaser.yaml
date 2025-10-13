@@ -309,7 +309,7 @@ chocolateys:
   - name: bab
 
     owners: bab-sh
-
+    icon_url: https://avatars.githubusercontent.com/u/191529825
     title: Bab - A Simple Task Runner
     authors: Sebastian Stepper
     project_url: https://bab.sh
@@ -335,8 +335,6 @@ chocolateys:
     skip_publish: false
 
     release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
-
-    url_template: "https://github.com/bab-sh/bab/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
     ids:
       - default
