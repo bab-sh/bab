@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   srcDir: '../',
   title: "Bab",
-  description: "Zero dependencies. Cross-platform task runner for your projects.",
+  description: "A modern task runner from simple to scaled",
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],

@@ -4,7 +4,7 @@
 
 <h1>Bab</h1>
 
-**A modern task runner for developers who value simplicity**
+**A modern task runner from simple to scaled**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/bab-sh/bab)](https://go.dev/)
