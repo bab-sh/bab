@@ -25,13 +25,54 @@ ITS PRE PRE ALPHA DO NOT USE IT FRFR
 
 ## Installation
 
-### Homebrew Cask (macOS)
+### Homebrew (macOS/Linux)
 
 ```bash
+# Tap the repository
 brew tap bab-sh/tap
-```
-```bash
+
+# Install as formula
+brew install bab
+
+# Or install as cask (recommended)
 brew install --cask bab
+```
+
+### Scoop (Windows)
+
+```bash
+scoop bucket add bab-sh https://github.com/bab-sh/scoop-bucket
+scoop install bab
+```
+
+### Snapcraft (Linux)
+
+```bash
+snap install bab-sh
+```
+
+### Linux Packages
+
+```bash
+# Debian/Ubuntu (.deb)
+# Download from https://github.com/bab-sh/bab/releases/latest
+sudo dpkg -i bab_*_amd64.deb
+
+# Fedora/RHEL (.rpm)
+# Download from https://github.com/bab-sh/bab/releases/latest
+sudo rpm -i bab_*.x86_64.rpm
+
+# Alpine (.apk)
+# Download from https://github.com/bab-sh/bab/releases/latest
+sudo apk add --allow-untrusted bab_*.apk
+
+# Arch Linux (.pkg.tar.zst)
+# Download from https://github.com/bab-sh/bab/releases/latest
+sudo pacman -U bab_*.pkg.tar.zst
+
+# Or use AUR
+yay -S bab-bin       # Pre-built binary
+yay -S bab           # Build from source
 ```
 
 ### Build from Source
@@ -78,16 +119,6 @@ bab setup              # Run setup task
 bab dev:start          # Run nested task
 ```
 
-### 4. (Optional) Compile to standalone scripts
-
-```bash
-bab compile            # Generate bab.sh and bab.bat
-
-# Now distribute zero-dependency scripts
-./bab.sh setup         # Unix/Linux/macOS
-bab.bat setup          # Windows
-```
-
 ## 📋 Commands
 
 ```bash
@@ -103,11 +134,6 @@ bab dev:start          # Run nested task
 bab <task> --dry-run   # Show what would run
 bab <task> --verbose   # Verbose output
 bab --file custom.yaml <task>  # Use custom Babfile
-
-# Compile to standalone scripts
-bab compile            # Generate bab.sh and bab.bat
-bab compile -o dist    # Output to custom directory
-bab compile --no-color # Disable colors in scripts
 ```
 
 ## 📜 License
