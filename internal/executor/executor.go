@@ -74,3 +74,34 @@ func executeCommand(ctx context.Context, shell, shellArg, command string) error 
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
 }
+
+func DryRun(ctx context.Context, task *parser.Task) error {
+	if task == nil {
+		log.Debug("DryRun called with nil task")
+		return fmt.Errorf("task cannot be nil")
+	}
+
+	log.Debug("Starting dry-run for task", "task", task.Name, "command-count", len(task.Commands))
+
+	if len(task.Commands) == 0 {
+		log.Debug("Task has no commands", "task", task.Name)
+		return fmt.Errorf("task %q has no commands to execute", task.Name)
+	}
+
+	if task.Description != "" {
+		log.Debug("Task description", "desc", task.Description)
+	}
+
+	for i, command := range task.Commands {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("dry-run cancelled: %w", ctx.Err())
+		default:
+		}
+
+		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", i+1, len(task.Commands)), "cmd", command)
+	}
+
+	log.Debug("Dry-run completed", "task", task.Name)
+	return nil
+}

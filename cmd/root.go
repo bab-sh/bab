@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/finder"
@@ -15,6 +16,7 @@ import (
 
 var (
 	verbose bool
+	dryRun  bool
 
 	rootCmd = &cobra.Command{
 		Use:           "bab",
@@ -31,10 +33,7 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-}
-
-func Execute() error {
-	return ExecuteContext(context.Background())
+	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show commands without executing")
 }
 
 func ExecuteContext(ctx context.Context) error {
@@ -50,32 +49,41 @@ func ExecuteContext(ctx context.Context) error {
 		return fmt.Errorf("no command or task specified")
 	}
 
-	commandName := os.Args[1]
-	for _, cmd := range rootCmd.Commands() {
-		if cmd.Name() == commandName || containsString(cmd.Aliases, commandName) {
-			log.Debug("Command error occurred", "command", commandName)
-			return fmt.Errorf("command %q failed", commandName)
+	if err := rootCmd.ParseFlags(os.Args[1:]); err != nil {
+		log.Error("Failed to parse flags", "error", err)
+		return err
+	}
+
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	var taskName string
+	for _, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "-") {
+			taskName = arg
+			break
 		}
 	}
 
-	checkVerboseFlag()
+	if taskName == "" {
+		log.Error("No task specified")
+		return fmt.Errorf("no task specified")
+	}
 
-	log.Debug("No command matched, attempting to execute as task", "arg", commandName)
-	if err := executeTask(ctx, commandName); err != nil {
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == taskName || containsString(cmd.Aliases, taskName) {
+			log.Debug("Command error occurred", "command", taskName)
+			return fmt.Errorf("command %q failed", taskName)
+		}
+	}
+
+	log.Debug("No command matched, attempting to execute as task", "arg", taskName)
+	if err := executeTask(ctx, taskName); err != nil {
 		return err
 	}
 	log.Debug("Task executed successfully")
 	return nil
-}
-
-func checkVerboseFlag() {
-	for _, arg := range os.Args {
-		if arg == "-v" || arg == "--verbose" {
-			log.SetLevel(log.DebugLevel)
-			verbose = true
-			break
-		}
-	}
 }
 
 func containsString(slice []string, item string) bool {
@@ -88,7 +96,7 @@ func containsString(slice []string, item string) bool {
 }
 
 func executeTask(ctx context.Context, taskName string) error {
-	log.Debug("Executing task", "name", taskName)
+	log.Debug("Executing task", "name", taskName, "dry-run", dryRun)
 
 	babfilePath, err := finder.FindBabfile()
 	if err != nil {
@@ -110,6 +118,16 @@ func executeTask(ctx context.Context, taskName string) error {
 		return fmt.Errorf("task %q not found", taskName)
 	}
 	log.Debug("Found task", "name", taskName, "commands", len(task.Commands))
+
+	if dryRun {
+		log.Info("Running task", "name", taskName, "dry-run", true)
+		if err := executor.DryRun(ctx, task); err != nil {
+			log.Error("Task dry-run failed", "name", taskName, "error", err)
+			return err
+		}
+		log.Info("Task dry-run completed", "name", taskName)
+		return nil
+	}
 
 	log.Info("Executing task", "name", taskName)
 	if err := executor.Execute(ctx, task); err != nil {
