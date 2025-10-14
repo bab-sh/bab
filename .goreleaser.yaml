@@ -317,7 +317,7 @@ chocolateys:
     project_url: https://bab.sh
     project_source_url: https://github.com/bab-sh/bab
     package_source_url: https://github.com/bab-sh/bab
-    icon_url: https://i.ibb.co/SXSxwHsz/bab.png
+    icon_url: https://cdn.bab.sh/l/logo
     license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
     docs_url: https://github.com/bab-sh/bab#readme
     bug_tracker_url: https://github.com/bab-sh/bab/issues
