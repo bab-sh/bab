@@ -28,9 +28,4 @@ logs
 .env.local
 .env.*.local
 
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-README.md
-DOCKER_README.md
+docker
