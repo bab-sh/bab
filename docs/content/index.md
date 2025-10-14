@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: "Bab"
-  text: "A modern task runner"
-  tagline: from simple to scaled.
+  text: "Custom commands for every project"
+  tagline: don't make it, bab it
   actions:
     - theme: brand
       text: Get Started
