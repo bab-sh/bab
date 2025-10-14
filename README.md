@@ -11,7 +11,7 @@ Custom commands for every project
 [![Release](https://img.shields.io/github/v/release/bab-sh/bab)](https://github.com/bab-sh/bab/releases)
 [![Status](https://img.shields.io/badge/Status-Pre--Alpha-red.svg)](https://github.com/bab-sh/bab)
 
-[Website](https://bab.sh) • [Documentation](https://github.com/bab-sh/bab#readme) • [Installation](#installation) • [Discord](https://discord.bab.sh) • [Contributing](#contributing)
+[Website](https://bab.sh) • [Documentation](https://docs.bab.sh) • [Installation](#installation) • [Discord](https://discord.bab.sh) • [Contributing](#contributing)
 
 </div>
 
