@@ -197,8 +197,6 @@ Benefits:
 - **CI/CD**: Use in build pipelines
 - **Portability**: Works anywhere shell/batch runs
 
-See the [Compile Guide](/compile) for more details.
-
 ## Cross-Platform Support
 
 Bab works seamlessly across platforms:
@@ -352,6 +350,5 @@ bab build --verbose  # Better logs in CI
 
 ## Next Steps
 
-- Learn about [Script Compilation](/compile) in detail
 - Check the [Syntax Guide](/syntax) for advanced patterns
 - See [Getting Started](/get-started) for quick setup

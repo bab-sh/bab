@@ -317,5 +317,4 @@ clean:
 ## Next Steps
 
 - Learn about all available [Features](/features)
-- See how to [Compile to Scripts](/compile)
 - Check out the [Getting Started](/get-started) guide

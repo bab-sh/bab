@@ -2,7 +2,6 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  srcDir: '../',
   title: "Bab",
   description: "A modern task runner from simple to scaled",
   head: [
@@ -29,8 +28,7 @@ export default defineConfig({
         text: 'Guide',
         items: [
           { text: 'Babfile Syntax', link: '/syntax' },
-          { text: 'Features', link: '/features' },
-          { text: 'Script Compilation', link: '/compile' }
+          { text: 'Features', link: '/features' }
         ]
       }
     ],

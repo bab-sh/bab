@@ -50,3 +50,4 @@ completions/
 Babfile
 Babfile.*
 !Babfile.example
+/docs/node_modules

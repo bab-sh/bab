@@ -120,7 +120,6 @@ bab.bat setup          # Windows
 
 - Learn about [Babfile Syntax](/syntax) to create more complex tasks
 - Explore all [Features](/features) available in bab
-- Deep dive into [Script Compilation](/compile) for zero-dependency distribution
 
 ## Need Help?
 
