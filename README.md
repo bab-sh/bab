@@ -4,7 +4,7 @@
 
 <h1>Bab</h1>
 
-**Custom commands for every project**
+Custom commands for every project
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/bab-sh/bab)](https://go.dev/)
