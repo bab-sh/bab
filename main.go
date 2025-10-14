@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/bab-sh/bab/cmd"
 	"github.com/charmbracelet/log"
@@ -14,5 +17,20 @@ func main() {
 		Level:           log.InfoLevel,
 	}))
 
-	cmd.Execute()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		log.Info("Received interrupt signal, shutting down gracefully...")
+		cancel()
+	}()
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		log.Error("Execution failed", "error", err)
+		os.Exit(1)
+	}
 }
