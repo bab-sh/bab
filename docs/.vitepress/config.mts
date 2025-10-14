@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  srcDir: './content',
   title: "Bab",
   description: "A modern task runner from simple to scaled",
   head: [
@@ -43,7 +44,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/:path',
+      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/content/:path',
       text: 'Edit this page on GitHub'
     },
 
