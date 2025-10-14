@@ -33,34 +33,39 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 }
 
-func Execute() {
+func Execute() error {
+	return ExecuteContext(context.Background())
+}
+
+func ExecuteContext(ctx context.Context) error {
 	log.Debug("Starting bab execution")
 
-	if rootCmd.Execute() == nil {
+	if err := rootCmd.Execute(); err == nil {
 		log.Debug("Command executed successfully")
-		return
+		return nil
 	}
 
 	if len(os.Args) < 2 {
 		log.Error("No command or task specified")
-		os.Exit(1)
+		return fmt.Errorf("no command or task specified")
 	}
 
 	commandName := os.Args[1]
 	for _, cmd := range rootCmd.Commands() {
 		if cmd.Name() == commandName || containsString(cmd.Aliases, commandName) {
 			log.Debug("Command error occurred", "command", commandName)
-			os.Exit(1)
+			return fmt.Errorf("command %q failed", commandName)
 		}
 	}
 
 	checkVerboseFlag()
 
 	log.Debug("No command matched, attempting to execute as task", "arg", commandName)
-	if err := executeTask(commandName); err != nil {
-		os.Exit(1)
+	if err := executeTask(ctx, commandName); err != nil {
+		return err
 	}
 	log.Debug("Task executed successfully")
+	return nil
 }
 
 func checkVerboseFlag() {
@@ -82,7 +87,7 @@ func containsString(slice []string, item string) bool {
 	return false
 }
 
-func executeTask(taskName string) error {
+func executeTask(ctx context.Context, taskName string) error {
 	log.Debug("Executing task", "name", taskName)
 
 	babfilePath, err := finder.FindBabfile()
@@ -107,7 +112,7 @@ func executeTask(taskName string) error {
 	log.Debug("Found task", "name", taskName, "commands", len(task.Commands))
 
 	log.Info("Executing task", "name", taskName)
-	if err := executor.Execute(context.Background(), task); err != nil {
+	if err := executor.Execute(ctx, task); err != nil {
 		log.Error("Task failed", "name", taskName, "error", err)
 		return err
 	}
