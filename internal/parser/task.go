@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -37,11 +36,11 @@ func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) 
 	task := &Task{Name: name}
 
 	if desc, ok := taskMap[keyDesc]; ok {
-		if descStr, ok := desc.(string); ok {
-			task.Description = descStr
-		} else {
-			task.Description = fmt.Sprint(desc)
+		descStr, err := safeStringCast(desc)
+		if err != nil {
+			return nil, fmt.Errorf("invalid description for task %q: %w", name, err)
 		}
+		task.Description = descStr
 		log.Debug("Task has description", "name", name, "desc", task.Description)
 	}
 
@@ -60,35 +59,40 @@ func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
 		return nil, fmt.Errorf("task %q has nil 'run' command", taskName)
 	}
 
-	switch v := runCmd.(type) {
-	case string:
-		if strings.TrimSpace(v) == "" {
-			return nil, fmt.Errorf("task %q has empty 'run' command", taskName)
+	if cmdStr, ok := runCmd.(string); ok {
+		if err := validateCommand(cmdStr); err != nil {
+			return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
 		}
 		log.Debug("Task has single command", "name", taskName)
-		return []string{v}, nil
+		return []string{cmdStr}, nil
+	}
 
-	case []interface{}:
-		if len(v) == 0 {
+	if cmdSlice, ok := safeSliceCast(runCmd); ok {
+		if len(cmdSlice) == 0 {
 			return nil, fmt.Errorf("task %q has empty 'run' command list", taskName)
 		}
-		commands := make([]string, 0, len(v))
-		for i, cmd := range v {
-			cmdStr := fmt.Sprint(cmd)
-			if strings.TrimSpace(cmdStr) == "" {
-				return nil, fmt.Errorf("task %q has empty command at index %d", taskName, i)
+		commands := make([]string, 0, len(cmdSlice))
+		for i, cmd := range cmdSlice {
+			cmdStr, err := safeStringCast(cmd)
+			if err != nil {
+				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
+			}
+			if err := validateCommand(cmdStr); err != nil {
+				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
 			}
 			commands = append(commands, cmdStr)
 		}
-		log.Debug("Task has multiple commands", "name", taskName, "count", len(v))
+		log.Debug("Task has multiple commands", "name", taskName, "count", len(cmdSlice))
 		return commands, nil
-
-	default:
-		cmdStr := fmt.Sprint(runCmd)
-		if strings.TrimSpace(cmdStr) == "" {
-			return nil, fmt.Errorf("task %q has empty 'run' command", taskName)
-		}
-		log.Debug("Task has command of unknown type, converted to string", "name", taskName)
-		return []string{cmdStr}, nil
 	}
+
+	cmdStr, err := safeStringCast(runCmd)
+	if err != nil {
+		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
+	}
+	if err := validateCommand(cmdStr); err != nil {
+		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
+	}
+	log.Debug("Task has command of unknown type, converted to string", "name", taskName)
+	return []string{cmdStr}, nil
 }

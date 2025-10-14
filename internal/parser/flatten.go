@@ -11,7 +11,7 @@ func flatten(data map[string]interface{}, prefix string, tasks TaskMap) error {
 		taskName := buildTaskName(prefix, key)
 		log.Debug("Processing task node", "name", taskName)
 
-		taskMap, ok := val.(map[string]interface{})
+		taskMap, ok := safeMapCast(val)
 		if !ok {
 			log.Debug("Expected map but got different type", "name", taskName, "type", fmt.Sprintf("%T", val))
 			return fmt.Errorf("task %q must be a map, got %T", taskName, val)
