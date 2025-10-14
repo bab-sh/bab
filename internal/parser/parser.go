@@ -12,8 +12,8 @@ import (
 func Parse(path string) (TaskMap, error) {
 	log.Debug("Starting to parse Babfile", "path", path)
 
-	if path == "" {
-		return nil, fmt.Errorf("babfile path cannot be empty")
+	if err := validatePath(path); err != nil {
+		return nil, fmt.Errorf("invalid babfile path: %w", err)
 	}
 
 	cleanPath := filepath.Clean(path)
