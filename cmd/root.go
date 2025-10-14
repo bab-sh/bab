@@ -18,7 +18,7 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:           "bab",
-		Short:         "A modern task runner from simple to scaled",
+		Short:         "Custom commands for every project",
 		Version:       version.Version,
 		SilenceErrors: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

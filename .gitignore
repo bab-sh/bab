@@ -51,3 +51,4 @@ Babfile
 Babfile.*
 !Babfile.example
 /docs/node_modules
+/docs/.vitepress/cache

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to **Bab** - a modern task runner from simple to scaled!
+Welcome to **Bab** - custom commands for every project!
 
 ## What is Bab?
 

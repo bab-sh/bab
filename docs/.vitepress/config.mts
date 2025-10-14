@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   srcDir: './content',
   title: "Bab",
-  description: "A modern task runner from simple to scaled",
+  description: "Custom commands for every project",
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
