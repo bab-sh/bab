@@ -43,7 +43,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/vitepress/:path',
+      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/:path',
       text: 'Edit this page on GitHub'
     },
 
