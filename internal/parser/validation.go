@@ -15,16 +15,6 @@ func validatePath(path string) error {
 	return nil
 }
 
-func validateTaskName(name string) error {
-	if name == "" {
-		return fmt.Errorf("task name cannot be empty")
-	}
-	if strings.TrimSpace(name) == "" {
-		return fmt.Errorf("task name cannot be only whitespace")
-	}
-	return nil
-}
-
 func validateCommand(command string) error {
 	if command == "" {
 		return fmt.Errorf("command cannot be empty")
