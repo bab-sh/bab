@@ -11,11 +11,18 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+const (
+	windowsShell = "cmd"
+	windowsArg   = "/C"
+	unixShell    = "sh"
+	unixArg      = "-c"
+)
+
 func getShellCommand() (string, string) {
 	if runtime.GOOS == "windows" {
-		return "cmd", "/C"
+		return windowsShell, windowsArg
 	}
-	return "sh", "-c"
+	return unixShell, unixArg
 }
 
 func Execute(ctx context.Context, task *parser.Task) error {
@@ -35,11 +42,17 @@ func Execute(ctx context.Context, task *parser.Task) error {
 	log.Debug("Using shell", "shell", shell, "arg", shellArg, "platform", runtime.GOOS)
 
 	for i, command := range task.Commands {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("task execution cancelled: %w", ctx.Err())
+		default:
+		}
+
 		log.Debug("Executing command", "task", task.Name, "index", i+1, "total", len(task.Commands), "command", command)
 
-		if command == "" {
-			log.Debug("Empty command detected", "task", task.Name, "index", i+1)
-			return fmt.Errorf("task %q has empty command at index %d", task.Name, i+1)
+		if err := validateCommand(command); err != nil {
+			log.Debug("Invalid command detected", "task", task.Name, "index", i+1, "error", err)
+			return fmt.Errorf("task %q has invalid command at index %d: %w", task.Name, i+1, err)
 		}
 
 		if err := executeCommand(ctx, shell, shellArg, command); err != nil {
