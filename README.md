@@ -75,9 +75,10 @@ build:
 ### 3. Run Your Tasks
 
 ```bash
-bab               # List all available tasks in the handy fuzzy finder
-bab setup         # Run the setup task
-bab dev           # Start development server
+bab list             # List all available tasks
+bab setup            # Run the setup task
+bab dev              # Start development server
+bab build --dry-run  # Preview build task without executing
 ```
 
 ---
@@ -181,7 +182,7 @@ sudo pacman -U bab_*.pkg.tar.zst
 
 ### Build from Source
 
-Requires Go 1.21 or later:
+Requires Go 1.25 or later:
 
 ```bash
 # Clone the repository
@@ -295,13 +296,19 @@ sudo pacman -U bab_*.pkg.tar.zst
 
 ```bash
 # List all available tasks
-bab
+bab list
 
 # Run a task
 bab <task-name>
 
 # Run nested tasks
 bab <parent>:<child>
+
+# Preview task without executing
+bab <task-name> --dry-run
+
+# Run with detailed logs
+bab <task-name> --verbose
 
 # Get help
 bab --help
@@ -347,17 +354,13 @@ quick-test:
 
 ```bash
 # Basic commands
-bab                              # List all tasks
+bab list                         # List all available tasks
 bab <task>                       # Run a task
 bab <parent>:<child>             # Run nested task
 
-# Options
+# Task execution options
 bab <task> --dry-run             # Show what would run without executing
-bab <task> --verbose             # Show detailed output
-bab --file custom.yaml <task>    # Use a custom Babfile
-bab completion bash              # Generate bash completion script
-bab completion zsh               # Generate zsh completion script
-bab completion fish              # Generate fish completion script
+bab <task> --verbose             # Show detailed execution logs
 
 # Help and information
 bab --help                       # Show help information
@@ -370,14 +373,20 @@ bab --version                    # Show version information
 
 Bab is under active development. Some completed features may be refined or reimplemented as the project matures.
 
-- [x] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
-- [x] **Task History Tracking** - Per-project execution history with status and duration
-- [x] **Nested Task Support** - Organize tasks hierarchically with colon notation
+
+- [x] **Basic Task Execution** - Execute tasks defined in Babfile with shell commands
+- [x] **Nested Task Support** - Organize tasks hierarchically with colon notation (e.g., `dev:start`)
 - [x] **Cross-Platform Execution** - Native shell execution on Linux, macOS, and Windows
-- [x] **Shell Completions** - Tab completion for bash, zsh, and fish shells
 - [x] **Flexible Babfile Formats** - Support for Babfile, Babfile.yaml, and Babfile.yml
-- [x] **Dry-Run Mode** - Preview commands without executing them
-- [x] **Custom File Paths** - Specify alternative Babfile locations
+- [x] **Dry-Run Mode** - Preview commands without executing them (`--dry-run`)
+- [x] **Verbose Logging** - Detailed execution logs for debugging (`--verbose`)
+- [x] **Task Listing** - Display all available tasks in a colorized tree structure (`bab list`)
+- [x] **Graceful Shutdown** - Proper handling of interrupts and termination signals
+- [x] **Multi-Command Tasks** - Support for tasks with single or multiple commands
+- [ ] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
+- [ ] **Task History Tracking** - Per-project execution history with status and duration
+- [ ] **Shell Completions** - Tab completion for bash, zsh, and fish shells
+- [ ] **Custom File Paths** - Specify alternative Babfile locations with `--file` flag
 - [ ] **Babfile Schema Validation** - Structured schema for validating Babfile syntax and configuration
 - [ ] **Advanced Multi-Babfile Support** - Import and compose multiple Babfiles for complex project structures
 - [ ] **Platform-Specific Tasks** - Define tasks that run only on specific operating systems (Windows, Linux, macOS)
@@ -387,7 +396,7 @@ Bab is under active development. Some completed features may be refined or reimp
 - [ ] **Module System** - Share and reuse Babfiles across projects as importable modules
 - [ ] **Performance Profiling** - Built-in performance monitoring and profiling for task execution
 - [ ] **Interactive Babfile Generator** - Create and modify Babfiles through interactive command-line forms
-- [ ] **Enhanced Output Formatting** - Improved colored output with better visual hierarchy
+- [ ] **Enhanced Output Formatting** - Rich, context-aware colored output with better visual hierarchy
 
 See our [GitHub Issues](https://github.com/bab-sh/bab/issues) for the complete list of planned features and to suggest new ideas.
 
