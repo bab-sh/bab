@@ -385,7 +385,6 @@ Bab is under active development. Some completed features may be refined or reimp
 - [x] **Multi-Command Tasks** - Support for tasks with single or multiple commands
 - [ ] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
 - [ ] **Task History Tracking** - Per-project execution history with status and duration
-- [ ] **Shell Completions** - Tab completion for bash, zsh, and fish shells
 - [ ] **Custom File Paths** - Specify alternative Babfile locations with `--file` flag
 - [ ] **Babfile Schema Validation** - Structured schema for validating Babfile syntax and configuration
 - [ ] **Advanced Multi-Babfile Support** - Import and compose multiple Babfiles for complex project structures
