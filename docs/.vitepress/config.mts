@@ -2,9 +2,9 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  srcDir: '../',
+  srcDir: './content',
   title: "Bab",
-  description: "A modern task runner from simple to scaled",
+  description: "Custom commands for every project",
   head: [
     ['link', { rel: 'icon', href: '/favicon.ico' }]
   ],
@@ -29,8 +29,7 @@ export default defineConfig({
         text: 'Guide',
         items: [
           { text: 'Babfile Syntax', link: '/syntax' },
-          { text: 'Features', link: '/features' },
-          { text: 'Script Compilation', link: '/compile' }
+          { text: 'Features', link: '/features' }
         ]
       }
     ],
@@ -45,7 +44,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/vitepress/:path',
+      pattern: 'https://github.com/bab-sh/bab/edit/main/docs/content/:path',
       text: 'Edit this page on GitHub'
     },
 

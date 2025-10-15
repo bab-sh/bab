@@ -1,123 +1,140 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/bab-sh/bab/internal/executor"
+	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/parser"
-	"github.com/bab-sh/bab/internal/registry"
-	"github.com/bab-sh/bab/internal/tui"
 	"github.com/bab-sh/bab/internal/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
 var (
-	babfile string
-	dryRun  bool
 	verbose bool
+	dryRun  bool
+
+	rootCmd = &cobra.Command{
+		Use:           "bab",
+		Short:         "Custom commands for every project",
+		Version:       version.Version,
+		SilenceErrors: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if verbose {
+				log.SetLevel(log.DebugLevel)
+			}
+		},
+	}
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "bab [task]",
-	Short: "A modern task runner from simple to scaled",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runRoot,
-}
-
-// Execute runs the root command.
-func Execute() error {
-	return rootCmd.Execute()
-}
-
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&babfile, "file", "f", "", "Path to Babfile (default: ./Babfile)")
-	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be executed without running")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose output")
-	rootCmd.Version = version.GetVersion()
-
-	rootCmd.AddCommand(newListCmd())
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show commands without executing")
 }
 
-func runRoot(_ *cobra.Command, args []string) error {
+func ExecuteContext(ctx context.Context) error {
+	log.Debug("Starting bab execution")
+
+	if err := rootCmd.Execute(); err == nil {
+		log.Debug("Command executed successfully")
+		return nil
+	}
+
+	if len(os.Args) < 2 {
+		log.Error("No command or task specified")
+		return fmt.Errorf("no command or task specified")
+	}
+
+	if err := rootCmd.ParseFlags(os.Args[1:]); err != nil {
+		log.Error("Failed to parse flags", "error", err)
+		return err
+	}
+
 	if verbose {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	reg, babfilePath, err := loadRegistry()
-	if err != nil {
-		return err
-	}
-
-	// Get project root (directory containing the Babfile)
-	projectRoot := filepath.Dir(babfilePath)
-
-	// If no task specified, launch interactive TUI
-	if len(args) == 0 {
-		return tui.Run(reg, projectRoot, dryRun, verbose)
-	}
-
-	// Execute the specified task directly
-	taskName := args[0]
-	task, err := reg.Get(taskName)
-	if err != nil {
-		log.Error("Task not found", "task", taskName)
-		log.Info("Run 'bab' to see available tasks")
-		log.Info("Run 'bab list' for a non-interactive list")
-		return err
-	}
-
-	exec := executor.New(
-		executor.WithDryRun(dryRun),
-		executor.WithVerbose(verbose),
-		executor.WithProjectRoot(projectRoot),
-	)
-
-	return exec.Execute(task)
-}
-
-func loadRegistry() (registry.Registry, string, error) {
-	if babfile == "" {
-		babfile = findBabfile()
-	}
-
-	if babfile == "" {
-		log.Error("No Babfile found in current directory")
-		log.Info("Looking for: Babfile, Babfile.yaml, Babfile.yml")
-		return nil, "", fmt.Errorf("no Babfile found")
-	}
-
-	// Get absolute path to the Babfile
-	absPath, err := filepath.Abs(babfile)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get absolute path: %w", err)
-	}
-
-	reg := registry.New()
-	p := parser.New(reg)
-
-	if err := p.ParseFile(absPath); err != nil {
-		log.Error("Failed to parse Babfile", "path", absPath, "error", err)
-		return nil, "", err
-	}
-
-	return reg, absPath, nil
-}
-
-func findBabfile() string {
-	candidates := []string{
-		"Babfile",
-		"Babfile.yaml",
-		"Babfile.yml",
-	}
-
-	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
+	var taskName string
+	for _, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "-") {
+			taskName = arg
+			break
 		}
 	}
 
-	return ""
+	if taskName == "" {
+		log.Error("No task specified")
+		return fmt.Errorf("no task specified")
+	}
+
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == taskName || containsString(cmd.Aliases, taskName) {
+			log.Debug("Command error occurred", "command", taskName)
+			return fmt.Errorf("command %q failed", taskName)
+		}
+	}
+
+	log.Debug("No command matched, attempting to execute as task", "arg", taskName)
+	if err := executeTask(ctx, taskName); err != nil {
+		return err
+	}
+	log.Debug("Task executed successfully")
+	return nil
+}
+
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+func executeTask(ctx context.Context, taskName string) error {
+	log.Debug("Executing task", "name", taskName, "dry-run", dryRun)
+
+	babfilePath, err := finder.FindBabfile()
+	if err != nil {
+		log.Error("Failed to locate Babfile", "error", err)
+		return err
+	}
+	log.Debug("Found Babfile", "path", babfilePath)
+
+	tasks, err := parser.Parse(babfilePath)
+	if err != nil {
+		log.Error("Failed to parse Babfile", "error", err)
+		return err
+	}
+	log.Debug("Parsed Babfile", "task-count", len(tasks))
+
+	task, exists := tasks[taskName]
+	if !exists {
+		log.Error("Task not found", "name", taskName)
+		return fmt.Errorf("task %q not found", taskName)
+	}
+	log.Debug("Found task", "name", taskName, "commands", len(task.Commands))
+
+	if dryRun {
+		log.Info("Running task", "name", taskName, "dry-run", true)
+		if err := executor.DryRun(ctx, task); err != nil {
+			log.Error("Task dry-run failed", "name", taskName, "error", err)
+			return err
+		}
+		log.Info("Task dry-run completed", "name", taskName)
+		return nil
+	}
+
+	log.Info("Executing task", "name", taskName)
+	if err := executor.Execute(ctx, task); err != nil {
+		log.Error("Task failed", "name", taskName, "error", err)
+		return err
+	}
+
+	log.Info("Task completed successfully", "name", taskName)
+	return nil
 }

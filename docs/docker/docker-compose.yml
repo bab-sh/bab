@@ -1,0 +1,9 @@
+services:
+  bab-docs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: bab-docs
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"

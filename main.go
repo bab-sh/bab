@@ -1,33 +1,39 @@
-// Package main is the entry point for the bab task runner.
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/bab-sh/bab/cmd"
 	"github.com/charmbracelet/log"
 )
 
 func main() {
-	logger := log.NewWithOptions(os.Stderr, log.Options{
+	log.SetDefault(log.NewWithOptions(os.Stderr, log.Options{
 		ReportCaller:    false,
 		ReportTimestamp: false,
 		Level:           log.InfoLevel,
-	})
+	}))
 
-	if os.Getenv("NO_COLOR") != "" {
-		styles := log.DefaultStyles()
-		for i := range styles.Levels {
-			styles.Levels[i] = styles.Levels[i].UnsetBackground().UnsetForeground().UnsetBold()
-		}
-		styles.Key = styles.Key.UnsetForeground()
-		styles.Value = styles.Value.UnsetForeground()
-		logger.SetStyles(styles)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		log.Info("Received interrupt signal, shutting down gracefully...")
+		cancel()
+	}()
+
+	exitCode := 0
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		log.Error("Execution failed", "error", err)
+		exitCode = 1
 	}
 
-	log.SetDefault(logger)
-
-	if err := cmd.Execute(); err != nil {
-		log.Fatal("Error", "err", err)
-	}
+	cancel()
+	os.Exit(exitCode)
 }

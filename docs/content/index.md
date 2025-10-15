@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: "Bab"
-  text: "Custom Commands for your Projects"
-  tagline: Zero dependencies. Cross-platform by design.
+  text: "Custom commands for every project"
+  tagline: don't make it, bab it
   actions:
     - theme: brand
       text: Get Started

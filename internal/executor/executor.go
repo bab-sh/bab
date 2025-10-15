@@ -1,190 +1,107 @@
-// Package executor provides functionality for executing tasks with configurable options.
 package executor
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"runtime"
-	"time"
 
-	baberrors "github.com/bab-sh/bab/internal/errors"
-	"github.com/bab-sh/bab/internal/history"
-	"github.com/bab-sh/bab/internal/registry"
+	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/log"
 )
 
-// Executor executes tasks with configurable options.
-type Executor struct {
-	dryRun         bool
-	verbose        bool
-	projectRoot    string
-	historyManager *history.Manager
-	ctx            context.Context
+const (
+	windowsShell = "cmd"
+	windowsArg   = "/C"
+	unixShell    = "sh"
+	unixArg      = "-c"
+)
+
+func getShellCommand() (string, string) {
+	if runtime.GOOS == "windows" {
+		return windowsShell, windowsArg
+	}
+	return unixShell, unixArg
 }
 
-// New creates a new Executor with the given options.
-func New(options ...Option) *Executor {
-	e := &Executor{
-		ctx: context.Background(),
-	}
-	for _, opt := range options {
-		opt(e)
-	}
-
-	if e.projectRoot != "" {
-		historyManager, err := history.NewManager(e.projectRoot)
-		if err != nil {
-			log.Debug("Failed to initialize history manager", "error", err)
-		} else {
-			e.historyManager = historyManager
-		}
-	}
-
-	return e
-}
-
-// Option is a functional option for configuring the Executor.
-type Option func(*Executor)
-
-// WithDryRun enables dry-run mode (shows commands without executing).
-func WithDryRun(dryRun bool) Option {
-	return func(e *Executor) {
-		e.dryRun = dryRun
-	}
-}
-
-// WithVerbose enables verbose output.
-func WithVerbose(verbose bool) Option {
-	return func(e *Executor) {
-		e.verbose = verbose
-	}
-}
-
-// WithProjectRoot sets the project root directory for the executor.
-func WithProjectRoot(projectRoot string) Option {
-	return func(e *Executor) {
-		e.projectRoot = projectRoot
-	}
-}
-
-// WithContext sets the context for the executor.
-func WithContext(ctx context.Context) Option {
-	return func(e *Executor) {
-		e.ctx = ctx
-	}
-}
-
-// Execute runs the given task.
-func (e *Executor) Execute(task *registry.Task) error {
+func Execute(ctx context.Context, task *parser.Task) error {
 	if task == nil {
-		return fmt.Errorf("cannot execute nil task")
+		log.Debug("Execute called with nil task")
+		return fmt.Errorf("task cannot be nil")
 	}
 
-	startTime := time.Now()
-	log.Info("▶ Running task", "name", task.Name)
+	log.Debug("Starting task execution", "task", task.Name, "command-count", len(task.Commands))
 
-	if task.Description != "" && e.verbose {
+	if len(task.Commands) == 0 {
+		log.Debug("Task has no commands", "task", task.Name)
+		return fmt.Errorf("task %q has no commands to execute", task.Name)
+	}
+
+	shell, shellArg := getShellCommand()
+	log.Debug("Using shell", "shell", shell, "arg", shellArg, "platform", runtime.GOOS)
+
+	for i, command := range task.Commands {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("task execution cancelled: %w", ctx.Err())
+		default:
+		}
+
+		log.Debug("Executing command", "task", task.Name, "index", i+1, "total", len(task.Commands), "command", command)
+
+		if err := validateCommand(command); err != nil {
+			log.Debug("Invalid command detected", "task", task.Name, "index", i+1, "error", err)
+			return fmt.Errorf("task %q has invalid command at index %d: %w", task.Name, i+1, err)
+		}
+
+		if err := executeCommand(ctx, shell, shellArg, command); err != nil {
+			log.Debug("Command failed", "task", task.Name, "index", i+1, "error", err)
+			return fmt.Errorf("command %d failed: %w", i+1, err)
+		}
+
+		log.Debug("Command completed successfully", "task", task.Name, "index", i+1)
+	}
+
+	log.Debug("Task execution completed", "task", task.Name)
+	return nil
+}
+
+func executeCommand(ctx context.Context, shell, shellArg, command string) error {
+	cmd := exec.CommandContext(ctx, shell, shellArg, command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
+}
+
+func DryRun(ctx context.Context, task *parser.Task) error {
+	if task == nil {
+		log.Debug("DryRun called with nil task")
+		return fmt.Errorf("task cannot be nil")
+	}
+
+	log.Debug("Starting dry-run for task", "task", task.Name, "command-count", len(task.Commands))
+
+	if len(task.Commands) == 0 {
+		log.Debug("Task has no commands", "task", task.Name)
+		return fmt.Errorf("task %q has no commands to execute", task.Name)
+	}
+
+	if task.Description != "" {
 		log.Debug("Task description", "desc", task.Description)
 	}
 
-	var execErr error
 	for i, command := range task.Commands {
-		if err := e.runCommand(command, i+1, len(task.Commands)); err != nil {
-			execErr = fmt.Errorf("command failed: %w", err)
-			break
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("dry-run cancelled: %w", ctx.Err())
+		default:
 		}
+
+		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", i+1, len(task.Commands)), "cmd", command)
 	}
 
-	// Record history entry
-	e.recordHistory(task, startTime, execErr)
-
-	if execErr != nil {
-		return execErr
-	}
-
-	log.Info("Task completed", "name", task.Name)
-
+	log.Debug("Dry-run completed", "task", task.Name)
 	return nil
-}
-
-func (e *Executor) recordHistory(task *registry.Task, startTime time.Time, execErr error) {
-	if e.historyManager == nil {
-		return
-	}
-
-	workDir, err := os.Getwd()
-	if err != nil {
-		workDir = ""
-	}
-
-	duration := time.Since(startTime)
-	status := history.StatusSuccess
-	if execErr != nil {
-		status = history.StatusFailure
-	}
-
-	entry := history.NewEntry(task.Name, task.Description, workDir, status, duration, execErr)
-
-	if err := e.historyManager.Record(entry); err != nil {
-		log.Debug("Failed to record history", "error", err)
-	}
-}
-
-func (e *Executor) runCommand(command string, current, total int) error {
-	if e.verbose || e.dryRun {
-		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", current, total), "cmd", command)
-	}
-
-	if e.dryRun {
-		return nil
-	}
-
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(e.ctx, "cmd", "/c", command)
-	} else {
-		cmd = exec.CommandContext(e.ctx, "sh", "-c", command)
-	}
-
-	cmd.Stdin = os.Stdin
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return baberrors.NewExecutionError("", command, fmt.Errorf("failed to start: %w", err))
-	}
-
-	go e.streamOutput(stdout, false)
-	go e.streamOutput(stderr, true)
-
-	if err := cmd.Wait(); err != nil {
-		return baberrors.NewExecutionError("", command, err)
-	}
-
-	return nil
-}
-
-func (e *Executor) streamOutput(pipe io.ReadCloser, isStderr bool) {
-	scanner := bufio.NewScanner(pipe)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if isStderr {
-			log.Error(line)
-		} else {
-			fmt.Printf("  %s\n", line)
-		}
-	}
 }

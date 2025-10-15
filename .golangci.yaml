@@ -27,7 +27,6 @@ linters:
     - goconst
     - godot
     - errorlint
-    - revive
 
 formatters:
   enable:
