@@ -18,7 +18,6 @@ func main() {
 	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -29,8 +28,12 @@ func main() {
 		cancel()
 	}()
 
+	exitCode := 0
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		log.Error("Execution failed", "error", err)
-		os.Exit(1)
+		exitCode = 1
 	}
+
+	cancel()
+	os.Exit(exitCode)
 }
