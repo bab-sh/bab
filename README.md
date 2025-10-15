@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://cdn.bab.sh/l/logo" alt="Bab Logo" width="170"/>
+<img src="https://cdn.bab.sh/l/logo" alt="Bab Logo" width="170" style="border-radius: 20%;"/>
 
 <h1>Bab</h1>
 
