@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to **Bab** - a modern task runner from simple to scaled!
+Welcome to **Bab** - custom commands for every project!
 
 ## What is Bab?
 
@@ -120,7 +120,6 @@ bab.bat setup          # Windows
 
 - Learn about [Babfile Syntax](/syntax) to create more complex tasks
 - Explore all [Features](/features) available in bab
-- Deep dive into [Script Compilation](/compile) for zero-dependency distribution
 
 ## Need Help?
 
