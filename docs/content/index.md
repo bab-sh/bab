@@ -87,9 +87,12 @@ Get started with Bab using your preferred installation method:
 curl -sSfL https://bab.sh/install.sh | sh
 ```
 
+```bash [Homebrew Cask]
+brew install --cask bab-sh/tap/bab
+```
+
 ```bash [Homebrew]
-brew tap bab-sh/tap
-brew install --cask bab
+brew install bab-sh/tap/bab
 ```
 
 ```powershell [Windows]
