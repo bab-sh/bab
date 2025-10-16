@@ -85,7 +85,7 @@ Get started instantly with platform-specific install scripts:
 
 ::: code-group
 
-```bash [Linux]
+```bash [macOS/Linux]
 curl -sSfL https://bab.sh/install.sh | sh
 ```
 
