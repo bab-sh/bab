@@ -6,14 +6,26 @@ export default defineConfig({
   title: "Bab",
   description: "Custom commands for every project",
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }]
+    ['link', { rel: 'icon', type: 'image/png', href: 'https://cdn.bab.sh/l/favicon' }],
+    ['link', { rel: 'apple-touch-icon', href: 'https://cdn.bab.sh/l/icon' }],
+    ['meta', { property: 'og:image', content: 'https://cdn.bab.sh/l/logo' }],
+    ['meta', { property: 'og:title', content: 'Bab - Custom commands for every project' }],
+    ['meta', { property: 'og:description', content: 'A modern task runner built for seamless development workflows. Zero dependencies, cross-platform, simple and powerful.' }],
   ],
+
   themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
+    logo: 'https://cdn.bab.sh/l/icon',
+
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Get Started', link: '/get-started' },
-      { text: 'Guide', link: '/syntax' },
+      { text: 'Guide', link: '/guide/getting-started' },
+      {
+        text: 'Reference',
+        items: [
+          { text: 'CLI Reference', link: '/guide/cli-reference' },
+          { text: 'Roadmap', link: '/reference/roadmap' }
+        ]
+      },
       { text: 'GitHub', link: 'https://github.com/bab-sh/bab' }
     ],
 
@@ -21,26 +33,38 @@ export default defineConfig({
       {
         text: 'Introduction',
         items: [
-          { text: 'Getting Started', link: '/get-started' },
-          { text: 'Installation', link: '/installation' }
+          { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Installation', link: '/guide/installation' }
         ]
       },
       {
         text: 'Guide',
         items: [
-          { text: 'Babfile Syntax', link: '/syntax' },
-          { text: 'Features', link: '/features' }
+          { text: 'Babfile Syntax', link: '/guide/babfile-syntax' },
+          { text: 'CLI Reference', link: '/guide/cli-reference' }
+        ]
+      },
+      {
+        text: 'Reference',
+        items: [
+          { text: 'Roadmap', link: '/reference/roadmap' },
+          { text: 'Contributing', link: '/contributing' }
         ]
       }
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/bab-sh/bab' }
+      { icon: 'github', link: 'https://github.com/bab-sh/bab' },
+      { icon: 'discord', link: 'https://discord.bab.sh' },
+      { icon: 'x', link: 'https://x.com/babshdev' },
+      { icon: 'instagram', link: 'https://instagram.com/babshdev' },
+      { icon: 'reddit', link: 'https://reddit.com/r/babsh' },
+      { icon: 'threads', link: 'https://threads.net/@babshdev' }
     ],
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Made with ❤️ by aio for developers who value simplicity and reliability.'
+      copyright: 'Built with ❤️ by AIO for developers who value simplicity and reliability.'
     },
 
     editLink: {
@@ -50,6 +74,11 @@ export default defineConfig({
 
     search: {
       provider: 'local'
+    },
+
+    outline: {
+      level: [2, 3],
+      label: 'On this page'
     }
   }
 })
