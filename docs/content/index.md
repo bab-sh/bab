@@ -1,10 +1,15 @@
 ---
 layout: home
 
+title: Bab
+titleTemplate: Custom commands for every project
+
 hero:
   name: Bab
   text: Custom commands for every project
-  tagline: A modern task runner built for seamless development workflows. Simple when you want it, powerful when you need it.
+  tagline: |
+    A modern task runner built for seamless development workflows.
+    Zero dependencies, cross-platform, simple and powerful.
   image:
     src: https://cdn.bab.sh/l/icon
     alt: Bab Logo
@@ -12,110 +17,73 @@ hero:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
+    - theme: brand
+      text: Installation
+      link: /guide/installation
     - theme: alt
-      text: View on GitHub
+      text: GitHub
       link: https://github.com/bab-sh/bab
+    - theme: alt
+      text: Join Discord
+      link: https://discord.bab.sh
 
 features:
   - icon: 🚀
     title: Zero Dependencies
-    details: No npm, Python, or other runtimes required. Just download and run. Pure Go binary with no external dependencies.
+    details: Pure Go binary with zero dependencies - just download and run.
+    link: /guide/installation
+    linkText: Installation Guide
 
   - icon: 🌍
     title: Cross-Platform
-    details: Works seamlessly on Windows, macOS, and Linux. Native shell execution on every platform with consistent behavior.
+    details: Works seamlessly on Windows, macOS, and Linux with native shell execution.
+    link: /guide/getting-started
+    linkText: Getting Started
 
   - icon: 📝
     title: Simple YAML Configuration
-    details: Define your tasks in clean, readable YAML. More intuitive than Makefiles, more powerful than npm scripts.
+    details: Define your tasks in clean, readable YAML - more intuitive than Makefiles.
+    link: /guide/babfile-syntax
+    linkText: Babfile Syntax
 
   - icon: 🎯
     title: Nested Task Support
-    details: Organize related tasks into groups using colon notation (dev:start, test:unit). Keep your workflows organized and discoverable.
+    details: Organize tasks into groups with colon notation like dev:start and test:unit.
+    link: /guide/babfile-syntax#nested-tasks
+    linkText: Learn About Nested Tasks
 
   - icon: ⚡
     title: Fast & Lightweight
-    details: Built with Go for speed and efficiency. Instant startup, minimal overhead. From zero to running your tasks in milliseconds.
+    details: Built with Go for instant startup and minimal overhead.
+    link: /guide/getting-started
+    linkText: Quick Start
 
   - icon: 🛠️
     title: Developer-Friendly
-    details: Dry-run mode to preview commands, verbose output for debugging, beautiful task listing, and intuitive CLI.
+    details: Dry-run mode, verbose output, beautiful task listing, and intuitive CLI.
+    link: /guide/cli-reference
+    linkText: CLI Reference
 
   - icon: 📦
     title: Universal Task Runner
-    details: Works with any language or project. Whether you're building Node.js, Go, Python, or anything else, Bab has you covered.
+    details: Works with any language or project - Node.js, Go, Python, and more.
+    link: /guide/babfile-syntax#complete-examples
+    linkText: View Examples
 
   - icon: 🎨
     title: Beautiful CLI
-    details: Colorized output, tree-structured task listing, and clear error messages. A CLI that's actually pleasant to use.
+    details: Colorized output, tree-structured task listing, and clear error messages.
+    link: /guide/cli-reference
+    linkText: Explore CLI Features
 ---
-
-## Quick Example
-
-Create a `Babfile` in your project root:
-
-```yaml
-dev:
-  desc: Start development server
-  run: npm run dev
-
-test:
-  desc: Run test suite
-  run: npm test
-
-build:
-  desc: Build for production
-  run: npm run build
-```
-
-Run your tasks:
-
-::: code-group
-
-```bash [macOS/Linux]
-# List all tasks
-bab list
-
-# Run a task
-bab dev
-
-# Preview without executing
-bab build --dry-run
-```
-
-```powershell [Windows]
-# List all tasks
-bab list
-
-# Run a task
-bab dev
-
-# Preview without executing
-bab build --dry-run
-```
-
-:::
-
-## Why Bab?
-
-**Bab** replaces the clunky syntax of Makefiles and the limitations of npm scripts with a universal, dependency-free solution that works across any language or project. Designed with developer experience at its core, Bab scales effortlessly from small scripts to hundreds of tasks.
-
-### Comparison
-
-| Feature | Bab | Make | npm scripts | Task/Taskfile |
-|---------|-----|------|-------------|---------------|
-| Zero dependencies | ✅ | ✅ | ❌ (requires npm) | ❌ (requires Task) |
-| Cross-platform | ✅ | ⚠️ | ✅ | ✅ |
-| Simple syntax | ✅ | ❌ | ⚠️ | ✅ |
-| Nested tasks | ✅ | ❌ | ⚠️ | ⚠️ |
-| Dry-run mode | ✅ | ⚠️ | ❌ | ✅ |
-| Any language | ✅ | ✅ | ❌ | ✅ |
 
 ## Installation
 
+Get started with Bab using your preferred installation method:
+
 ::: code-group
 
-```bash [macOS/Linux (curl)]
+```bash [Quick Install]
 curl -sSfL https://bab.sh/install.sh | sh
 ```
 
@@ -128,6 +96,15 @@ brew install --cask bab
 iwr -useb https://bab.sh/install.ps1 | iex
 ```
 
+```powershell [Chocolatey]
+choco install bab
+```
+
+```bash [Scoop]
+scoop bucket add bab-sh https://github.com/bab-sh/scoop-bucket
+scoop install bab
+```
+
 ```bash [Go]
 go install github.com/bab-sh/bab@latest
 ```
@@ -135,60 +112,3 @@ go install github.com/bab-sh/bab@latest
 :::
 
 [See all installation methods →](/guide/installation)
-
-## Connect With Us
-
-Stay connected with the Bab community across all platforms:
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
-
-<div>
-
-**🌐 [bab.sh](https://bab.sh)**
-Visit our official website
-
-</div>
-
-<div>
-
-**💬 [Discord](https://discord.bab.sh)**
-Get help, discuss features, and connect with the community
-
-</div>
-
-<div>
-
-**🐙 [GitHub](https://github.com/bab-sh/bab)**
-Star the repo, contribute code, and report issues
-
-</div>
-
-<div>
-
-**𝕏 [X/Twitter](https://x.com/babshdev)**
-Follow @babshdev for updates and announcements
-
-</div>
-
-<div>
-
-**📷 [Instagram](https://instagram.com/babshdev)**
-Follow @babshdev for visual updates
-
-</div>
-
-<div>
-
-**🤖 [Reddit](https://reddit.com/r/babsh)**
-Join the r/babsh community
-
-</div>
-
-<div>
-
-**🧵 [Threads](https://threads.net/@babshdev)**
-Follow @babshdev on Threads
-
-</div>
-
-</div>
