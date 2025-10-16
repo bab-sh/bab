@@ -79,24 +79,36 @@ features:
 
 ## Installation
 
-Get started with Bab using your preferred installation method:
+### Quick Install
+
+Get started instantly with platform-specific install scripts:
 
 ::: code-group
 
-```bash [Quick Install]
+```bash [Linux]
 curl -sSfL https://bab.sh/install.sh | sh
-```
-
-```bash [Homebrew Cask]
-brew install --cask bab-sh/tap/bab
-```
-
-```bash [Homebrew]
-brew install bab-sh/tap/bab
 ```
 
 ```powershell [Windows]
 iwr -useb https://bab.sh/install.ps1 | iex
+```
+
+:::
+
+### Package Managers
+
+Install using your preferred package manager:
+
+::: code-group
+
+```bash [Homebrew Cask]
+brew tap bab-sh/tap
+brew install --cask bab
+```
+
+```bash [Homebrew]
+brew tap bab-sh/tap
+brew install bab
 ```
 
 ```powershell [Chocolatey]
@@ -106,6 +118,18 @@ choco install bab
 ```bash [Scoop]
 scoop bucket add bab-sh https://github.com/bab-sh/scoop-bucket
 scoop install bab
+```
+
+```bash [Snap]
+snap install bab-sh
+```
+
+```bash [yay]
+yay -S bab-bin
+```
+
+```bash [paru]
+paru -S bab-bin
 ```
 
 ```bash [Go]
