@@ -1,16 +1,29 @@
 import { defineConfig } from 'vitepress'
 
+const ogUrl = 'https://docs.bab.sh'
+const ogImage = 'https://cdn.bab.sh/l/logo'
+const ogTitle = 'Bab - Custom commands for every project'
+const ogDescription = 'A modern task runner built for seamless development workflows. Zero dependencies, cross-platform, simple and powerful.'
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   srcDir: './content',
   title: "Bab",
-  description: "Custom commands for every project",
+  description: ogDescription,
+
   head: [
     ['link', { rel: 'icon', type: 'image/png', href: 'https://cdn.bab.sh/l/favicon' }],
     ['link', { rel: 'apple-touch-icon', href: 'https://cdn.bab.sh/l/icon' }],
-    ['meta', { property: 'og:image', content: 'https://cdn.bab.sh/l/logo' }],
-    ['meta', { property: 'og:title', content: 'Bab - Custom commands for every project' }],
-    ['meta', { property: 'og:description', content: 'A modern task runner built for seamless development workflows. Zero dependencies, cross-platform, simple and powerful.' }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:url', content: ogUrl }],
+    ['meta', { property: 'og:title', content: ogTitle }],
+    ['meta', { property: 'og:description', content: ogDescription }],
+    ['meta', { property: 'og:image', content: ogImage }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: ogTitle }],
+    ['meta', { name: 'twitter:description', content: ogDescription }],
+    ['meta', { name: 'twitter:image', content: ogImage }],
+    ['meta', { name: 'theme-color', content: '#646cff' }],
   ],
 
   themeConfig: {
