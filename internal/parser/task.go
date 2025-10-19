@@ -44,6 +44,15 @@ func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) 
 		log.Debug("Task has description", "name", name, "desc", task.Description)
 	}
 
+	if deps, ok := taskMap[keyDeps]; ok {
+		dependencies, err := parseDependencies(name, deps)
+		if err != nil {
+			return nil, err
+		}
+		task.Dependencies = dependencies
+		log.Debug("Task has dependencies", "name", name, "deps", dependencies)
+	}
+
 	commands, err := parseCommands(name, runCmd)
 	if err != nil {
 		return nil, err
@@ -95,4 +104,47 @@ func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
 	}
 	log.Debug("Task has command of unknown type, converted to string", "name", taskName)
 	return []string{cmdStr}, nil
+}
+
+func parseDependencies(taskName string, depsValue interface{}) ([]string, error) {
+	if depsValue == nil {
+		return nil, fmt.Errorf("task %q has nil 'deps' value", taskName)
+	}
+
+	if depStr, ok := depsValue.(string); ok {
+		if depStr == "" {
+			return nil, fmt.Errorf("task %q has empty 'deps' string", taskName)
+		}
+		log.Debug("Task has single dependency", "name", taskName, "dep", depStr)
+		return []string{depStr}, nil
+	}
+
+	if depSlice, ok := safeSliceCast(depsValue); ok {
+		if len(depSlice) == 0 {
+			return nil, fmt.Errorf("task %q has empty 'deps' list", taskName)
+		}
+		dependencies := make([]string, 0, len(depSlice))
+		for i, dep := range depSlice {
+			depStr, err := safeStringCast(dep)
+			if err != nil {
+				return nil, fmt.Errorf("task %q has invalid dependency at index %d: %w", taskName, i, err)
+			}
+			if depStr == "" {
+				return nil, fmt.Errorf("task %q has empty dependency at index %d", taskName, i)
+			}
+			dependencies = append(dependencies, depStr)
+		}
+		log.Debug("Task has multiple dependencies", "name", taskName, "count", len(depSlice))
+		return dependencies, nil
+	}
+
+	depStr, err := safeStringCast(depsValue)
+	if err != nil {
+		return nil, fmt.Errorf("task %q has invalid 'deps' value: %w", taskName, err)
+	}
+	if depStr == "" {
+		return nil, fmt.Errorf("task %q has empty 'deps' string", taskName)
+	}
+	log.Debug("Task has dependency of unknown type, converted to string", "name", taskName)
+	return []string{depStr}, nil
 }
