@@ -1,0 +1,16 @@
+ci:
+  test:
+    run: echo "Running tests"
+
+  lint:
+    run: echo "Linting code"
+
+  full:
+    deps:
+      - ci:test
+      - ci:lint
+    run: echo "CI complete"
+
+dev:
+  start:
+    run: echo "Starting dev server"
