@@ -11,36 +11,31 @@ Custom commands for every project
 [![Release](https://img.shields.io/github/v/release/bab-sh/bab)](https://github.com/bab-sh/bab/releases)
 [![Status](https://img.shields.io/badge/Status-Pre--Alpha-red.svg)](https://github.com/bab-sh/bab)
 
-[Website](https://bab.sh) • [Documentation](https://docs.bab.sh) • [Installation](#installation) • [Discord](https://discord.bab.sh) • [Contributing](#contributing)
+[Website](https://bab.sh) • [Documentation](https://docs.bab.sh) • [Discord](https://discord.bab.sh)
 
 </div>
 
 ---
 
-## Table of Contents
+## Contents
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
-- [Installation](#installation)
-- [Update](#update)
-- [Usage](#usage)
-  - [Basic Usage](#basic-usage)
-  - [Babfile Structure](#babfile-structure)
-  - [Command Reference](#command-reference)
 - [Roadmap](#roadmap)
-- [Contributing](#contributing)
 - [Support](#support)
 - [License](#license)
 
 ---
 
 ## Overview
-**Bab** is a modern task runner built for seamless development workflows. It replaces the clunky syntax of Makefiles and the limitations of npm scripts with a universal, dependency free solution that works across any language or project. Designed with developer experience at its core, Bab is simple when you want it to be and powerful when you need it to be. Whether you're running small scripts or orchestrating hundreds of tasks, Bab scales effortlessly, keeping your workflow smooth, organized, and maintainable.
+
+**Bab** is a modern task runner built for seamless development workflows. It replaces the clunky syntax of Makefiles and the limitations of npm scripts with a universal, dependency-free solution that works across any language or project. Whether you're running small scripts or orchestrating hundreds of tasks, Bab scales effortlessly, keeping your workflow smooth, organized, and maintainable.
 
 ---
+
 ## Quick Start
 
-### 1. Install Bab
+### Install Bab
 
 ```bash
 # macOS / Linux
@@ -50,7 +45,9 @@ curl -sSfL https://bab.sh/install.sh | sh
 iwr -useb https://bab.sh/install.ps1 | iex
 ```
 
-### 2. Create a Babfile
+For more installation options, see the [Installation Documentation](https://docs.bab.sh/guide/installation).
+
+### Create a Babfile
 
 Create a `Babfile` in your project root:
 
@@ -72,7 +69,9 @@ build:
   run: npm run build
 ```
 
-### 3. Run Your Tasks
+For complete Babfile syntax and advanced features, see the [Babfile Documentation](https://docs.bab.sh/guide/babfile-syntax).
+
+### Run Your Tasks
 
 ```bash
 bab list             # List all available tasks
@@ -81,298 +80,13 @@ bab dev              # Start development server
 bab build --dry-run  # Preview build task without executing
 ```
 
----
-
-## Installation
-
-Bab provides multiple installation methods to fit your preferred workflow.
-
-### Quick Install
-
-#### macOS / Linux
-
-```bash
-# Install latest version
-curl -sSfL https://bab.sh/install.sh | sh
-
-# Install specific version
-curl -sSfL https://bab.sh/install.sh | sh -s -- v1.0.0
-
-# Using wget
-wget -qO- https://bab.sh/install.sh | sh
-```
-
-#### Windows (PowerShell)
-
-```powershell
-# Install latest version
-iwr -useb https://bab.sh/install.ps1 | iex
-
-# Install specific version
-iwr -useb https://bab.sh/install.ps1 | iex -Version v1.0.0
-```
-
-### Package Managers
-
-#### Homebrew (macOS/Linux)
-
-```bash
-# Tap the repository
-brew tap bab-sh/tap
-
-# Install as formula
-brew install bab
-
-# Or install as cask (recommended)
-brew install --cask bab
-```
-
-#### Chocolatey (Windows)
-
-```powershell
-choco install bab
-```
-
-#### Scoop (Windows)
-
-```powershell
-scoop bucket add bab-sh https://github.com/bab-sh/scoop-bucket
-scoop install bab
-```
-
-#### Snapcraft (Linux)
-
-```bash
-snap install bab-sh
-```
-
-#### AUR (Arch Linux)
-
-```bash
-# Pre-built binary
-yay -S bab-bin
-
-# Build from source
-yay -S bab
-```
-
-#### Go Install
-
-```bash
-go install github.com/bab-sh/bab@latest
-```
-
-### Linux Packages
-
-Download packages from [GitHub Releases](https://github.com/bab-sh/bab/releases/latest):
-
-```bash
-# Debian/Ubuntu (.deb)
-sudo dpkg -i bab_*_amd64.deb
-
-# Fedora/RHEL (.rpm)
-sudo rpm -i bab_*.x86_64.rpm
-
-# Alpine (.apk)
-sudo apk add --allow-untrusted bab_*.apk
-
-# Arch Linux (.pkg.tar.zst)
-sudo pacman -U bab_*.pkg.tar.zst
-```
-
-### Build from Source
-
-Requires Go 1.25 or later:
-
-```bash
-# Clone the repository
-git clone https://github.com/bab-sh/bab.git
-cd bab
-
-# Build
-go build -o bab
-
-# Install (optional)
-sudo mv bab /usr/local/bin/
-```
-
----
-
-## Update
-
-### Quick Update
-
-The install scripts automatically detect existing installations and update them:
-
-#### macOS / Linux
-
-```bash
-# Update to latest version
-curl -sSfL https://bab.sh/install.sh | sh
-
-# Update to specific version
-curl -sSfL https://bab.sh/install.sh | sh -s -- v1.0.0
-```
-
-#### Windows (PowerShell)
-
-```powershell
-# Update to latest version
-iwr -useb https://bab.sh/install.ps1 | iex
-
-# Update to specific version
-iwr -useb https://bab.sh/install.ps1 | iex -Version v1.0.0
-```
-
-### Package Manager Updates
-
-#### Homebrew (macOS/Linux)
-
-```bash
-# Update via formula
-brew upgrade bab
-
-# Update via cask
-brew upgrade --cask bab
-```
-
-#### Chocolatey (Windows)
-
-```powershell
-choco upgrade bab
-```
-
-#### Scoop (Windows)
-
-```powershell
-scoop update bab
-```
-
-#### Snapcraft (Linux)
-
-```bash
-snap refresh bab-sh
-```
-
-#### AUR (Arch Linux)
-
-```bash
-# Update with yay
-yay -Syu bab-bin
-
-# Or with paru
-paru -Syu bab-bin
-```
-
-#### Go Install
-
-```bash
-go install github.com/bab-sh/bab@latest
-```
-
-#### Linux Packages
-
-Download the latest package from [releases](https://github.com/bab-sh/bab/releases/latest) and reinstall:
-
-```bash
-# Debian/Ubuntu
-sudo dpkg -i bab_*_amd64.deb
-
-# Fedora/RHEL
-sudo rpm -U bab_*.x86_64.rpm
-
-# Alpine
-sudo apk add --allow-untrusted bab_*.apk
-
-# Arch Linux
-sudo pacman -U bab_*.pkg.tar.zst
-```
-
----
-
-## Usage
-
-### Basic Usage
-
-```bash
-# List all available tasks
-bab list
-
-# Run a task
-bab <task-name>
-
-# Run nested tasks
-bab <parent>:<child>
-
-# Preview task without executing
-bab <task-name> --dry-run
-
-# Run with detailed logs
-bab <task-name> --verbose
-
-# Get help
-bab --help
-
-# Show version
-bab --version
-```
-
-### Babfile Structure
-
-A Babfile is a YAML file that defines your project's tasks. Here's the basic structure:
-
-```yaml
-# Simple task
-task-name:
-  desc: Description of what this task does
-  run: command to execute
-
-# Task with multiple commands
-build:
-  desc: Build the project
-  run: |
-    echo "Building..."
-    go build -o app
-    echo "Build complete!"
-
-# Nested tasks
-dev:
-  start:
-    desc: Start development server
-    run: npm run dev
-
-  test:
-    desc: Run tests in watch mode
-    run: npm run test:watch
-
-# Task without description
-quick-test:
-  run: go test ./...
-```
-
-### Command Reference
-
-```bash
-# Basic commands
-bab list                         # List all available tasks
-bab <task>                       # Run a task
-bab <parent>:<child>             # Run nested task
-
-# Task execution options
-bab <task> --dry-run             # Show what would run without executing
-bab <task> --verbose             # Show detailed execution logs
-
-# Help and information
-bab --help                       # Show help information
-bab --version                    # Show version information
-```
+For more CLI commands and options, see the [CLI Guide](https://docs.bab.sh/guide/cli-reference).
 
 ---
 
 ## Roadmap
 
 Bab is under active development. Some completed features may be refined or reimplemented as the project matures.
-
 
 - [x] **Basic Task Execution** - Execute tasks defined in Babfile with shell commands
 - [x] **Nested Task Support** - Organize tasks hierarchically with colon notation (e.g., `dev:start`)
@@ -401,51 +115,12 @@ See our [GitHub Issues](https://github.com/bab-sh/bab/issues) for the complete l
 
 ---
 
-## Contributing
-
-We welcome contributions from the community. Whether it's bug reports, feature requests, or code contributions, we appreciate your help.
-
-### How to Contribute
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Development Setup
-
-```bash
-# Clone your fork
-git clone https://github.com/bab-sh/bab.git
-cd bab
-
-# Install dependencies
-go mod download
-
-# Build
-go build -o bab
-
-# Run tests
-go test ./...
-```
-
-### Guidelines
-
-- Write clear, concise commit messages
-- Add tests for new features
-- Update documentation as needed
-- Follow Go best practices and idioms
-- Run tests and lint before submitting PRs
-
----
-
 ## Support
 
-Need help? We're here for you:
-
 - 💬 **Discord** - Join our [Discord community](https://discord.bab.sh) for questions and discussions
-- 🐛 **Bug Reports** - [GitHub Issues](https://github.com/bab-sh/bab/issues) for bug reports
+- 📚 **Documentation** - Visit [docs.bab.sh](https://docs.bab.sh) for comprehensive guides
+- 🐛 **Bug Reports** - [GitHub Issues](https://github.com/bab-sh/bab/issues) for bug reports and feature requests
+- 🤝 **Contributing** - See the [Contributing Guide](https://docs.bab.sh/contributing) to get started
 - 🌐 **Website** - Visit [bab.sh](https://bab.sh) for more information
 
 ---
@@ -457,8 +132,6 @@ Bab is released under the [MIT License](LICENSE). This means you're free to use,
 ---
 
 <div align="center">
-
-**[⬆ back to top](#table-of-contents)**
 
 Built with ❤️ by AIO
 
