@@ -129,7 +129,7 @@ func TestNormalizeMap(t *testing.T) {
 			},
 		},
 		{
-			name: "empty map[interface{}]interface{}",
+			name:  "empty map[interface{}]interface{}",
 			input: map[interface{}]interface{}{},
 			want:  map[string]interface{}{},
 		},

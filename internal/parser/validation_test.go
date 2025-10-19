@@ -93,8 +93,8 @@ func TestValidateDependencies(t *testing.T) {
 			errMsg:  "invalid dependency",
 		},
 		{
-			name: "empty task map",
-			tasks: TaskMap{},
+			name:    "empty task map",
+			tasks:   TaskMap{},
 			wantErr: false,
 		},
 		{
@@ -125,7 +125,7 @@ func TestValidateDependencies(t *testing.T) {
 					Dependencies: []string{"test"},
 				},
 			},
-			wantErr: false, 
+			wantErr: false,
 		},
 	}
 

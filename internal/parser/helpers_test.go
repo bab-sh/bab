@@ -92,9 +92,9 @@ func TestSafeStringCast(t *testing.T) {
 
 func TestSafeMapCast(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  interface{}
-		wantOk bool
+		name     string
+		input    interface{}
+		wantOk   bool
 		validate func(t *testing.T, got map[string]interface{})
 	}{
 		{
@@ -178,9 +178,9 @@ func TestSafeMapCast(t *testing.T) {
 
 func TestSafeSliceCast(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  interface{}
-		wantOk bool
+		name     string
+		input    interface{}
+		wantOk   bool
 		validate func(t *testing.T, got []interface{})
 	}{
 		{

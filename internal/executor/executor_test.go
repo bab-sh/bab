@@ -143,7 +143,7 @@ func TestExecute(t *testing.T) {
 func TestExecuteWithContext(t *testing.T) {
 	t.Run("context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel() 
+		cancel()
 
 		task := &parser.Task{
 			Name:     "test",
@@ -274,7 +274,7 @@ func TestDryRun(t *testing.T) {
 func TestDryRunWithContext(t *testing.T) {
 	t.Run("context cancellation during dry run", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		cancel() 
+		cancel()
 
 		task := &parser.Task{
 			Name:     "test",

@@ -4,6 +4,36 @@ import (
 	"testing"
 )
 
+func assertSliceResults(t *testing.T, funcName string, got []string, want []string, err error, wantErr bool, errMsg string) {
+	t.Helper()
+	if wantErr {
+		if err == nil {
+			t.Errorf("%s() expected error containing %q, got nil", funcName, errMsg)
+			return
+		}
+		if errMsg != "" && !contains(err.Error(), errMsg) {
+			t.Errorf("%s() error = %q, want error containing %q", funcName, err.Error(), errMsg)
+		}
+		return
+	}
+
+	if err != nil {
+		t.Errorf("%s() unexpected error: %v", funcName, err)
+		return
+	}
+
+	if len(got) != len(want) {
+		t.Errorf("%s() got %d items, want %d", funcName, len(got), len(want))
+		return
+	}
+
+	for i, item := range got {
+		if item != want[i] {
+			t.Errorf("%s()[%d] = %q, want %q", funcName, i, item, want[i])
+		}
+	}
+}
+
 func TestParseCommands(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -88,33 +118,7 @@ func TestParseCommands(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseCommands(tt.taskName, tt.runCmd)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("parseCommands() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
-					t.Errorf("parseCommands() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("parseCommands() unexpected error: %v", err)
-				return
-			}
-
-			if len(got) != len(tt.want) {
-				t.Errorf("parseCommands() got %d commands, want %d", len(got), len(tt.want))
-				return
-			}
-
-			for i, cmd := range got {
-				if cmd != tt.want[i] {
-					t.Errorf("parseCommands()[%d] = %q, want %q", i, cmd, tt.want[i])
-				}
-			}
+			assertSliceResults(t, "parseCommands", got, tt.want, err, tt.wantErr, tt.errMsg)
 		})
 	}
 }
@@ -196,33 +200,7 @@ func TestParseDependencies(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseDependencies(tt.taskName, tt.depsValue)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("parseDependencies() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
-					t.Errorf("parseDependencies() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("parseDependencies() unexpected error: %v", err)
-				return
-			}
-
-			if len(got) != len(tt.want) {
-				t.Errorf("parseDependencies() got %d deps, want %d", len(got), len(tt.want))
-				return
-			}
-
-			for i, dep := range got {
-				if dep != tt.want[i] {
-					t.Errorf("parseDependencies()[%d] = %q, want %q", i, dep, tt.want[i])
-				}
-			}
+			assertSliceResults(t, "parseDependencies", got, tt.want, err, tt.wantErr, tt.errMsg)
 		})
 	}
 }

@@ -73,12 +73,12 @@ test:
 			tmpDir := t.TempDir()
 			babfilePath := filepath.Join(tmpDir, "Babfile")
 
-			if err := os.WriteFile(babfilePath, []byte(tt.babfileYAML), 0644); err != nil {
+			if err := os.WriteFile(babfilePath, []byte(tt.babfileYAML), 0600); err != nil {
 				t.Fatalf("failed to create test Babfile: %v", err)
 			}
 
 			oldDir, _ := os.Getwd()
-			defer os.Chdir(oldDir)
+			defer func() { _ = os.Chdir(oldDir) }()
 			if err := os.Chdir(tmpDir); err != nil {
 				t.Fatalf("failed to change directory: %v", err)
 			}
