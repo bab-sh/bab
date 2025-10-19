@@ -383,6 +383,7 @@ Bab is under active development. Some completed features may be refined or reimp
 - [x] **Task Listing** - Display all available tasks in a colorized tree structure (`bab list`)
 - [x] **Graceful Shutdown** - Proper handling of interrupts and termination signals
 - [x] **Multi-Command Tasks** - Support for tasks with single or multiple commands
+- [x] **Task Dependencies** - Automatic execution of prerequisite tasks before running a task
 - [ ] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
 - [ ] **Task History Tracking** - Per-project execution history with status and duration
 - [ ] **Custom File Paths** - Specify alternative Babfile locations with `--file` flag
@@ -391,7 +392,6 @@ Bab is under active development. Some completed features may be refined or reimp
 - [ ] **Platform-Specific Tasks** - Define tasks that run only on specific operating systems (Windows, Linux, macOS)
 - [ ] **Compiled Binary Execution** - Support for executing compiled binaries beyond shell scripts
 - [ ] **Environment Variable Management** - Built-in handling, interpolation, and validation of environment variables
-- [ ] **Task Dependencies** - Automatic execution of prerequisite tasks in the correct order
 - [ ] **Module System** - Share and reuse Babfiles across projects as importable modules
 - [ ] **Performance Profiling** - Built-in performance monitoring and profiling for task execution
 - [ ] **Interactive Babfile Generator** - Create and modify Babfiles through interactive command-line forms

@@ -43,6 +43,11 @@ func Parse(path string) (TaskMap, error) {
 		return nil, err
 	}
 
+	if err := ValidateDependencies(tasks); err != nil {
+		log.Debug("Failed to validate dependencies", "error", err)
+		return nil, fmt.Errorf("dependency validation failed: %w", err)
+	}
+
 	log.Debug("Successfully parsed Babfile", "task-count", len(tasks))
 	return tasks, nil
 }

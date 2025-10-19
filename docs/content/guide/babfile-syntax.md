@@ -95,6 +95,103 @@ backup:
     echo "Backup created: backup_${timestamp}.sql"
 ```
 
+### `deps` - Task Dependencies
+
+Define prerequisite tasks that must run before the current task executes. Dependencies run in the order specified, and each dependency runs only once per invocation.
+
+#### Single Dependency
+
+```yaml
+setup:
+  desc: Install dependencies
+  run: npm install
+
+build:
+  desc: Build the application
+  deps: setup
+  run: npm run build
+```
+
+When you run `bab build`, it automatically runs `setup` first.
+
+#### Multiple Dependencies
+
+```yaml
+deploy:
+  desc: Deploy to production
+  deps: [build, test]
+  run: ./deploy.sh
+```
+
+Dependencies execute in array order: `build` → `test` → `deploy`
+
+#### Nested Task Dependencies
+
+Dependencies work with nested tasks:
+
+```yaml
+build:
+  frontend:
+    desc: Build frontend
+    run: npm run build:frontend
+
+  backend:
+    desc: Build backend
+    run: go build
+
+deploy:
+  desc: Deploy all components
+  deps: [build:frontend, build:backend]
+  run: ./deploy.sh
+```
+
+#### Dependency Chains
+
+Dependencies can have their own dependencies:
+
+```yaml
+setup:
+  desc: Install dependencies
+  run: npm install
+
+lint:
+  desc: Run linter
+  deps: setup
+  run: npm run lint
+
+build:
+  desc: Build application
+  deps: [setup, lint]
+  run: npm run build
+
+test:
+  desc: Run tests
+  deps: build
+  run: npm test
+
+deploy:
+  desc: Deploy to production
+  deps: [build, test]
+  run: ./deploy.sh
+```
+
+Running `bab deploy` executes: `setup` → `lint` → `build` → `test` → `deploy`
+
+::: tip Smart Execution
+Shared dependencies run only once. In the example above, `setup` runs once even though both `lint` and `build` depend on it.
+:::
+
+::: warning Circular Dependencies
+Bab detects circular dependencies and prevents infinite loops:
+```
+ERROR Circular dependency detected: task-a → task-b → task-c → task-a
+```
+:::
+
+::: danger Failure Handling
+If any dependency fails, the entire chain stops immediately. The main task won't execute if dependencies fail.
+:::
+
 ## Nested Tasks
 
 Organize related tasks into groups using hierarchical structure. Tasks are accessed with colon notation:
@@ -263,36 +360,52 @@ setup:
 dev:
   start:
     desc: Start development server
+    deps: setup
     run: npm run dev
 
   watch:
     desc: Watch and rebuild
+    deps: setup
     run: npm run watch
+
+lint:
+  desc: Lint and format code
+  deps: setup
+  run:
+    - npm run eslint
+    - npm run prettier --write .
 
 test:
   unit:
     desc: Run unit tests
+    deps: setup
     run: npm run test:unit
 
   e2e:
     desc: Run E2E tests
+    deps: setup
     run: npm run test:e2e
 
   all:
     desc: Run all tests
+    deps: setup
     run: npm test
 
 build:
   dev:
     desc: Build for development
+    deps: [setup, lint]
     run: npm run build:dev
 
   prod:
     desc: Build for production
-    run:
-      - npm run lint
-      - npm test
-      - npm run build:prod
+    deps: [setup, lint, test:all]
+    run: npm run build:prod
+
+deploy:
+  desc: Deploy to production
+  deps: build:prod
+  run: npm run deploy
 
 clean:
   desc: Remove build artifacts and dependencies
@@ -300,12 +413,6 @@ clean:
     - rm -rf dist
     - rm -rf node_modules
     - rm -rf .cache
-
-lint:
-  desc: Lint and format code
-  run:
-    - npm run eslint
-    - npm run prettier --write .
 ```
 
 ### Go Project
@@ -317,49 +424,67 @@ setup:
   desc: Download dependencies
   run: go mod download
 
+lint:
+  desc: Run linters
+  deps: setup
+  run:
+    - go fmt ./...
+    - go vet ./...
+    - golangci-lint run
+
 dev:
   run:
     desc: Run with hot reload
+    deps: setup
     run: air
 
   build:
     desc: Build for development
+    deps: setup
     run: go build -o app
 
 test:
   unit:
     desc: Run unit tests
+    deps: setup
     run: go test ./...
 
   coverage:
     desc: Run tests with coverage
+    deps: setup
     run: go test ./... -coverprofile=coverage.out
 
   bench:
     desc: Run benchmarks
+    deps: setup
     run: go test -bench=. ./...
+
+  all:
+    desc: Run all tests with coverage
+    deps: [setup, lint]
+    run: go test ./... -coverprofile=coverage.out
 
 build:
   desc: Build production binary
+  deps: [setup, lint, test:all]
   run: go build -ldflags="-s -w" -o app
 
   all:
     desc: Build for all platforms
+    deps: [setup, lint, test:all]
     run:
       - GOOS=linux GOARCH=amd64 go build -o app-linux
       - GOOS=darwin GOARCH=amd64 go build -o app-darwin
       - GOOS=windows GOARCH=amd64 go build -o app.exe
 
+deploy:
+  desc: Deploy application
+  deps: build
+  run: ./scripts/deploy.sh
+
 clean:
   desc: Clean build artifacts
   run: rm -f app app-* coverage.out
-
-lint:
-  desc: Run linters
-  run:
-    - go fmt ./...
-    - go vet ./...
-    - golangci-lint run
 ```
 
 ### Docker Project
@@ -367,14 +492,25 @@ lint:
 ```yaml
 # Babfile for Docker project
 
+test:
+  desc: Run tests
+  run: npm test
+
 docker:
   build:
     desc: Build Docker image
+    deps: test
     run: docker build -t myapp:latest .
 
   run:
     desc: Run container
+    deps: docker:build
     run: docker run -p 8080:8080 myapp:latest
+
+  push:
+    desc: Push to registry
+    deps: docker:build
+    run: docker push myapp:latest
 
   stop:
     desc: Stop all containers
@@ -398,6 +534,11 @@ docker:
     logs:
       desc: View logs
       run: docker-compose logs -f
+
+deploy:
+  desc: Build and deploy to production
+  deps: [test, docker:build, docker:push]
+  run: kubectl apply -f k8s/
 ```
 
 ## Best Practices
@@ -507,6 +648,42 @@ build:
 deploy:
   # ... deploy tasks
 ```
+
+### 7. Use Dependencies Instead of Manual Chaining
+
+```yaml
+# ✅ Good - declarative dependencies
+lint:
+  desc: Run linter
+  deps: setup
+  run: npm run lint
+
+build:
+  desc: Build application
+  deps: [setup, lint]
+  run: npm run build
+
+deploy:
+  desc: Deploy to production
+  deps: [build, test]
+  run: ./deploy.sh
+
+# ❌ Less maintainable - manual chaining
+deploy:
+  desc: Deploy to production
+  run:
+    - npm install
+    - npm run lint
+    - npm run build
+    - npm test
+    - ./deploy.sh
+```
+
+Benefits of using `deps`:
+- **Reusable** - Each task can be run independently
+- **Maintainable** - Changes to dependencies update automatically
+- **Clear** - Dependencies are explicit, not hidden in commands
+- **Efficient** - Shared dependencies run only once
 
 ## Next Steps
 

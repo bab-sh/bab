@@ -52,6 +52,12 @@ features:
     link: /guide/babfile-syntax#nested-tasks
     linkText: Learn About Nested Tasks
 
+  - icon: 🔗
+    title: Task Dependencies
+    details: Automatically run prerequisite tasks with the deps field - no manual chaining needed.
+    link: /guide/babfile-syntax#deps-task-dependencies
+    linkText: Learn About Dependencies
+
   - icon: ⚡
     title: Fast & Lightweight
     details: Built with Go for instant startup and minimal overhead.
