@@ -29,6 +29,7 @@ Current features in the latest release:
 - [x] Tree-structured task display
 - [x] Clear error messages
 - [x] Task descriptions
+- [x] Task dependencies
 
 ## What's Coming Next
 
@@ -37,9 +38,6 @@ High-priority features for upcoming releases:
 ::: info Priority Features
 The most requested features by the community.
 :::
-
-### Task Dependencies
-Automatically run prerequisite tasks before executing a task.
 
 ### Custom File Paths
 Specify alternative Babfile locations with `--file` flag.
