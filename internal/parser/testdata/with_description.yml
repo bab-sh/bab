@@ -1,0 +1,8 @@
+test:
+  desc: Run all unit tests
+  run: go test ./...
+
+coverage:
+  desc: Generate coverage report
+  deps: test
+  run: go tool cover -html=coverage.txt
