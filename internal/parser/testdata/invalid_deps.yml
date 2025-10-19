@@ -1,0 +1,3 @@
+test:
+  deps: nonexistent_task
+  run: echo "Testing"
