@@ -92,6 +92,10 @@ func DryRun(ctx context.Context, task *parser.Task) error {
 		log.Debug("Task description", "desc", task.Description)
 	}
 
+	if len(task.Dependencies) > 0 {
+		log.Debug("Dependencies", "deps", task.Dependencies)
+	}
+
 	for i, command := range task.Commands {
 		select {
 		case <-ctx.Done():
