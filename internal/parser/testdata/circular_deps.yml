@@ -1,0 +1,7 @@
+task_a:
+  deps: task_b
+  run: echo "A"
+
+task_b:
+  deps: task_a
+  run: echo "B"
