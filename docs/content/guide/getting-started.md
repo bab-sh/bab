@@ -1,360 +1,83 @@
 # Getting Started
 
-Welcome to **Bab** - the modern task runner for all your projects.
+## Install
 
-## What is Bab?
-
-Bab is a task runner that replaces Makefiles and npm scripts with a simple, universal solution. It lets you define custom commands in YAML and execute them with ease across any language or project.
-
-### Key Features
-
-- **Zero Dependencies** - No npm, Python, or other runtimes required
-- **Cross-Platform** - Works on Windows, macOS, and Linux
-- **Simple Syntax** - Just YAML, no complex syntax to learn
-- **Fast** - Built with Go for speed and efficiency
-- **Universal** - Works with any programming language or project type
-
-## Quick Start
-
-### 1. Install Bab
-
-Choose your preferred installation method:
-
-::: code-group
-
-```bash [macOS/Linux]
+```bash
+# macOS / Linux
 curl -sSfL https://bab.sh/install.sh | sh
-```
 
-```bash [Homebrew]
-brew tap bab-sh/tap
-brew install --cask bab
-```
-
-```powershell [Windows]
+# Windows (PowerShell)
 iwr -useb https://bab.sh/install.ps1 | iex
 ```
 
-:::
+See [installation guide](/guide/installation) for other methods.
 
-For more installation options, see the [Installation Guide](/guide/installation).
+## Create Babfile
 
-### 2. Create Your First Babfile
-
-Create a file named `Babfile` in your project root:
+Create a `Babfile` in your project root:
 
 ```yaml
-# Babfile
 setup:
   desc: Install dependencies
   run: npm install
 
 dev:
   desc: Start development server
+  deps: setup
   run: npm run dev
 
 test:
-  desc: Run test suite
+  desc: Run tests
+  deps: setup
   run: npm test
 
 build:
   desc: Build for production
+  deps: [setup, test]
   run: npm run build
 ```
 
-::: tip
-You can also name your file `Babfile.yaml` or `Babfile.yml` - Bab will find it automatically.
-:::
-
-### 3. List Available Tasks
-
-Run `bab list` to see all your tasks:
+## Usage
 
 ```bash
+# List tasks
 bab list
-```
 
-Output:
-
-```
-build Build for production
-dev Start development server
-setup Install dependencies
-test Run test suite
-```
-
-### 4. Run Tasks
-
-Execute any task by name:
-
-```bash
-# Run setup
-bab setup
-
-# Start development server
+# Run a task
 bab dev
 
-# Build for production
-bab build
+# Preview without executing
+bab build --dry-run
+
+# Verbose output
+bab build --verbose
 ```
 
-### 5. Preview Commands (Dry Run)
+## Task Dependencies
 
-Want to see what a task will do before running it?
+Dependencies run automatically before the main task:
 
 ```bash
-bab build --dry-run
+bab build
+# Runs: setup → test → build
 ```
 
-This shows you all the commands that would be executed without actually running them.
-
-::: tip
-Use `--dry-run` (or `-n`) to safely preview any task before execution.
-:::
-
-## Understanding the Basics
-
-### Task Structure
-
-Every task in a Babfile has:
-- A **name** (the key, like `build` or `test`)
-- A **run** field with the command(s) to execute
-- An optional **desc** field for documentation
-
-```yaml
-task-name:
-  desc: What this task does
-  run: command to execute
-```
-
-### Multiple Commands
-
-You can run multiple commands in sequence:
-
-```yaml
-deploy:
-  desc: Build and deploy
-  run:
-    - npm run test
-    - npm run build
-    - npm run deploy:prod
-```
-
-Commands execute in order. If any command fails, execution stops.
-
-### Nested Tasks
-
-Organize related tasks using colon notation:
+## Nested Tasks
 
 ```yaml
 dev:
   start:
-    desc: Start dev server
+    desc: Start server
     run: npm run dev
 
   watch:
-    desc: Watch for changes
+    desc: Watch files
     run: npm run watch
-
-test:
-  unit:
-    desc: Run unit tests
-    run: npm run test:unit
-
-  e2e:
-    desc: Run E2E tests
-    run: npm run test:e2e
 ```
 
-Run nested tasks:
+Run with `bab dev:start`.
 
-```bash
-bab dev:start
-bab test:unit
-```
+## Next Steps
 
-### Task Dependencies
-
-Automatically run prerequisite tasks using `deps`:
-
-```yaml
-setup:
-  desc: Install dependencies
-  run: npm install
-
-lint:
-  desc: Run linter
-  deps: setup
-  run: npm run lint
-
-build:
-  desc: Build application
-  deps: [setup, lint]
-  run: npm run build
-
-test:
-  desc: Run tests
-  deps: build
-  run: npm test
-
-deploy:
-  desc: Deploy to production
-  deps: [build, test]
-  run: npm run deploy
-```
-
-Run a task with dependencies:
-
-```bash
-# Runs: setup → lint → build → test → deploy
-bab deploy
-```
-
-::: tip Smart Execution
-Each dependency runs only once, even if multiple tasks depend on it. In the example above, `setup` runs only once even though both `lint` and `build` depend on it. Bab automatically handles the execution order.
-:::
-
-## Common Patterns
-
-### Node.js Project
-
-```yaml
-setup:
-  desc: Install dependencies
-  run: npm install
-
-dev:
-  desc: Start development
-  deps: setup
-  run: npm run dev
-
-test:
-  desc: Run tests
-  deps: setup
-  run: npm test
-
-build:
-  desc: Build for production
-  deps: [setup, test]
-  run: npm run build
-
-deploy:
-  desc: Deploy application
-  deps: build
-  run: npm run deploy
-
-clean:
-  desc: Clean build artifacts
-  run: rm -rf dist node_modules
-```
-
-### Go Project
-
-```yaml
-setup:
-  desc: Download dependencies
-  run: go mod download
-
-dev:
-  desc: Run with auto-reload
-  deps: setup
-  run: air
-
-test:
-  desc: Run tests
-  deps: setup
-  run: go test ./...
-
-build:
-  desc: Build binary
-  deps: [setup, test]
-  run: go build -o app
-
-deploy:
-  desc: Deploy application
-  deps: build
-  run: ./scripts/deploy.sh
-
-clean:
-  desc: Clean build artifacts
-  run: rm -f app
-```
-
-### Python Project
-
-```yaml
-setup:
-  desc: Create virtualenv and install deps
-  run:
-    - python -m venv venv
-    - source venv/bin/activate && pip install -r requirements.txt
-
-dev:
-  desc: Run development server
-  deps: setup
-  run: python manage.py runserver
-
-lint:
-  desc: Lint code
-  deps: setup
-  run: flake8 .
-
-test:
-  desc: Run tests
-  deps: [setup, lint]
-  run: pytest
-
-deploy:
-  desc: Deploy application
-  deps: test
-  run: python manage.py deploy
-```
-
-## Command-Line Options
-
-### Verbose Output
-
-Get detailed execution information:
-
-```bash
-bab build --verbose
-# or
-bab build -v
-```
-
-### Dry Run
-
-Preview commands without executing:
-
-```bash
-bab deploy --dry-run
-# or
-bab deploy -n
-```
-
-### Get Help
-
-```bash
-bab --help          # General help
-bab list --help     # Command-specific help
-```
-
-### Check Version
-
-```bash
-bab --version
-```
-
-## What's Next?
-
-Now that you have the basics down:
-
-- **[Installation Guide](/guide/installation)** - Learn about all installation methods
-- **[Babfile Syntax](/guide/babfile-syntax)** - Master the Babfile syntax
-- **[CLI Reference](/guide/cli-reference)** - Explore all CLI commands and flags
-
-## Need Help?
-
-- Join our [Discord community](https://discord.bab.sh)
-- Check the [GitHub repository](https://github.com/bab-sh/bab)
-- Report issues on [GitHub Issues](https://github.com/bab-sh/bab/issues)
+- [Babfile Syntax](/guide/babfile-syntax) - Learn the YAML format
+- [CLI Reference](/guide/cli-reference) - See all commands
