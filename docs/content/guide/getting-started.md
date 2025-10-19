@@ -173,6 +173,47 @@ bab dev:start
 bab test:unit
 ```
 
+### Task Dependencies
+
+Automatically run prerequisite tasks using `deps`:
+
+```yaml
+setup:
+  desc: Install dependencies
+  run: npm install
+
+lint:
+  desc: Run linter
+  deps: setup
+  run: npm run lint
+
+build:
+  desc: Build application
+  deps: [setup, lint]
+  run: npm run build
+
+test:
+  desc: Run tests
+  deps: build
+  run: npm test
+
+deploy:
+  desc: Deploy to production
+  deps: [build, test]
+  run: npm run deploy
+```
+
+Run a task with dependencies:
+
+```bash
+# Runs: setup → lint → build → test → deploy
+bab deploy
+```
+
+::: tip Smart Execution
+Each dependency runs only once, even if multiple tasks depend on it. In the example above, `setup` runs only once even though both `lint` and `build` depend on it. Bab automatically handles the execution order.
+:::
+
 ## Common Patterns
 
 ### Node.js Project
@@ -184,15 +225,23 @@ setup:
 
 dev:
   desc: Start development
+  deps: setup
   run: npm run dev
 
 test:
   desc: Run tests
+  deps: setup
   run: npm test
 
 build:
   desc: Build for production
+  deps: [setup, test]
   run: npm run build
+
+deploy:
+  desc: Deploy application
+  deps: build
+  run: npm run deploy
 
 clean:
   desc: Clean build artifacts
@@ -208,15 +257,23 @@ setup:
 
 dev:
   desc: Run with auto-reload
+  deps: setup
   run: air
 
 test:
   desc: Run tests
+  deps: setup
   run: go test ./...
 
 build:
   desc: Build binary
+  deps: [setup, test]
   run: go build -o app
+
+deploy:
+  desc: Deploy application
+  deps: build
+  run: ./scripts/deploy.sh
 
 clean:
   desc: Clean build artifacts
@@ -234,15 +291,23 @@ setup:
 
 dev:
   desc: Run development server
+  deps: setup
   run: python manage.py runserver
-
-test:
-  desc: Run tests
-  run: pytest
 
 lint:
   desc: Lint code
+  deps: setup
   run: flake8 .
+
+test:
+  desc: Run tests
+  deps: [setup, lint]
+  run: pytest
+
+deploy:
+  desc: Deploy application
+  deps: test
+  run: python manage.py deploy
 ```
 
 ## Command-Line Options

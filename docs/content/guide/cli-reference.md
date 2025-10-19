@@ -140,6 +140,23 @@ bab deploy --dry-run
 If no Babfile is found in the current directory, Bab will show an error message.
 :::
 
+::: tip Automatic Dependency Execution
+When a task has dependencies defined with `deps`, Bab automatically executes them in the correct order before running the main task.
+
+```bash
+# If deploy has deps: [build, test]
+bab deploy
+# Executes: build → test → deploy
+```
+
+Use `--verbose` to see dependency execution details:
+
+```bash
+bab deploy --verbose
+# Shows: "Executing dependency..." for each dep
+```
+:::
+
 ## Global Flags
 
 These flags work with all commands and task executions:
