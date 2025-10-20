@@ -6,7 +6,7 @@ titleTemplate: Custom commands for every project
 
 hero:
   name: Bab
-  text: Custom commands for every project
+  text: Custom commands for every project liam du kek
   tagline: Modern task runner. Zero dependencies, cross-platform, simple.
   image:
     src: https://cdn.bab.sh/l/icon
