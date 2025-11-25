@@ -4,30 +4,29 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bab-sh/bab/internal/parser"
 )
 
-func TestContainsString(t *testing.T) {
+func TestIsBuiltinCommand(t *testing.T) {
 	tests := []struct {
-		name  string
-		slice []string
-		item  string
-		want  bool
+		name string
+		cmd  string
+		want bool
 	}{
-		{"found in slice", []string{"a", "b", "c"}, "b", true},
-		{"not found in slice", []string{"a", "b", "c"}, "d", false},
-		{"empty slice", []string{}, "a", false},
-		{"empty string in slice", []string{"", "b"}, "", true},
-		{"empty string not in slice", []string{"a", "b"}, "", false},
+		{"list command", "list", true},
+		{"help command", "help", false},
+		{"unknown command", "unknown", false},
+		{"empty string", "", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := containsString(tt.slice, tt.item)
+			got := isBuiltinCommand(tt.cmd)
 			if got != tt.want {
-				t.Errorf("containsString() = %v, want %v", got, tt.want)
+				t.Errorf("isBuiltinCommand(%q) = %v, want %v", tt.cmd, got, tt.want)
 			}
 		})
 	}
@@ -95,7 +94,7 @@ test:
 					t.Errorf("executeTask() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("executeTask() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -236,7 +235,7 @@ func TestExecuteTaskWithDeps(t *testing.T) {
 					t.Errorf("executeTaskWithDeps() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("executeTaskWithDeps() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -329,18 +328,4 @@ func TestBuildDependencyChain(t *testing.T) {
 			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && indexOf(s, substr) >= 0))
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }
