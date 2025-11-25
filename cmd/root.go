@@ -16,10 +16,9 @@ import (
 )
 
 var (
-	verbose     bool
-	dryRun      bool
-	interactive bool
-	rootCtx     context.Context
+	verbose bool
+	dryRun  bool
+	rootCtx context.Context
 
 	rootCmd = &cobra.Command{
 		Use:           "bab",
@@ -33,10 +32,7 @@ var (
 			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if interactive {
-				return runInteractive(rootCtx)
-			}
-			return cmd.Help()
+			return runInteractive(rootCtx)
 		},
 	}
 )
@@ -44,7 +40,6 @@ var (
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show commands without executing")
-	rootCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive task picker")
 }
 
 func ExecuteContext(ctx context.Context) error {
