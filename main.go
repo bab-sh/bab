@@ -11,6 +11,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	log.SetDefault(log.NewWithOptions(os.Stderr, log.Options{
 		ReportCaller:    false,
 		ReportTimestamp: false,
@@ -18,6 +22,7 @@ func main() {
 	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -28,12 +33,10 @@ func main() {
 		cancel()
 	}()
 
-	exitCode := 0
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		log.Error("Execution failed", "error", err)
-		exitCode = 1
+		return 1
 	}
 
-	cancel()
-	os.Exit(exitCode)
+	return 0
 }
