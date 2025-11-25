@@ -21,7 +21,7 @@ Current features in the latest release:
 - [x] Task listing (`bab list`)
 - [x] Dry-run mode (`--dry-run`)
 - [x] Verbose output (`--verbose`)
-- [x] Interactive mode with fuzzy search (`-i`)
+- [x] Interactive mode with fuzzy search (default)
 - [x] Shell completion (bash, zsh, fish, powershell)
 - [x] Graceful shutdown handling
 
