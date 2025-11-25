@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -91,7 +92,7 @@ test:
 					t.Errorf("runList() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("runList() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -120,7 +121,7 @@ func TestRunListNoBabfile(t *testing.T) {
 		t.Error("runList() expected error when no Babfile exists, got nil")
 	}
 
-	if err != nil && !contains(err.Error(), "Babfile") {
+	if err != nil && !strings.Contains(err.Error(), "Babfile") {
 		t.Errorf("runList() error = %q, want error containing 'Babfile'", err.Error())
 	}
 }
