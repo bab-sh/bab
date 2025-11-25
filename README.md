@@ -98,7 +98,7 @@ Bab is under active development. Some completed features may be refined or reimp
 - [x] **Graceful Shutdown** - Proper handling of interrupts and termination signals
 - [x] **Multi-Command Tasks** - Support for tasks with single or multiple commands
 - [x] **Task Dependencies** - Automatic execution of prerequisite tasks before running a task
-- [ ] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
+- [x] **Interactive Mode** - Fuzzy search interface for browsing and selecting tasks
 - [ ] **Task History Tracking** - Per-project execution history with status and duration
 - [ ] **Custom File Paths** - Specify alternative Babfile locations with `--file` flag
 - [ ] **Babfile Schema Validation** - Structured schema for validating Babfile syntax and configuration
