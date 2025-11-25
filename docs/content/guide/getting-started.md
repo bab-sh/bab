@@ -51,7 +51,14 @@ bab build --dry-run
 
 # Verbose output
 bab build --verbose
+
+# Browse tasks interactively
+bab -i
 ```
+
+## Interactive Mode
+
+The `-i` flag launches an interactive fuzzy finder that lets you browse and select tasks. This is especially useful when you have many tasks or can't remember the exact task name. Type to search, use arrow keys to navigate, and press `Enter` to execute the selected task.
 
 ## Task Dependencies
 
