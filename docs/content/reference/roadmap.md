@@ -21,6 +21,7 @@ Current features in the latest release:
 - [x] Task listing (`bab list`)
 - [x] Dry-run mode (`--dry-run`)
 - [x] Verbose output (`--verbose`)
+- [x] Interactive mode with fuzzy search (`-i`)
 - [x] Shell completion (bash, zsh, fish, powershell)
 - [x] Graceful shutdown handling
 
@@ -41,9 +42,6 @@ The most requested features by the community.
 
 ### Custom File Paths
 Specify alternative Babfile locations with `--file` flag.
-
-### Interactive Mode
-Fuzzy search interface for browsing and selecting tasks.
 
 ### Platform-Specific Tasks
 Define tasks that run only on specific operating systems.
