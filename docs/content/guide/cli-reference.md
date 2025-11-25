@@ -2,6 +2,21 @@
 
 ## Commands
 
+### `bab`
+Browse and select tasks using an interactive fuzzy finder.
+
+```bash
+bab
+```
+
+Type to search for tasks, use arrow keys or `Ctrl+P`/`Ctrl+N` to navigate, and press `Enter` to execute. Press `Esc` or `Ctrl+C` to exit without running a task.
+
+**Keyboard shortcuts:**
+- `Enter` - Execute selected task
+- `Up/Down` or `Ctrl+P/Ctrl+N` - Navigate through tasks
+- `Ctrl+U` - Clear search input
+- `Esc` or `Ctrl+C` - Exit without executing
+
 ### `bab list`
 List all available tasks.
 
@@ -52,24 +67,6 @@ Show detailed execution logs.
 ```bash
 bab build --verbose
 ```
-
-### `-i, --interactive`
-Browse and select tasks using an interactive fuzzy finder.
-
-```bash
-bab -i
-bab --interactive
-```
-
-Type to search for tasks, use arrow keys or `Ctrl+P`/`Ctrl+N` to navigate, and press `Enter` to execute. Press `Esc` or `Ctrl+C` to exit without running a task.
-
-**Keyboard shortcuts:**
-- `Enter` - Execute selected task
-- `Up/Down` or `Ctrl+P/Ctrl+N` - Navigate through tasks
-- `Ctrl+U` - Clear search input
-- `Esc` or `Ctrl+C` - Exit without executing
-
-This is useful when you have many tasks or want to explore available commands without remembering exact task names.
 
 ### `--version`
 Show version information.

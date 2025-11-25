@@ -74,11 +74,11 @@ For complete Babfile syntax and advanced features, see the [Babfile Documentatio
 ### Run Your Tasks
 
 ```bash
+bab                  # Browse tasks interactively
 bab list             # List all available tasks
 bab setup            # Run the setup task
 bab dev              # Start development server
 bab build --dry-run  # Preview build task without executing
-bab -i               # Browse tasks interactively
 ```
 
 For more CLI commands and options, see the [CLI Guide](https://docs.bab.sh/guide/cli-reference).
