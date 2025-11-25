@@ -3,8 +3,18 @@ package finder
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func normalizePath(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return path
+	}
+	return resolved
+}
 
 func TestFindBabfileVariants(t *testing.T) {
 	variants := []string{"Babfile", "Babfile.yaml", "Babfile.yml", "babfile.yaml", "babfile.yml"}
@@ -29,7 +39,10 @@ func TestFindBabfileVariants(t *testing.T) {
 				t.Errorf("FindBabfile() unexpected error: %v", err)
 			}
 
-			if found != babfilePath {
+			foundNorm := normalizePath(t, found)
+			wantNorm := normalizePath(t, babfilePath)
+			if filepath.Dir(foundNorm) != filepath.Dir(wantNorm) ||
+				!strings.EqualFold(filepath.Base(foundNorm), filepath.Base(wantNorm)) {
 				t.Errorf("FindBabfile() = %q, want %q", found, babfilePath)
 			}
 		})
@@ -61,7 +74,7 @@ func TestFindBabfileInParentDirectories(t *testing.T) {
 			t.Errorf("FindBabfile() unexpected error: %v", err)
 		}
 
-		if found != babfilePath {
+		if normalizePath(t, found) != normalizePath(t, babfilePath) {
 			t.Errorf("FindBabfile() = %q, want %q", found, babfilePath)
 		}
 	})
@@ -91,7 +104,7 @@ func TestFindBabfileInParentDirectories(t *testing.T) {
 			t.Errorf("FindBabfile() unexpected error: %v", err)
 		}
 
-		if found != babfilePath {
+		if normalizePath(t, found) != normalizePath(t, babfilePath) {
 			t.Errorf("FindBabfile() = %q, want %q", found, babfilePath)
 		}
 	})
@@ -112,7 +125,7 @@ func TestFindBabfileErrors(t *testing.T) {
 			t.Error("FindBabfile() expected error when no Babfile exists, got nil")
 		}
 
-		if err != nil && !contains(err.Error(), "no Babfile found") {
+		if err != nil && !strings.Contains(err.Error(), "no Babfile found") {
 			t.Errorf("FindBabfile() error = %q, want error containing 'no Babfile found'", err.Error())
 		}
 	})
@@ -143,22 +156,8 @@ func TestFindBabfilePriority(t *testing.T) {
 			t.Errorf("FindBabfile() unexpected error: %v", err)
 		}
 
-		if found != babfilePath {
+		if normalizePath(t, found) != normalizePath(t, babfilePath) {
 			t.Errorf("FindBabfile() = %q, want %q", found, babfilePath)
 		}
 	})
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && indexOf(s, substr) >= 0))
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

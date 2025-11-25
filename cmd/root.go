@@ -9,24 +9,34 @@ import (
 	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/tui"
 	"github.com/bab-sh/bab/internal/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
 var (
-	verbose bool
-	dryRun  bool
+	verbose     bool
+	dryRun      bool
+	interactive bool
+	rootCtx     context.Context
 
 	rootCmd = &cobra.Command{
 		Use:           "bab",
 		Short:         "Custom commands for every project",
 		Version:       version.Version,
 		SilenceErrors: true,
+		SilenceUsage:  true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if verbose {
 				log.SetLevel(log.DebugLevel)
 			}
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if interactive {
+				return runInteractive(rootCtx)
+			}
+			return cmd.Help()
 		},
 	}
 )
@@ -34,10 +44,12 @@ var (
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "Show commands without executing")
+	rootCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive task picker")
 }
 
 func ExecuteContext(ctx context.Context) error {
 	log.Debug("Starting bab execution")
+	rootCtx = ctx
 
 	if err := rootCmd.Execute(); err == nil {
 		log.Debug("Command executed successfully")
@@ -45,51 +57,40 @@ func ExecuteContext(ctx context.Context) error {
 	}
 
 	if len(os.Args) < 2 {
-		log.Error("No command or task specified")
 		return fmt.Errorf("no command or task specified")
 	}
 
-	if err := rootCmd.ParseFlags(os.Args[1:]); err != nil {
-		log.Error("Failed to parse flags", "error", err)
-		return err
-	}
-
-	if verbose {
-		log.SetLevel(log.DebugLevel)
-	}
-
-	var taskName string
-	for _, arg := range os.Args[1:] {
-		if !strings.HasPrefix(arg, "-") {
-			taskName = arg
-			break
-		}
-	}
-
+	taskName := findTaskName()
 	if taskName == "" {
-		log.Error("No task specified")
 		return fmt.Errorf("no task specified")
 	}
 
-	for _, cmd := range rootCmd.Commands() {
-		if cmd.Name() == taskName || containsString(cmd.Aliases, taskName) {
-			log.Debug("Command error occurred", "command", taskName)
-			return fmt.Errorf("command %q failed", taskName)
-		}
+	if isBuiltinCommand(taskName) {
+		return fmt.Errorf("command %q failed", taskName)
 	}
 
-	log.Debug("No command matched, attempting to execute as task", "arg", taskName)
-	if err := executeTask(ctx, taskName); err != nil {
-		return err
-	}
-	log.Debug("Task executed successfully")
-	return nil
+	log.Debug("Executing as task", "name", taskName)
+	return executeTask(ctx, taskName)
 }
 
-func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
+func findTaskName() string {
+	for _, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "-") {
+			return arg
+		}
+	}
+	return ""
+}
+
+func isBuiltinCommand(name string) bool {
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == name {
 			return true
+		}
+		for _, alias := range cmd.Aliases {
+			if alias == name {
+				return true
+			}
 		}
 	}
 	return false
@@ -98,19 +99,10 @@ func containsString(slice []string, item string) bool {
 func executeTask(ctx context.Context, taskName string) error {
 	log.Debug("Executing task", "name", taskName, "dry-run", dryRun)
 
-	babfilePath, err := finder.FindBabfile()
+	tasks, err := loadTasks()
 	if err != nil {
-		log.Error("Failed to locate Babfile", "error", err)
 		return err
 	}
-	log.Debug("Found Babfile", "path", babfilePath)
-
-	tasks, err := parser.Parse(babfilePath)
-	if err != nil {
-		log.Error("Failed to parse Babfile", "error", err)
-		return err
-	}
-	log.Debug("Parsed Babfile", "task-count", len(tasks))
 
 	executed := make(map[string]bool)
 	executing := make(map[string]bool)
@@ -118,7 +110,25 @@ func executeTask(ctx context.Context, taskName string) error {
 	return executeTaskWithDeps(ctx, taskName, tasks, executed, executing)
 }
 
-func executeTaskWithDeps(ctx context.Context, taskName string, tasks parser.TaskMap, executed map[string]bool, executing map[string]bool) error {
+func loadTasks() (parser.TaskMap, error) {
+	path, err := finder.FindBabfile()
+	if err != nil {
+		log.Error("Failed to locate Babfile", "error", err)
+		return nil, err
+	}
+	log.Debug("Found Babfile", "path", path)
+
+	tasks, err := parser.Parse(path)
+	if err != nil {
+		log.Error("Failed to parse Babfile", "error", err)
+		return nil, err
+	}
+	log.Debug("Parsed Babfile", "task-count", len(tasks))
+
+	return tasks, nil
+}
+
+func executeTaskWithDeps(ctx context.Context, taskName string, tasks parser.TaskMap, executed, executing map[string]bool) error {
 	if executed[taskName] {
 		log.Debug("Task already executed, skipping", "name", taskName)
 		return nil
@@ -126,55 +136,47 @@ func executeTaskWithDeps(ctx context.Context, taskName string, tasks parser.Task
 
 	if executing[taskName] {
 		chain := buildDependencyChain(taskName, executing, tasks)
-		log.Error("Circular dependency detected", "chain", chain)
 		return fmt.Errorf("circular dependency detected: %s", chain)
 	}
 
 	task, exists := tasks[taskName]
 	if !exists {
-		log.Error("Task not found", "name", taskName)
 		return fmt.Errorf("task %q not found", taskName)
 	}
 
 	executing[taskName] = true
 	defer delete(executing, taskName)
 
-	if len(task.Dependencies) > 0 {
-		log.Debug("Executing dependencies first", "task", taskName, "deps", task.Dependencies)
-		for _, dep := range task.Dependencies {
-			log.Debug("Executing dependency", "task", taskName, "dependency", dep)
-			if err := executeTaskWithDeps(ctx, dep, tasks, executed, executing); err != nil {
-				return fmt.Errorf("dependency %q of task %q failed: %w", dep, taskName, err)
-			}
+	for _, dep := range task.Dependencies {
+		log.Debug("Executing dependency", "task", taskName, "dependency", dep)
+		if err := executeTaskWithDeps(ctx, dep, tasks, executed, executing); err != nil {
+			return fmt.Errorf("dependency %q of task %q failed: %w", dep, taskName, err)
 		}
 	}
 
-	log.Debug("Found task", "name", taskName, "commands", len(task.Commands))
+	log.Debug("Executing task", "name", taskName, "commands", len(task.Commands))
 
+	var err error
 	if dryRun {
-		log.Info("Running task", "name", taskName, "dry-run", true)
-		if err := executor.DryRun(ctx, task); err != nil {
-			log.Error("Task dry-run failed", "name", taskName, "error", err)
-			return err
-		}
-		log.Info("Task dry-run completed", "name", taskName)
+		err = executor.DryRun(ctx, task)
 	} else {
-		log.Info("Executing task", "name", taskName)
-		if err := executor.Execute(ctx, task); err != nil {
-			log.Error("Task failed", "name", taskName, "error", err)
-			return err
-		}
-		log.Info("Task completed successfully", "name", taskName)
+		err = executor.Execute(ctx, task)
 	}
 
+	if err != nil {
+		log.Error("Task failed", "name", taskName, "error", err)
+		return err
+	}
+
+	log.Info("Task completed", "name", taskName)
 	executed[taskName] = true
 	return nil
 }
 
 func buildDependencyChain(currentTask string, executing map[string]bool, tasks parser.TaskMap) string {
 	chain := []string{currentTask}
-
 	visited := make(map[string]bool)
+
 	for len(chain) < len(tasks) {
 		lastTask := chain[len(chain)-1]
 		if visited[lastTask] {
@@ -199,4 +201,27 @@ func buildDependencyChain(currentTask string, executing map[string]bool, tasks p
 	}
 
 	return strings.Join(chain, " → ")
+}
+
+func runInteractive(ctx context.Context) error {
+	log.Debug("Starting interactive task picker")
+
+	tasks, err := loadTasks()
+	if err != nil {
+		return err
+	}
+
+	selected, err := tui.PickTask(tasks)
+	if err != nil {
+		log.Error("Task picker failed", "error", err)
+		return err
+	}
+
+	if selected == nil {
+		log.Debug("No task selected")
+		return nil
+	}
+
+	log.Debug("Task selected", "name", selected.Name)
+	return executeTask(ctx, selected.Name)
 }
