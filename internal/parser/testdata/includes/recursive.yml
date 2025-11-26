@@ -1,0 +1,7 @@
+includes:
+  level1:
+    babfile: ./deep/level1.yml
+
+tasks:
+  root:
+    run: echo "root"

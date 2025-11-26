@@ -1,2 +1,3 @@
-test:
-  run: ""
+tasks:
+  test:
+    run: ""

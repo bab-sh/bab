@@ -10,14 +10,23 @@ import (
 )
 
 func Parse(path string) (TaskMap, error) {
+	ctx := NewParseContext()
+	return parseWithContext(path, ctx)
+}
+
+func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
 	log.Debug("Starting to parse Babfile", "path", path)
 
 	if err := validatePath(path); err != nil {
 		return nil, fmt.Errorf("invalid babfile path: %w", err)
 	}
 
-	cleanPath := filepath.Clean(path)
-	data, err := os.ReadFile(cleanPath)
+	absPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	data, err := os.ReadFile(absPath)
 	if err != nil {
 		log.Debug("Failed to read Babfile", "path", path, "error", err)
 		return nil, fmt.Errorf("failed to read Babfile: %w", err)
@@ -37,10 +46,33 @@ func Parse(path string) (TaskMap, error) {
 	}
 	log.Debug("Successfully unmarshaled YAML", "top-level-keys", len(rootMap))
 
+	includes, err := parseIncludes(rootMap, absPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse includes: %w", err)
+	}
+
+	delete(rootMap, keyIncludes)
+
+	tasksRaw, exists := rootMap[keyTasks]
+	if !exists {
+		return nil, fmt.Errorf("babfile must contain a 'tasks' key")
+	}
+
+	tasksSection, ok := safeMapCast(tasksRaw)
+	if !ok {
+		return nil, fmt.Errorf("'tasks' must be a map, got %T", tasksRaw)
+	}
+
 	tasks := make(TaskMap)
-	if err := flatten(rootMap, "", tasks); err != nil {
+	if err := flatten(tasksSection, "", tasks); err != nil {
 		log.Debug("Failed to flatten tasks", "error", err)
 		return nil, err
+	}
+
+	for namespace, path := range includes {
+		if err := resolveInclude(namespace, path, tasks, ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := ValidateDependencies(tasks); err != nil {

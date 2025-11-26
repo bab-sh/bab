@@ -1,0 +1,6 @@
+tasks:
+  build:
+    run: echo "building"
+
+  test:
+    run: echo "testing"

@@ -1,0 +1,7 @@
+# This file is missing the required 'tasks' key
+includes:
+  gen:
+    babfile: ./simple.yml
+
+hello:
+  run: echo "Hello"

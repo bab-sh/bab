@@ -1,0 +1,6 @@
+tasks:
+  docker:
+    build:
+      run: docker build .
+    push:
+      run: docker push
