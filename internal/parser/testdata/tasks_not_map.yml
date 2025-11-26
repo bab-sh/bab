@@ -1,0 +1,2 @@
+# The 'tasks' key should be a map, not a string
+tasks: "not a map"

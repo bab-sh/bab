@@ -1,2 +1,3 @@
-hello:
-  run: echo "Hello World"
+tasks:
+  hello:
+    run: echo "Hello World"

@@ -1,0 +1,7 @@
+includes:
+  b:
+    babfile: ./circular_b.yml
+
+tasks:
+  task_a:
+    run: echo "a"

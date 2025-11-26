@@ -1,6 +1,7 @@
-build:
-  desc: Build the project
-  run:
-    - echo "Compiling..."
-    - echo "Linking..."
-    - echo "Done!"
+tasks:
+  build:
+    desc: Build the project
+    run:
+      - echo "Compiling..."
+      - echo "Linking..."
+      - echo "Done!"

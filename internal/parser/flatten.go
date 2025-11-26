@@ -35,7 +35,7 @@ func buildTaskName(prefix, key string) string {
 func getNestedKeys(taskMap map[string]interface{}) []string {
 	var keys []string
 	for k := range taskMap {
-		if k != keyRun && k != keyDesc && k != keyDeps {
+		if k != keyRun && k != keyDesc && k != keyDeps && k != keyIncludes && k != keyBabfile && k != keyTasks {
 			keys = append(keys, k)
 		}
 	}
