@@ -1,2 +1,3 @@
-test:
-  desc: This task has no run command
+tasks:
+  test:
+    desc: This task has no run command

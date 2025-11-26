@@ -1,0 +1,5 @@
+includes:
+  gen: "./simple.yml"
+
+task:
+  run: echo "test"

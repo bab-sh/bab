@@ -138,6 +138,16 @@ func TestParseDescriptions(t *testing.T) {
 	}
 }
 
+func TestParseEmptyTasks(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "empty.yml"))
+	if err != nil {
+		t.Fatalf("Parse() unexpected error: %v", err)
+	}
+	if len(tasks) != 0 {
+		t.Errorf("expected 0 tasks, got %d", len(tasks))
+	}
+}
+
 func TestParseInvalidFiles(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -145,8 +155,9 @@ func TestParseInvalidFiles(t *testing.T) {
 		errMsg string
 	}{
 		{"invalid YAML syntax", filepath.Join("testdata", "invalid_yaml.yml"), "failed to parse YAML"},
-		{"empty file", filepath.Join("testdata", "empty.yml"), "root of Babfile must be a map"},
 		{"root is not a map", filepath.Join("testdata", "root_not_map.yml"), "root of Babfile must be a map"},
+		{"missing tasks key", filepath.Join("testdata", "missing_tasks_key.yml"), "babfile must contain a 'tasks' key"},
+		{"tasks not a map", filepath.Join("testdata", "tasks_not_map.yml"), "'tasks' must be a map"},
 		{"invalid dependency reference", filepath.Join("testdata", "invalid_deps.yml"), "dependency validation failed"},
 		{"empty command", filepath.Join("testdata", "empty_command.yml"), "command cannot be"},
 		{"nonexistent file", "nonexistent.yml", "failed to read Babfile"},

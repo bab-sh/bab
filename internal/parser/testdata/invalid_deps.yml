@@ -1,3 +1,4 @@
-test:
-  deps: nonexistent_task
-  run: echo "Testing"
+tasks:
+  test:
+    deps: nonexistent_task
+    run: echo "Testing"

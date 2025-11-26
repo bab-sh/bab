@@ -8,3 +8,17 @@ type Task struct {
 }
 
 type TaskMap map[string]*Task
+
+type IncludeMap map[string]string
+
+type ParseContext struct {
+	visited map[string]bool
+	stack   []string
+}
+
+func NewParseContext() *ParseContext {
+	return &ParseContext{
+		visited: make(map[string]bool),
+		stack:   make([]string, 0),
+	}
+}
