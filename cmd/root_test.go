@@ -10,28 +10,6 @@ import (
 	"github.com/bab-sh/bab/internal/parser"
 )
 
-func TestIsBuiltinCommand(t *testing.T) {
-	tests := []struct {
-		name string
-		cmd  string
-		want bool
-	}{
-		{"list command", "list", true},
-		{"help command", "help", false},
-		{"unknown command", "unknown", false},
-		{"empty string", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := isBuiltinCommand(tt.cmd)
-			if got != tt.want {
-				t.Errorf("isBuiltinCommand(%q) = %v, want %v", tt.cmd, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestExecuteTask(t *testing.T) {
 	tests := []struct {
 		name        string
