@@ -1,0 +1,4 @@
+includes: "not a map"
+
+task:
+  run: echo "test"

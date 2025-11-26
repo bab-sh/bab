@@ -1,11 +1,12 @@
-clean:
-  run: echo "Cleaning..."
+tasks:
+  clean:
+    run: echo "Cleaning..."
 
-build:
-  deps: clean
-  run: echo "Building..."
+  build:
+    deps: clean
+    run: echo "Building..."
 
-test:
-  deps:
-    - build
-  run: echo "Testing..."
+  test:
+    deps:
+      - build
+    run: echo "Testing..."

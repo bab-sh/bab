@@ -46,22 +46,17 @@ func ExecuteContext(ctx context.Context) error {
 	log.Debug("Starting bab execution")
 	rootCtx = ctx
 
-	if err := rootCmd.Execute(); err == nil {
-		log.Debug("Command executed successfully")
-		return nil
-	}
-
 	if len(os.Args) < 2 {
-		return fmt.Errorf("no command or task specified")
+		return rootCmd.Execute()
 	}
 
 	taskName := findTaskName()
 	if taskName == "" {
-		return fmt.Errorf("no task specified")
+		return rootCmd.Execute()
 	}
 
 	if isBuiltinCommand(taskName) {
-		return fmt.Errorf("command %q failed", taskName)
+		return rootCmd.Execute()
 	}
 
 	log.Debug("Executing as task", "name", taskName)

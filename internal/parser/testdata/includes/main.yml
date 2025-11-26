@@ -1,0 +1,11 @@
+includes:
+  gen:
+    babfile: ./simple.yml
+
+tasks:
+  setup:
+    run: echo "setup"
+
+  all:
+    deps: [setup, gen:build]
+    run: echo "done"

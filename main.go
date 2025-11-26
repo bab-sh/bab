@@ -34,7 +34,6 @@ func run() int {
 	}()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		log.Error("Execution failed", "error", err)
 		return 1
 	}
 

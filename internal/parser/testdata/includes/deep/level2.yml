@@ -1,0 +1,3 @@
+tasks:
+  task2:
+    run: echo "level2"

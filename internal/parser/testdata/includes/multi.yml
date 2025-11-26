@@ -1,0 +1,10 @@
+includes:
+  gen:
+    babfile: ./simple.yml
+  docker:
+    babfile: ./nested.yml
+
+tasks:
+  deploy:
+    deps: [gen:build, docker:docker:build]
+    run: echo "deploying"
