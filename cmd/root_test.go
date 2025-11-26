@@ -43,25 +43,28 @@ func TestExecuteTask(t *testing.T) {
 		{
 			name:     "execute simple task",
 			taskName: "hello",
-			babfileYAML: `hello:
-  run: echo "Hello World"`,
+			babfileYAML: `tasks:
+  hello:
+    run: echo "Hello World"`,
 			wantErr: false,
 		},
 		{
 			name:     "execute task with dependencies",
 			taskName: "test",
-			babfileYAML: `build:
-  run: echo "Building"
-test:
-  deps: build
-  run: echo "Testing"`,
+			babfileYAML: `tasks:
+  build:
+    run: echo "Building"
+  test:
+    deps: build
+    run: echo "Testing"`,
 			wantErr: false,
 		},
 		{
 			name:     "task not found",
 			taskName: "nonexistent",
-			babfileYAML: `hello:
-  run: echo "Hello"`,
+			babfileYAML: `tasks:
+  hello:
+    run: echo "Hello"`,
 			wantErr: true,
 			errMsg:  "not found",
 		},

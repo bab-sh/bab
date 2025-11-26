@@ -18,33 +18,36 @@ func TestRunList(t *testing.T) {
 	}{
 		{
 			name: "list simple tasks",
-			babfileYAML: `hello:
-  run: echo "Hello"
-world:
-  run: echo "World"`,
+			babfileYAML: `tasks:
+  hello:
+    run: echo "Hello"
+  world:
+    run: echo "World"`,
 			wantErr: false,
 		},
 		{
 			name: "list tasks with descriptions",
-			babfileYAML: `test:
-  desc: Run tests
-  run: go test ./...
-build:
-  desc: Build the project
-  run: go build`,
+			babfileYAML: `tasks:
+  test:
+    desc: Run tests
+    run: go test ./...
+  build:
+    desc: Build the project
+    run: go build`,
 			wantErr: false,
 		},
 		{
 			name: "list nested tasks",
-			babfileYAML: `ci:
-  test:
-    run: echo "Testing"
-  lint:
-    run: echo "Linting"
-dev:
-  start:
-    desc: Start dev server
-    run: echo "Starting"`,
+			babfileYAML: `tasks:
+  ci:
+    test:
+      run: echo "Testing"
+    lint:
+      run: echo "Linting"
+  dev:
+    start:
+      desc: Start dev server
+      run: echo "Starting"`,
 			wantErr: false,
 		},
 		{
@@ -55,14 +58,15 @@ dev:
 		},
 		{
 			name: "tasks with dependencies",
-			babfileYAML: `clean:
-  run: echo "Cleaning"
-build:
-  deps: clean
-  run: echo "Building"
-test:
-  deps: build
-  run: echo "Testing"`,
+			babfileYAML: `tasks:
+  clean:
+    run: echo "Cleaning"
+  build:
+    deps: clean
+    run: echo "Building"
+  test:
+    deps: build
+    run: echo "Testing"`,
 			wantErr: false,
 		},
 	}
