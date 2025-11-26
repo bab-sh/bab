@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/bab-sh/bab/internal/executor"
@@ -21,7 +20,7 @@ var (
 	rootCtx context.Context
 
 	rootCmd = &cobra.Command{
-		Use:           "bab",
+		Use:           "bab [task]",
 		Short:         "Custom commands for every project",
 		Version:       version.Version,
 		SilenceErrors: true,
@@ -32,8 +31,12 @@ var (
 			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return executeTask(rootCtx, args[0])
+			}
 			return runInteractive(rootCtx)
 		},
+		Args: cobra.ArbitraryArgs,
 	}
 )
 
@@ -46,44 +49,7 @@ func ExecuteContext(ctx context.Context) error {
 	log.Debug("Starting bab execution")
 	rootCtx = ctx
 
-	if len(os.Args) < 2 {
-		return rootCmd.Execute()
-	}
-
-	taskName := findTaskName()
-	if taskName == "" {
-		return rootCmd.Execute()
-	}
-
-	if isBuiltinCommand(taskName) {
-		return rootCmd.Execute()
-	}
-
-	log.Debug("Executing as task", "name", taskName)
-	return executeTask(ctx, taskName)
-}
-
-func findTaskName() string {
-	for _, arg := range os.Args[1:] {
-		if !strings.HasPrefix(arg, "-") {
-			return arg
-		}
-	}
-	return ""
-}
-
-func isBuiltinCommand(name string) bool {
-	for _, cmd := range rootCmd.Commands() {
-		if cmd.Name() == name {
-			return true
-		}
-		for _, alias := range cmd.Aliases {
-			if alias == name {
-				return true
-			}
-		}
-	}
-	return false
+	return rootCmd.Execute()
 }
 
 func executeTask(ctx context.Context, taskName string) error {
