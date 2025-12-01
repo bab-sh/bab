@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 func TestRunList(t *testing.T) {
@@ -88,8 +86,7 @@ func TestRunList(t *testing.T) {
 				t.Fatalf("failed to change directory: %v", err)
 			}
 
-			cmd := &cobra.Command{}
-			err := runList(cmd, []string{})
+			err := runList()
 
 			if tt.wantErr {
 				if err == nil {
@@ -118,8 +115,7 @@ func TestRunListNoBabfile(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	cmd := &cobra.Command{}
-	err := runList(cmd, []string{})
+	err := runList()
 
 	if err == nil {
 		t.Error("runList() expected error when no Babfile exists, got nil")
