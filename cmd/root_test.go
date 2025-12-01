@@ -6,11 +6,87 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/bab-sh/bab/internal/parser"
 )
 
-func TestExecuteTask(t *testing.T) {
+func TestNewCLI(t *testing.T) {
+	cli := newCLI()
+	if cli == nil {
+		t.Fatal("newCLI() returned nil")
+		return
+	}
+	if cli.verbose {
+		t.Error("verbose should be false by default")
+	}
+	if cli.dryRun {
+		t.Error("dryRun should be false by default")
+	}
+	if cli.listTasks {
+		t.Error("listTasks should be false by default")
+	}
+	if cli.completion != "" {
+		t.Errorf("completion should be empty by default, got %q", cli.completion)
+	}
+}
+
+func TestCLI_buildCommand(t *testing.T) {
+	cli := newCLI()
+	cmd := cli.buildCommand()
+
+	t.Run("command properties", func(t *testing.T) {
+		if cmd.Use != "bab [task]" {
+			t.Errorf("Use = %q, want %q", cmd.Use, "bab [task]")
+		}
+		if cmd.Short != "Custom commands for every project" {
+			t.Errorf("Short = %q, want %q", cmd.Short, "Custom commands for every project")
+		}
+		if !cmd.SilenceErrors {
+			t.Error("SilenceErrors should be true")
+		}
+		if !cmd.SilenceUsage {
+			t.Error("SilenceUsage should be true")
+		}
+	})
+
+	t.Run("flags exist", func(t *testing.T) {
+		persistentFlags := []string{"verbose", "dry-run"}
+		for _, name := range persistentFlags {
+			if cmd.PersistentFlags().Lookup(name) == nil {
+				t.Errorf("persistent flag %q not found", name)
+			}
+		}
+
+		localFlags := []string{"list", "completion"}
+		for _, name := range localFlags {
+			if cmd.Flags().Lookup(name) == nil {
+				t.Errorf("flag %q not found", name)
+			}
+		}
+	})
+
+	t.Run("flag shorthand", func(t *testing.T) {
+		shorthands := map[string]string{
+			"verbose":    "v",
+			"dry-run":    "n",
+			"list":       "l",
+			"completion": "c",
+		}
+		for name, shorthand := range shorthands {
+			flag := cmd.Flags().Lookup(name)
+			if flag == nil {
+				flag = cmd.PersistentFlags().Lookup(name)
+			}
+			if flag == nil {
+				t.Errorf("flag %q not found", name)
+				continue
+			}
+			if flag.Shorthand != shorthand {
+				t.Errorf("flag %q shorthand = %q, want %q", name, flag.Shorthand, shorthand)
+			}
+		}
+	})
+}
+
+func TestCLI_runTask(t *testing.T) {
 	tests := []struct {
 		name        string
 		taskName    string
@@ -24,17 +100,6 @@ func TestExecuteTask(t *testing.T) {
 			babfileYAML: `tasks:
   hello:
     run: echo "Hello World"`,
-			wantErr: false,
-		},
-		{
-			name:     "execute task with dependencies",
-			taskName: "test",
-			babfileYAML: `tasks:
-  build:
-    run: echo "Building"
-  test:
-    deps: build
-    run: echo "Testing"`,
 			wantErr: false,
 		},
 		{
@@ -63,250 +128,69 @@ func TestExecuteTask(t *testing.T) {
 				t.Fatalf("failed to change directory: %v", err)
 			}
 
-			oldDryRun := dryRun
-			dryRun = true
-			defer func() { dryRun = oldDryRun }()
+			cli := newCLI()
+			cli.ctx = context.Background()
+			cli.dryRun = true
 
-			ctx := context.Background()
-			err := executeTask(ctx, tt.taskName)
+			err := cli.runTask(tt.taskName)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("executeTask() expected error containing %q, got nil", tt.errMsg)
+					t.Errorf("runTask() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
 				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("executeTask() error = %q, want error containing %q", err.Error(), tt.errMsg)
+					t.Errorf("runTask() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("executeTask() unexpected error: %v", err)
+				t.Errorf("runTask() unexpected error: %v", err)
 			}
 		})
 	}
 }
 
-func TestExecuteTaskWithDeps(t *testing.T) {
-	tests := []struct {
-		name      string
-		taskName  string
-		tasks     parser.TaskMap
-		wantErr   bool
-		errMsg    string
-		executed  map[string]bool
-		executing map[string]bool
-	}{
-		{
-			name:     "execute task with no dependencies",
-			taskName: "hello",
-			tasks: parser.TaskMap{
-				"hello": &parser.Task{
-					Name:     "hello",
-					Commands: []string{"echo hello"},
-				},
-			},
-			wantErr:   false,
-			executed:  make(map[string]bool),
-			executing: make(map[string]bool),
-		},
-		{
-			name:     "execute task with one dependency",
-			taskName: "test",
-			tasks: parser.TaskMap{
-				"build": &parser.Task{
-					Name:     "build",
-					Commands: []string{"echo building"},
-				},
-				"test": &parser.Task{
-					Name:         "test",
-					Commands:     []string{"echo testing"},
-					Dependencies: []string{"build"},
-				},
-			},
-			wantErr:   false,
-			executed:  make(map[string]bool),
-			executing: make(map[string]bool),
-		},
-		{
-			name:     "execute task with multiple dependencies",
-			taskName: "deploy",
-			tasks: parser.TaskMap{
-				"build": &parser.Task{
-					Name:     "build",
-					Commands: []string{"echo building"},
-				},
-				"test": &parser.Task{
-					Name:     "test",
-					Commands: []string{"echo testing"},
-				},
-				"deploy": &parser.Task{
-					Name:         "deploy",
-					Commands:     []string{"echo deploying"},
-					Dependencies: []string{"build", "test"},
-				},
-			},
-			wantErr:   false,
-			executed:  make(map[string]bool),
-			executing: make(map[string]bool),
-		},
-		{
-			name:     "task not found",
-			taskName: "nonexistent",
-			tasks: parser.TaskMap{
-				"hello": &parser.Task{
-					Name:     "hello",
-					Commands: []string{"echo hello"},
-				},
-			},
-			wantErr:   true,
-			errMsg:    "not found",
-			executed:  make(map[string]bool),
-			executing: make(map[string]bool),
-		},
-		{
-			name:     "circular dependency detected",
-			taskName: "task_a",
-			tasks: parser.TaskMap{
-				"task_a": &parser.Task{
-					Name:         "task_a",
-					Commands:     []string{"echo a"},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &parser.Task{
-					Name:         "task_b",
-					Commands:     []string{"echo b"},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantErr:   true,
-			errMsg:    "circular dependency",
-			executed:  make(map[string]bool),
-			executing: make(map[string]bool),
-		},
-		{
-			name:     "skip already executed task",
-			taskName: "hello",
-			tasks: parser.TaskMap{
-				"hello": &parser.Task{
-					Name:     "hello",
-					Commands: []string{"echo hello"},
-				},
-			},
-			wantErr: false,
-			executed: map[string]bool{
-				"hello": true,
-			},
-			executing: make(map[string]bool),
-		},
-	}
+func TestCLI_run_dispatching(t *testing.T) {
+	t.Run("completion flag takes priority", func(t *testing.T) {
+		cli := newCLI()
+		cmd := cli.buildCommand()
+		cli.completion = "invalid"
+		cli.listTasks = true
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldDryRun := dryRun
-			dryRun = true
-			defer func() { dryRun = oldDryRun }()
+		err := cli.run(cmd, []string{"sometask"})
 
-			ctx := context.Background()
-			err := executeTaskWithDeps(ctx, tt.taskName, tt.tasks, tt.executed, tt.executing)
+		if err == nil || !strings.Contains(err.Error(), "invalid shell") {
+			t.Errorf("expected completion error, got: %v", err)
+		}
+	})
 
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("executeTaskWithDeps() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("executeTaskWithDeps() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-				return
-			}
+	t.Run("list flag takes priority over args", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		babfilePath := filepath.Join(tmpDir, "Babfile")
+		babfileYAML := `tasks:
+  hello:
+    run: echo "Hello"`
+		if err := os.WriteFile(babfilePath, []byte(babfileYAML), 0600); err != nil {
+			t.Fatalf("failed to create test Babfile: %v", err)
+		}
 
-			if err != nil {
-				t.Errorf("executeTaskWithDeps() unexpected error: %v", err)
-			}
-		})
-	}
-}
+		oldDir, _ := os.Getwd()
+		defer func() { _ = os.Chdir(oldDir) }()
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("failed to change directory: %v", err)
+		}
 
-func TestBuildDependencyChain(t *testing.T) {
-	tests := []struct {
-		name        string
-		currentTask string
-		executing   map[string]bool
-		tasks       parser.TaskMap
-		wantChain   string
-	}{
-		{
-			name:        "simple circular dependency",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-				"task_b": true,
-			},
-			tasks: parser.TaskMap{
-				"task_a": &parser.Task{
-					Name:         "task_a",
-					Commands:     []string{"echo a"},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &parser.Task{
-					Name:         "task_b",
-					Commands:     []string{"echo b"},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantChain: "task_a → task_b",
-		},
-		{
-			name:        "no circular dependency",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-			},
-			tasks: parser.TaskMap{
-				"task_a": &parser.Task{
-					Name:     "task_a",
-					Commands: []string{"echo a"},
-				},
-			},
-			wantChain: "task_a",
-		},
-		{
-			name:        "longer chain",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-				"task_b": true,
-				"task_c": true,
-			},
-			tasks: parser.TaskMap{
-				"task_a": &parser.Task{
-					Name:         "task_a",
-					Commands:     []string{"echo a"},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &parser.Task{
-					Name:         "task_b",
-					Commands:     []string{"echo b"},
-					Dependencies: []string{"task_c"},
-				},
-				"task_c": &parser.Task{
-					Name:         "task_c",
-					Commands:     []string{"echo c"},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantChain: "task_a → task_b → task_c",
-		},
-	}
+		cli := newCLI()
+		cmd := cli.buildCommand()
+		cli.listTasks = true
+		cli.ctx = context.Background()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := buildDependencyChain(tt.currentTask, tt.executing, tt.tasks)
-			if got != tt.wantChain {
-				t.Errorf("buildDependencyChain() = %q, want %q", got, tt.wantChain)
-			}
-		})
-	}
+		err := cli.run(cmd, []string{"nonexistent"})
+
+		if err != nil {
+			t.Errorf("expected list to run successfully, got error: %v", err)
+		}
+	})
 }

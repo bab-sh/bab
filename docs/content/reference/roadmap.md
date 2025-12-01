@@ -18,7 +18,7 @@ Current features in the latest release:
 - [x] Multiple Babfile formats (Babfile, Babfile.yaml, Babfile.yml)
 
 ### CLI Features
-- [x] Task listing (`bab list`)
+- [x] Task listing (`bab --list`)
 - [x] Dry-run mode (`--dry-run`)
 - [x] Verbose output (`--verbose`)
 - [x] Interactive mode with fuzzy search (default)
