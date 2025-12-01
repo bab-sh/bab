@@ -24,7 +24,7 @@ go mod download
 go build -o bab
 
 # Run
-./bab list
+./bab --list
 ```
 
 ## Testing
