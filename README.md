@@ -75,7 +75,7 @@ For complete Babfile syntax and advanced features, see the [Babfile Documentatio
 
 ```bash
 bab                  # Browse tasks interactively
-bab list             # List all available tasks
+bab --list           # List all available tasks
 bab setup            # Run the setup task
 bab dev              # Start development server
 bab build --dry-run  # Preview build task without executing
@@ -95,7 +95,7 @@ Bab is under active development. Some completed features may be refined or reimp
 - [x] **Flexible Babfile Formats** - Support for Babfile, Babfile.yaml, and Babfile.yml
 - [x] **Dry-Run Mode** - Preview commands without executing them (`--dry-run`)
 - [x] **Verbose Logging** - Detailed execution logs for debugging (`--verbose`)
-- [x] **Task Listing** - Display all available tasks in a colorized tree structure (`bab list`)
+- [x] **Task Listing** - Display all available tasks in a colorized tree structure (`bab --list`)
 - [x] **Graceful Shutdown** - Proper handling of interrupts and termination signals
 - [x] **Multi-Command Tasks** - Support for tasks with single or multiple commands
 - [x] **Task Dependencies** - Automatic execution of prerequisite tasks before running a task

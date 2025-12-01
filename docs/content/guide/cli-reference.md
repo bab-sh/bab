@@ -17,15 +17,6 @@ Type to search for tasks, use arrow keys or `Ctrl+P`/`Ctrl+N` to navigate, and p
 - `Ctrl+U` - Clear search input
 - `Esc` or `Ctrl+C` - Exit without executing
 
-### `bab list`
-List all available tasks.
-
-```bash
-bab list
-```
-
-Aliases: `ls`, `tasks`
-
 ### `bab <task>`
 Execute a task.
 
@@ -36,23 +27,31 @@ bab dev:start
 
 Tasks with dependencies run them first automatically.
 
-### `bab completion <shell>`
+## Flags
+
+### `-l, --list`
+List all available tasks.
+
+```bash
+bab --list
+bab -l
+```
+
+### `-c, --completion <shell>`
 Generate shell completion script.
 
 ```bash
 # Bash
-source <(bab completion bash)
+source <(bab --completion bash)
 
 # Zsh
-source <(bab completion zsh)
+source <(bab --completion zsh)
 
 # Fish
-bab completion fish > ~/.config/fish/completions/bab.fish
+bab --completion fish > ~/.config/fish/completions/bab.fish
 ```
 
 Supported shells: `bash`, `zsh`, `fish`, `powershell`
-
-## Flags
 
 ### `-n, --dry-run`
 Preview commands without executing.
@@ -80,7 +79,6 @@ Show help.
 
 ```bash
 bab --help
-bab list --help
 ```
 
 ## Exit Codes

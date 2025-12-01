@@ -44,7 +44,7 @@ build:
 bab
 
 # List tasks
-bab list
+bab --list
 
 # Run a task
 bab dev
