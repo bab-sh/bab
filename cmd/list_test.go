@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestRunList(t *testing.T) {
+func TestCLI_runList(t *testing.T) {
 	tests := []struct {
 		name        string
 		babfileYAML string
@@ -86,7 +86,8 @@ func TestRunList(t *testing.T) {
 				t.Fatalf("failed to change directory: %v", err)
 			}
 
-			err := runList()
+			cli := newCLI()
+			err := cli.runList()
 
 			if tt.wantErr {
 				if err == nil {
@@ -106,7 +107,7 @@ func TestRunList(t *testing.T) {
 	}
 }
 
-func TestRunListNoBabfile(t *testing.T) {
+func TestCLI_runListNoBabfile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	oldDir, _ := os.Getwd()
@@ -115,7 +116,8 @@ func TestRunListNoBabfile(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	err := runList()
+	cli := newCLI()
+	err := cli.runList()
 
 	if err == nil {
 		t.Error("runList() expected error when no Babfile exists, got nil")
