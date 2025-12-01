@@ -69,6 +69,7 @@ func TestParseTasksWithDependencies(t *testing.T) {
 	clean := tasks["clean"]
 	if clean == nil {
 		t.Fatal("task 'clean' not found")
+		return
 	}
 	if len(clean.Dependencies) != 0 {
 		t.Errorf("clean should have no dependencies, got %v", clean.Dependencies)
@@ -77,6 +78,7 @@ func TestParseTasksWithDependencies(t *testing.T) {
 	build := tasks[testBuildTask]
 	if build == nil {
 		t.Fatal("task 'build' not found")
+		return
 	}
 	if len(build.Dependencies) != 1 || build.Dependencies[0] != "clean" {
 		t.Errorf("build should depend on 'clean', got %v", build.Dependencies)
@@ -85,6 +87,7 @@ func TestParseTasksWithDependencies(t *testing.T) {
 	test := tasks["test"]
 	if test == nil {
 		t.Fatal("task 'test' not found")
+		return
 	}
 	if len(test.Dependencies) != 1 || test.Dependencies[0] != testBuildTask {
 		t.Errorf("test should depend on 'build', got %v", test.Dependencies)
@@ -110,6 +113,7 @@ func TestParseNestedTasks(t *testing.T) {
 	full := tasks["ci:full"]
 	if full == nil {
 		t.Fatal("task 'ci:full' not found")
+		return
 	}
 	if len(full.Dependencies) != 2 {
 		t.Errorf("ci:full should have 2 dependencies, got %d", len(full.Dependencies))
@@ -124,6 +128,7 @@ func TestParseDescriptions(t *testing.T) {
 	test := tasks["test"]
 	if test == nil {
 		t.Fatal("task 'test' not found")
+		return
 	}
 	if test.Description != "Run all unit tests" {
 		t.Errorf("expected description 'Run all unit tests', got %q", test.Description)
@@ -132,6 +137,7 @@ func TestParseDescriptions(t *testing.T) {
 	coverage := tasks["coverage"]
 	if coverage == nil {
 		t.Fatal("task 'coverage' not found")
+		return
 	}
 	if coverage.Description != "Generate coverage report" {
 		t.Errorf("expected description 'Generate coverage report', got %q", coverage.Description)
