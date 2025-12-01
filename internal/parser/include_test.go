@@ -286,6 +286,7 @@ func TestMergeTasksPreservesDependencies(t *testing.T) {
 	task := parent["gen:build"]
 	if task == nil {
 		t.Fatal("expected task 'gen:build' not found")
+		return
 	}
 
 	if len(task.Dependencies) != 2 {
