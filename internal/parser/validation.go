@@ -15,16 +15,6 @@ func validatePath(path string) error {
 	return nil
 }
 
-func validateCommand(command string) error {
-	if command == "" {
-		return fmt.Errorf("command cannot be empty")
-	}
-	if strings.TrimSpace(command) == "" {
-		return fmt.Errorf("command cannot be only whitespace")
-	}
-	return nil
-}
-
 func ValidateDependencies(tasks TaskMap) error {
 	for taskName, task := range tasks {
 		if len(task.Dependencies) == 0 {

@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 
+	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 )
 
@@ -69,7 +70,7 @@ func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
 	}
 
 	if cmdStr, ok := runCmd.(string); ok {
-		if err := validateCommand(cmdStr); err != nil {
+		if err := validation.ValidateCommand(cmdStr); err != nil {
 			return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
 		}
 		log.Debug("Task has single command", "name", taskName)
@@ -86,7 +87,7 @@ func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
 			}
-			if err := validateCommand(cmdStr); err != nil {
+			if err := validation.ValidateCommand(cmdStr); err != nil {
 				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
 			}
 			commands = append(commands, cmdStr)
@@ -99,7 +100,7 @@ func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
 	}
-	if err := validateCommand(cmdStr); err != nil {
+	if err := validation.ValidateCommand(cmdStr); err != nil {
 		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
 	}
 	log.Debug("Task has command of unknown type, converted to string", "name", taskName)

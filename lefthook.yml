@@ -17,7 +17,7 @@ pre-commit:
 
     lint:
       glob: "*.go"
-      run: golangci-lint run --config=".golangci.yaml" --new --timeout=2m {staged_files}
+      run: golangci-lint run --config=".golangci.yaml" --new --timeout=2m
       fail_text: "Linting failed. Run: task lint:fix"
 
 commit-msg:

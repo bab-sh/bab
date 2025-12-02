@@ -1,11 +1,11 @@
-package executor
+package validation
 
 import (
 	"fmt"
 	"strings"
 )
 
-func validateCommand(command string) error {
+func ValidateCommand(command string) error {
 	if command == "" {
 		return fmt.Errorf("command cannot be empty")
 	}
