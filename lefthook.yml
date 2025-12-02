@@ -28,7 +28,7 @@ pre-commit:
     lint:
       glob: "*.go"
       run: golangci-lint run --config=".golangci.yaml" --new --timeout=5m
-      fail_text: "Linting failed. Run: task lint:fix"
+      fail_text: "Linting failed. Run: golangci-lint run --fix"
 
     test:
       glob: "*.go"
@@ -43,6 +43,12 @@ commit-msg:
 
 pre-push:
   commands:
-    check:
-      run: task check
-      fail_text: "Pre-push checks failed. Run: task check"
+    lint:
+      glob: "*.go"
+      run: golangci-lint run --config=".golangci.yaml" --timeout=5m
+      fail_text: "Linting failed. Run: golangci-lint run --fix"
+
+    test:
+      glob: "*.go"
+      run: go test -v -race ./...
+      fail_text: "Tests failed. Run: go test -v -race ./..."
