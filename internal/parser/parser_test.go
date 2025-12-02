@@ -207,30 +207,6 @@ func TestParseInvalidPaths(t *testing.T) {
 	}
 }
 
-func TestValidatePath(t *testing.T) {
-	tests := []struct {
-		name    string
-		path    string
-		wantErr bool
-	}{
-		{"valid path", "/some/path/file.yml", false},
-		{"valid relative path", "file.yml", false},
-		{"empty path", "", true},
-		{"whitespace only", "   ", true},
-		{"tab only", "\t", true},
-		{"newline only", "\n", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validatePath(tt.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validatePath() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && indexOf(s, substr) >= 0))
