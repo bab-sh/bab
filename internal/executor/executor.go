@@ -8,6 +8,7 @@ import (
 	"runtime"
 
 	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 )
 
@@ -50,7 +51,7 @@ func Execute(ctx context.Context, task *parser.Task) error {
 
 		log.Debug("Executing command", "task", task.Name, "index", i+1, "total", len(task.Commands), "command", command)
 
-		if err := validateCommand(command); err != nil {
+		if err := validation.ValidateCommand(command); err != nil {
 			log.Debug("Invalid command detected", "task", task.Name, "index", i+1, "error", err)
 			return fmt.Errorf("task %q has invalid command at index %d: %w", task.Name, i+1, err)
 		}

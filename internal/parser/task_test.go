@@ -344,29 +344,3 @@ func TestBuildTask(t *testing.T) {
 		})
 	}
 }
-
-func TestValidateCommand(t *testing.T) {
-	tests := []struct {
-		name    string
-		command string
-		wantErr bool
-	}{
-		{"valid command", "echo hello", false},
-		{"command with flags", "ls -la", false},
-		{"complex command", "docker run -it --rm ubuntu", false},
-		{"empty command", "", true},
-		{"whitespace only", "   ", true},
-		{"tab only", "\t", true},
-		{"newline only", "\n", true},
-		{"mixed whitespace", " \t\n ", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateCommand(tt.command)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateCommand() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
