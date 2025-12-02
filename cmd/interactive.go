@@ -16,7 +16,6 @@ func (c *CLI) runInteractive() error {
 
 	selected, err := tui.PickTask(tasks)
 	if err != nil {
-		log.Error("Task picker failed", "error", err)
 		return err
 	}
 

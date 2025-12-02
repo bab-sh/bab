@@ -22,14 +22,12 @@ func New(dryRun bool) *Runner {
 func LoadTasks() (parser.TaskMap, error) {
 	path, err := finder.FindBabfile()
 	if err != nil {
-		log.Error("Failed to locate Babfile", "error", err)
 		return nil, err
 	}
 	log.Debug("Found Babfile", "path", path)
 
 	tasks, err := parser.Parse(path)
 	if err != nil {
-		log.Error("Failed to parse Babfile", "error", err)
 		return nil, err
 	}
 	log.Debug("Parsed Babfile", "task-count", len(tasks))
@@ -94,11 +92,10 @@ func (r *Runner) runWithDeps(ctx context.Context, taskName string, tasks parser.
 	}
 
 	if err != nil {
-		log.Error("Task failed", "name", taskName, "error", err)
 		return err
 	}
 
-	log.Info("Task completed", "name", taskName)
+	log.Debug("Task completed", "name", taskName)
 	executed[taskName] = true
 	return nil
 }
