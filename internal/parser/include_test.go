@@ -2,6 +2,7 @@ package parser
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -117,7 +118,7 @@ func TestParseIncludes(t *testing.T) {
 					t.Errorf("parseIncludes() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("parseIncludes() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -174,7 +175,7 @@ func TestMergeTasks(t *testing.T) {
 			name:   "merge single task",
 			parent: TaskMap{},
 			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []string{"go build"}},
+				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -184,8 +185,8 @@ func TestMergeTasks(t *testing.T) {
 			name:   "merge multiple tasks",
 			parent: TaskMap{},
 			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []string{"go build"}},
-				"test":  &Task{Name: "test", Commands: []string{"go test"}},
+				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
+				"test":  &Task{Name: "test", Commands: []Command{{Cmd: "go test"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -194,10 +195,10 @@ func TestMergeTasks(t *testing.T) {
 		{
 			name: "merge with existing parent tasks",
 			parent: TaskMap{
-				"setup": &Task{Name: "setup", Commands: []string{"echo setup"}},
+				"setup": &Task{Name: "setup", Commands: []Command{{Cmd: "echo setup"}}},
 			},
 			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []string{"go build"}},
+				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -206,10 +207,10 @@ func TestMergeTasks(t *testing.T) {
 		{
 			name: "task collision",
 			parent: TaskMap{
-				"gen:build": &Task{Name: "gen:build", Commands: []string{"existing"}},
+				"gen:build": &Task{Name: "gen:build", Commands: []Command{{Cmd: "existing"}}},
 			},
 			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []string{"go build"}},
+				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   true,
@@ -217,7 +218,7 @@ func TestMergeTasks(t *testing.T) {
 		},
 		{
 			name:      "empty included tasks",
-			parent:    TaskMap{"setup": &Task{Name: "setup", Commands: []string{"echo"}}},
+			parent:    TaskMap{"setup": &Task{Name: "setup", Commands: []Command{{Cmd: "echo"}}}},
 			included:  TaskMap{},
 			namespace: "gen",
 			wantErr:   false,
@@ -229,7 +230,7 @@ func TestMergeTasks(t *testing.T) {
 			included: TaskMap{
 				"build": &Task{
 					Name:         "build",
-					Commands:     []string{"go build"},
+					Commands:     []Command{{Cmd: "go build"}},
 					Dependencies: []string{"gen:lint", "setup"},
 				},
 			},
@@ -248,7 +249,7 @@ func TestMergeTasks(t *testing.T) {
 					t.Errorf("mergeTasks() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if !contains(err.Error(), tt.errMsg) {
+				if !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("mergeTasks() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -273,7 +274,7 @@ func TestMergeTasksPreservesDependencies(t *testing.T) {
 	included := TaskMap{
 		"build": &Task{
 			Name:         "build",
-			Commands:     []string{"go build"},
+			Commands:     []Command{{Cmd: "go build"}},
 			Dependencies: []string{"gen:lint", "setup"},
 		},
 	}
@@ -363,7 +364,7 @@ func TestParseCircularInclude(t *testing.T) {
 		t.Fatal("Parse() expected error for circular include, got nil")
 	}
 
-	if !contains(err.Error(), "circular include detected") {
+	if !strings.Contains(err.Error(), "circular include detected") {
 		t.Errorf("Parse() error = %q, want error containing 'circular include detected'", err.Error())
 	}
 }
@@ -403,7 +404,7 @@ func TestParseInvalidIncludes(t *testing.T) {
 				t.Errorf("Parse() expected error containing %q, got nil", tt.errMsg)
 				return
 			}
-			if !contains(err.Error(), tt.errMsg) {
+			if !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("Parse() error = %q, want error containing %q", err.Error(), tt.errMsg)
 			}
 		})
@@ -436,7 +437,7 @@ func TestParseIncludeFileNotFound(t *testing.T) {
 		t.Fatal("resolveInclude() expected error for nonexistent file, got nil")
 	}
 
-	if !contains(err.Error(), "failed to parse included babfile") {
+	if !strings.Contains(err.Error(), "failed to parse included babfile") {
 		t.Errorf("resolveInclude() error = %q, want error containing 'failed to parse included babfile'", err.Error())
 	}
 }

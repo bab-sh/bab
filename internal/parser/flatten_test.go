@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -17,7 +18,9 @@ func TestFlatten(t *testing.T) {
 			name: "simple single task",
 			data: map[string]interface{}{
 				"hello": map[string]interface{}{
-					"run": "echo hello",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "echo hello"},
+					},
 				},
 			},
 			prefix:  "",
@@ -35,10 +38,14 @@ func TestFlatten(t *testing.T) {
 			name: "multiple tasks at same level",
 			data: map[string]interface{}{
 				"build": map[string]interface{}{
-					"run": "go build",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go build"},
+					},
 				},
 				"test": map[string]interface{}{
-					"run": "go test",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test"},
+					},
 				},
 			},
 			prefix:  "",
@@ -60,10 +67,14 @@ func TestFlatten(t *testing.T) {
 			data: map[string]interface{}{
 				"ci": map[string]interface{}{
 					"test": map[string]interface{}{
-						"run": "go test",
+						"run": []interface{}{
+							map[string]interface{}{"cmd": "go test"},
+						},
 					},
 					"lint": map[string]interface{}{
-						"run": "golangci-lint run",
+						"run": []interface{}{
+							map[string]interface{}{"cmd": "golangci-lint run"},
+						},
 					},
 				},
 			},
@@ -82,34 +93,30 @@ func TestFlatten(t *testing.T) {
 			},
 		},
 		{
-			name: "task with run and nested tasks",
+			name: "task with run and nested tasks is invalid",
 			data: map[string]interface{}{
 				"ci": map[string]interface{}{
-					"run": "echo starting ci",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "echo starting ci"},
+					},
 					"test": map[string]interface{}{
-						"run": "go test",
+						"run": []interface{}{
+							map[string]interface{}{"cmd": "go test"},
+						},
 					},
 				},
 			},
 			prefix:  "",
-			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
-				if len(tasks) != 2 {
-					t.Errorf("expected 2 tasks, got %d", len(tasks))
-				}
-				if tasks["ci"] == nil {
-					t.Error("task 'ci' not found")
-				}
-				if tasks["ci:test"] == nil {
-					t.Error("task 'ci:test' not found")
-				}
-			},
+			wantErr: true,
+			errMsg:  "cannot have both 'run' block and nested subtasks",
 		},
 		{
 			name: "with prefix",
 			data: map[string]interface{}{
 				"test": map[string]interface{}{
-					"run": "go test",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test"},
+					},
 				},
 			},
 			prefix:  "ci",
@@ -129,7 +136,9 @@ func TestFlatten(t *testing.T) {
 				"a": map[string]interface{}{
 					"b": map[string]interface{}{
 						"c": map[string]interface{}{
-							"run": "echo abc",
+							"run": []interface{}{
+								map[string]interface{}{"cmd": "echo abc"},
+							},
 						},
 					},
 				},
@@ -184,7 +193,7 @@ func TestFlatten(t *testing.T) {
 					t.Errorf("flatten() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("flatten() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -235,7 +244,7 @@ func TestGetNestedKeys(t *testing.T) {
 		{
 			name: "no nested keys",
 			taskMap: map[string]interface{}{
-				"run":  "echo test",
+				"run":  []interface{}{map[string]interface{}{"cmd": "echo test"}},
 				"desc": "Test task",
 				"deps": []string{"build"},
 			},
@@ -244,18 +253,18 @@ func TestGetNestedKeys(t *testing.T) {
 		{
 			name: "only nested keys",
 			taskMap: map[string]interface{}{
-				"test": map[string]interface{}{"run": "go test"},
-				"lint": map[string]interface{}{"run": "golangci-lint"},
+				"test": map[string]interface{}{"run": []interface{}{map[string]interface{}{"cmd": "go test"}}},
+				"lint": map[string]interface{}{"run": []interface{}{map[string]interface{}{"cmd": "golangci-lint"}}},
 			},
 			want: []string{"test", "lint"},
 		},
 		{
 			name: "mixed keys",
 			taskMap: map[string]interface{}{
-				"run":  "echo parent",
+				"run":  []interface{}{map[string]interface{}{"cmd": "echo parent"}},
 				"desc": "Parent task",
-				"test": map[string]interface{}{"run": "go test"},
-				"lint": map[string]interface{}{"run": "golangci-lint"},
+				"test": map[string]interface{}{"run": []interface{}{map[string]interface{}{"cmd": "go test"}}},
+				"lint": map[string]interface{}{"run": []interface{}{map[string]interface{}{"cmd": "golangci-lint"}}},
 			},
 			want: []string{"test", "lint"},
 		},
@@ -267,8 +276,8 @@ func TestGetNestedKeys(t *testing.T) {
 		{
 			name: "single nested key",
 			taskMap: map[string]interface{}{
-				"run":   "echo test",
-				"child": map[string]interface{}{"run": "echo child"},
+				"run":   []interface{}{map[string]interface{}{"cmd": "echo test"}},
+				"child": map[string]interface{}{"run": []interface{}{map[string]interface{}{"cmd": "echo child"}}},
 			},
 			want: []string{"child"},
 		},
@@ -308,7 +317,9 @@ func TestProcessTaskNode(t *testing.T) {
 		{
 			name: "task with run command",
 			taskMap: map[string]interface{}{
-				"run": "echo hello",
+				"run": []interface{}{
+					map[string]interface{}{"cmd": "echo hello"},
+				},
 			},
 			taskName: "hello",
 			wantErr:  false,
@@ -325,7 +336,9 @@ func TestProcessTaskNode(t *testing.T) {
 			name: "task without run command but with nested tasks",
 			taskMap: map[string]interface{}{
 				"test": map[string]interface{}{
-					"run": "go test",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test"},
+					},
 				},
 			},
 			taskName: "ci",
@@ -340,34 +353,61 @@ func TestProcessTaskNode(t *testing.T) {
 			},
 		},
 		{
-			name: "task with both run and nested tasks",
+			name: "task with both run and nested tasks is invalid",
 			taskMap: map[string]interface{}{
-				"run": "echo parent",
+				"run": []interface{}{
+					map[string]interface{}{"cmd": "echo parent"},
+				},
 				"test": map[string]interface{}{
-					"run": "go test",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test"},
+					},
 				},
 			},
 			taskName: "ci",
+			wantErr:  true,
+		},
+		{
+			name: "task with invalid run command",
+			taskMap: map[string]interface{}{
+				"run": []interface{}{
+					map[string]interface{}{"cmd": ""},
+				},
+			},
+			taskName: "test",
+			wantErr:  true,
+		},
+		{
+			name: "default subtask creates parent task name",
+			taskMap: map[string]interface{}{
+				"default": map[string]interface{}{
+					"desc": "Run tests",
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test ./..."},
+					},
+				},
+				"race": map[string]interface{}{
+					"run": []interface{}{
+						map[string]interface{}{"cmd": "go test -race ./..."},
+					},
+				},
+			},
+			taskName: "test",
 			wantErr:  false,
 			validate: func(t *testing.T, tasks TaskMap) {
 				if len(tasks) != 2 {
 					t.Errorf("expected 2 tasks, got %d", len(tasks))
 				}
-				if tasks["ci"] == nil {
-					t.Error("task 'ci' not found")
+				if tasks["test"] == nil {
+					t.Error("task 'test' not found (should be created from default subtask)")
 				}
-				if tasks["ci:test"] == nil {
-					t.Error("task 'ci:test' not found")
+				if tasks["test:race"] == nil {
+					t.Error("task 'test:race' not found")
+				}
+				if tasks["test"] != nil && tasks["test"].Description != "Run tests" {
+					t.Errorf("expected description 'Run tests', got %q", tasks["test"].Description)
 				}
 			},
-		},
-		{
-			name: "task with invalid run command",
-			taskMap: map[string]interface{}{
-				"run": "",
-			},
-			taskName: "test",
-			wantErr:  true,
 		},
 	}
 

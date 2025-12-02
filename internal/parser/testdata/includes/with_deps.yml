@@ -1,10 +1,13 @@
 tasks:
   compile:
-    run: go build ./...
+    run:
+      - cmd: go build ./...
 
   lint:
-    run: golangci-lint run
+    run:
+      - cmd: golangci-lint run
 
   check:
     deps: [gen:compile, gen:lint]
-    run: echo "all checks passed"
+    run:
+      - cmd: echo "all checks passed"

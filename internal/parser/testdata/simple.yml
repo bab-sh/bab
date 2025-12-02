@@ -1,3 +1,4 @@
 tasks:
   hello:
-    run: echo "Hello World"
+    run:
+      - cmd: echo "Hello World"

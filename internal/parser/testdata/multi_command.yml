@@ -2,6 +2,6 @@ tasks:
   build:
     desc: Build the project
     run:
-      - echo "Compiling..."
-      - echo "Linking..."
-      - echo "Done!"
+      - cmd: echo "Compiling..."
+      - cmd: echo "Linking..."
+      - cmd: echo "Done!"

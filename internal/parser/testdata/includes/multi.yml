@@ -7,4 +7,5 @@ includes:
 tasks:
   deploy:
     deps: [gen:build, docker:docker:build]
-    run: echo "deploying"
+    run:
+      - cmd: echo "deploying"

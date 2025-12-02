@@ -187,3 +187,32 @@ func TestValidateDependencyName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePlatform(t *testing.T) {
+	tests := []struct {
+		name     string
+		platform string
+		wantErr  bool
+	}{
+		{"valid linux", "linux", false},
+		{"valid darwin", "darwin", false},
+		{"valid windows", "windows", false},
+		{"invalid platform", "freebsd", true},
+		{"empty platform", "", true},
+		{"uppercase invalid", "Linux", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePlatform(tt.platform)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePlatform(%q) error = %v, wantErr %v", tt.platform, err, tt.wantErr)
+			}
+			if err != nil && tt.wantErr {
+				if !strings.Contains(err.Error(), "invalid platform") {
+					t.Errorf("ValidatePlatform() error = %q, expected to contain 'invalid platform'", err.Error())
+				}
+			}
+		})
+	}
+}

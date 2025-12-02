@@ -18,9 +18,11 @@ func TestCLI_runList(t *testing.T) {
 			name: "list simple tasks",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello"
+    run:
+      - cmd: echo "Hello"
   world:
-    run: echo "World"`,
+    run:
+      - cmd: echo "World"`,
 			wantErr: false,
 		},
 		{
@@ -28,10 +30,12 @@ func TestCLI_runList(t *testing.T) {
 			babfileYAML: `tasks:
   test:
     desc: Run tests
-    run: go test ./...
+    run:
+      - cmd: go test ./...
   build:
     desc: Build the project
-    run: go build`,
+    run:
+      - cmd: go build`,
 			wantErr: false,
 		},
 		{
@@ -39,13 +43,16 @@ func TestCLI_runList(t *testing.T) {
 			babfileYAML: `tasks:
   ci:
     test:
-      run: echo "Testing"
+      run:
+        - cmd: echo "Testing"
     lint:
-      run: echo "Linting"
+      run:
+        - cmd: echo "Linting"
   dev:
     start:
       desc: Start dev server
-      run: echo "Starting"`,
+      run:
+        - cmd: echo "Starting"`,
 			wantErr: false,
 		},
 		{
@@ -58,13 +65,16 @@ func TestCLI_runList(t *testing.T) {
 			name: "tasks with dependencies",
 			babfileYAML: `tasks:
   clean:
-    run: echo "Cleaning"
+    run:
+      - cmd: echo "Cleaning"
   build:
     deps: clean
-    run: echo "Building"
+    run:
+      - cmd: echo "Building"
   test:
     deps: build
-    run: echo "Testing"`,
+    run:
+      - cmd: echo "Testing"`,
 			wantErr: false,
 		},
 	}

@@ -4,8 +4,10 @@ includes:
 
 tasks:
   setup:
-    run: echo "setup"
+    run:
+      - cmd: echo "setup"
 
   all:
     deps: [setup, gen:build]
-    run: echo "done"
+    run:
+      - cmd: echo "done"

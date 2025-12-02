@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -16,16 +17,16 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"clean": &Task{
 					Name:     "clean",
-					Commands: []string{"rm -rf dist"},
+					Commands: []Command{{Cmd: "rm -rf dist"}},
 				},
 				"build": &Task{
 					Name:         "build",
-					Commands:     []string{"go build"},
+					Commands:     []Command{{Cmd: "go build"}},
 					Dependencies: []string{"clean"},
 				},
 				"test": &Task{
 					Name:         "test",
-					Commands:     []string{"go test"},
+					Commands:     []Command{{Cmd: "go test"}},
 					Dependencies: []string{"build"},
 				},
 			},
@@ -36,15 +37,15 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"lint": &Task{
 					Name:     "lint",
-					Commands: []string{"golangci-lint run"},
+					Commands: []Command{{Cmd: "golangci-lint run"}},
 				},
 				"test": &Task{
 					Name:     "test",
-					Commands: []string{"go test"},
+					Commands: []Command{{Cmd: "go test"}},
 				},
 				"ci": &Task{
 					Name:         "ci",
-					Commands:     []string{"echo done"},
+					Commands:     []Command{{Cmd: "echo done"}},
 					Dependencies: []string{"lint", "test"},
 				},
 			},
@@ -55,11 +56,11 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"build": &Task{
 					Name:     "build",
-					Commands: []string{"go build"},
+					Commands: []Command{{Cmd: "go build"}},
 				},
 				"test": &Task{
 					Name:     "test",
-					Commands: []string{"go test"},
+					Commands: []Command{{Cmd: "go test"}},
 				},
 			},
 			wantErr: false,
@@ -69,7 +70,7 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"build": &Task{
 					Name:         "build",
-					Commands:     []string{"go build"},
+					Commands:     []Command{{Cmd: "go build"}},
 					Dependencies: []string{"nonexistent"},
 				},
 			},
@@ -81,11 +82,11 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"lint": &Task{
 					Name:     "lint",
-					Commands: []string{"golangci-lint run"},
+					Commands: []Command{{Cmd: "golangci-lint run"}},
 				},
 				"ci": &Task{
 					Name:         "ci",
-					Commands:     []string{"echo done"},
+					Commands:     []Command{{Cmd: "echo done"}},
 					Dependencies: []string{"lint", "nonexistent", "alsonothere"},
 				},
 			},
@@ -102,15 +103,15 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"ci:test": &Task{
 					Name:     "ci:test",
-					Commands: []string{"go test"},
+					Commands: []Command{{Cmd: "go test"}},
 				},
 				"ci:lint": &Task{
 					Name:     "ci:lint",
-					Commands: []string{"golangci-lint run"},
+					Commands: []Command{{Cmd: "golangci-lint run"}},
 				},
 				"ci:full": &Task{
 					Name:         "ci:full",
-					Commands:     []string{"echo done"},
+					Commands:     []Command{{Cmd: "echo done"}},
 					Dependencies: []string{"ci:test", "ci:lint"},
 				},
 			},
@@ -121,7 +122,7 @@ func TestValidateDependencies(t *testing.T) {
 			tasks: TaskMap{
 				"test": &Task{
 					Name:         "test",
-					Commands:     []string{"go test"},
+					Commands:     []Command{{Cmd: "go test"}},
 					Dependencies: []string{"test"},
 				},
 			},
@@ -138,7 +139,7 @@ func TestValidateDependencies(t *testing.T) {
 					t.Errorf("ValidateDependencies() expected error containing %q, got nil", tt.errMsg)
 					return
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("ValidateDependencies() error = %q, want error containing %q", err.Error(), tt.errMsg)
 				}
 				return

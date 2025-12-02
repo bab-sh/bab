@@ -99,7 +99,8 @@ func TestCLI_runTask(t *testing.T) {
 			taskName: "hello",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello World"`,
+    run:
+      - cmd: echo "Hello World"`,
 			wantErr: false,
 		},
 		{
@@ -107,7 +108,8 @@ func TestCLI_runTask(t *testing.T) {
 			taskName: "nonexistent",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello"`,
+    run:
+      - cmd: echo "Hello"`,
 			wantErr: true,
 			errMsg:  "not found",
 		},
@@ -171,7 +173,8 @@ func TestCLI_run_dispatching(t *testing.T) {
 		babfilePath := filepath.Join(tmpDir, "Babfile")
 		babfileYAML := `tasks:
   hello:
-    run: echo "Hello"`
+    run:
+      - cmd: echo "Hello"`
 		if err := os.WriteFile(babfilePath, []byte(babfileYAML), 0600); err != nil {
 			t.Fatalf("failed to create test Babfile: %v", err)
 		}
