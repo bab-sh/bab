@@ -1,3 +1,4 @@
 tasks:
   task2:
-    run: echo "level2"
+    run:
+      - cmd: echo "level2"

@@ -1,8 +1,10 @@
 tasks:
   task_a:
     deps: task_b
-    run: echo "A"
+    run:
+      - cmd: echo "A"
 
   task_b:
     deps: task_a
-    run: echo "B"
+    run:
+      - cmd: echo "B"

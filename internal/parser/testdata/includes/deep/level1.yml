@@ -4,4 +4,5 @@ includes:
 
 tasks:
   task1:
-    run: echo "level1"
+    run:
+      - cmd: echo "level1"

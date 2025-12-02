@@ -21,6 +21,17 @@ func processTaskNode(taskMap map[string]interface{}, taskName string, tasks Task
 
 	nestedKeys := getNestedKeys(taskMap)
 	if len(nestedKeys) > 0 {
+		if hasRun {
+			nonDefaultKeys := make([]string, 0, len(nestedKeys))
+			for _, k := range nestedKeys {
+				if k != keyDefault {
+					nonDefaultKeys = append(nonDefaultKeys, k)
+				}
+			}
+			if len(nonDefaultKeys) > 0 {
+				return fmt.Errorf("task %q cannot have both 'run' block and nested subtasks %v; use a 'default' subtask instead", taskName, nonDefaultKeys)
+			}
+		}
 		log.Debug("Node has nested tasks, recursing", "name", taskName)
 		for _, key := range nestedKeys {
 			nestedMap := map[string]interface{}{key: taskMap[key]}
@@ -64,47 +75,80 @@ func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) 
 	return task, nil
 }
 
-func parseCommands(taskName string, runCmd interface{}) ([]string, error) {
+func parseCommands(taskName string, runCmd interface{}) ([]Command, error) {
 	if runCmd == nil {
-		return nil, fmt.Errorf("task %q has nil 'run' command", taskName)
+		return nil, fmt.Errorf("task %q has nil 'run' field", taskName)
 	}
 
-	if cmdStr, ok := runCmd.(string); ok {
-		if err := validation.ValidateCommand(cmdStr); err != nil {
-			return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
-		}
-		log.Debug("Task has single command", "name", taskName)
-		return []string{cmdStr}, nil
+	cmdSlice, ok := safeSliceCast(runCmd)
+	if !ok {
+		return nil, fmt.Errorf("task %q 'run' must be a list of commands", taskName)
 	}
 
-	if cmdSlice, ok := safeSliceCast(runCmd); ok {
-		if err := validation.ValidateNonEmptySlice(cmdSlice, fmt.Sprintf("task %q 'run' command list", taskName)); err != nil {
+	if err := validation.ValidateNonEmptySlice(cmdSlice, fmt.Sprintf("task %q 'run' field", taskName)); err != nil {
+		return nil, err
+	}
+
+	commands := make([]Command, 0, len(cmdSlice))
+	for i, item := range cmdSlice {
+		cmd, err := parseCommandObject(taskName, i, item)
+		if err != nil {
 			return nil, err
 		}
-		commands := make([]string, 0, len(cmdSlice))
-		for i, cmd := range cmdSlice {
-			cmdStr, err := safeStringCast(cmd)
-			if err != nil {
-				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
-			}
-			if err := validation.ValidateCommand(cmdStr); err != nil {
-				return nil, fmt.Errorf("task %q has invalid command at index %d: %w", taskName, i, err)
-			}
-			commands = append(commands, cmdStr)
-		}
-		log.Debug("Task has multiple commands", "name", taskName, "count", len(cmdSlice))
-		return commands, nil
+		commands = append(commands, cmd)
 	}
 
-	cmdStr, err := safeStringCast(runCmd)
+	log.Debug("Parsed commands", "task", taskName, "count", len(commands))
+	return commands, nil
+}
+
+func parseCommandObject(taskName string, index int, item interface{}) (Command, error) {
+	cmdMap, ok := safeMapCast(item)
+	if !ok {
+		return Command{}, fmt.Errorf("task %q command at index %d must be an object with 'cmd' field", taskName, index)
+	}
+
+	cmd := Command{}
+
+	cmdRaw, hasCmd := cmdMap[keyCmd]
+	if !hasCmd {
+		return Command{}, fmt.Errorf("task %q command at index %d missing required 'cmd' field", taskName, index)
+	}
+
+	cmdStr, err := safeStringCast(cmdRaw)
 	if err != nil {
-		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
+		return Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
 	}
+
 	if err := validation.ValidateCommand(cmdStr); err != nil {
-		return nil, fmt.Errorf("task %q has invalid 'run' command: %w", taskName, err)
+		return Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
 	}
-	log.Debug("Task has command of unknown type, converted to string", "name", taskName)
-	return []string{cmdStr}, nil
+	cmd.Cmd = cmdStr
+
+	if platformsRaw, hasPlatforms := cmdMap[keyPlatforms]; hasPlatforms {
+		platforms, err := parsePlatforms(taskName, index, platformsRaw)
+		if err != nil {
+			return Command{}, err
+		}
+		cmd.Platforms = platforms
+	}
+
+	return cmd, nil
+}
+
+func parsePlatforms(taskName string, index int, raw interface{}) ([]string, error) {
+	platforms, ok := safeStringSliceCast(raw)
+	if !ok {
+		return nil, fmt.Errorf("task %q command at index %d 'platforms' must be a list of strings", taskName, index)
+	}
+
+	for _, p := range platforms {
+		if err := validation.ValidatePlatform(p); err != nil {
+			return nil, fmt.Errorf("task %q command at index %d: %w", taskName, index, err)
+		}
+	}
+
+	return platforms, nil
 }
 
 func parseDependencies(taskName string, depsValue interface{}) ([]string, error) {

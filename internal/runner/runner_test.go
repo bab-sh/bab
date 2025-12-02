@@ -23,7 +23,8 @@ func TestRunner_Run(t *testing.T) {
 			taskName: "hello",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello World"`,
+    run:
+      - cmd: echo "Hello World"`,
 			wantErr: false,
 		},
 		{
@@ -31,10 +32,12 @@ func TestRunner_Run(t *testing.T) {
 			taskName: "test",
 			babfileYAML: `tasks:
   build:
-    run: echo "Building"
+    run:
+      - cmd: echo "Building"
   test:
     deps: build
-    run: echo "Testing"`,
+    run:
+      - cmd: echo "Testing"`,
 			wantErr: false,
 		},
 		{
@@ -42,7 +45,8 @@ func TestRunner_Run(t *testing.T) {
 			taskName: "nonexistent",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello"`,
+    run:
+      - cmd: echo "Hello"`,
 			wantErr: true,
 			errMsg:  "not found",
 		},
@@ -99,7 +103,7 @@ func TestRunner_RunWithTasks(t *testing.T) {
 			tasks: parser.TaskMap{
 				"hello": &parser.Task{
 					Name:     "hello",
-					Commands: []string{"echo hello"},
+					Commands: []parser.Command{{Cmd: "echo hello"}},
 				},
 			},
 			wantErr: false,
@@ -110,11 +114,11 @@ func TestRunner_RunWithTasks(t *testing.T) {
 			tasks: parser.TaskMap{
 				"build": &parser.Task{
 					Name:     "build",
-					Commands: []string{"echo building"},
+					Commands: []parser.Command{{Cmd: "echo building"}},
 				},
 				"test": &parser.Task{
 					Name:         "test",
-					Commands:     []string{"echo testing"},
+					Commands:     []parser.Command{{Cmd: "echo testing"}},
 					Dependencies: []string{"build"},
 				},
 			},
@@ -126,15 +130,15 @@ func TestRunner_RunWithTasks(t *testing.T) {
 			tasks: parser.TaskMap{
 				"build": &parser.Task{
 					Name:     "build",
-					Commands: []string{"echo building"},
+					Commands: []parser.Command{{Cmd: "echo building"}},
 				},
 				"test": &parser.Task{
 					Name:     "test",
-					Commands: []string{"echo testing"},
+					Commands: []parser.Command{{Cmd: "echo testing"}},
 				},
 				"deploy": &parser.Task{
 					Name:         "deploy",
-					Commands:     []string{"echo deploying"},
+					Commands:     []parser.Command{{Cmd: "echo deploying"}},
 					Dependencies: []string{"build", "test"},
 				},
 			},
@@ -146,7 +150,7 @@ func TestRunner_RunWithTasks(t *testing.T) {
 			tasks: parser.TaskMap{
 				"hello": &parser.Task{
 					Name:     "hello",
-					Commands: []string{"echo hello"},
+					Commands: []parser.Command{{Cmd: "echo hello"}},
 				},
 			},
 			wantErr: true,
@@ -158,12 +162,12 @@ func TestRunner_RunWithTasks(t *testing.T) {
 			tasks: parser.TaskMap{
 				"task_a": &parser.Task{
 					Name:         "task_a",
-					Commands:     []string{"echo a"},
+					Commands:     []parser.Command{{Cmd: "echo a"}},
 					Dependencies: []string{"task_b"},
 				},
 				"task_b": &parser.Task{
 					Name:         "task_b",
-					Commands:     []string{"echo b"},
+					Commands:     []parser.Command{{Cmd: "echo b"}},
 					Dependencies: []string{"task_a"},
 				},
 			},
@@ -208,9 +212,11 @@ func TestLoadTasks(t *testing.T) {
 			name: "load simple tasks",
 			babfileYAML: `tasks:
   hello:
-    run: echo "Hello"
+    run:
+      - cmd: echo "Hello"
   world:
-    run: echo "World"`,
+    run:
+      - cmd: echo "World"`,
 			createFile: true,
 			wantErr:    false,
 			wantCount:  2,
@@ -220,9 +226,11 @@ func TestLoadTasks(t *testing.T) {
 			babfileYAML: `tasks:
   ci:
     test:
-      run: echo "Testing"
+      run:
+        - cmd: echo "Testing"
     lint:
-      run: echo "Linting"`,
+      run:
+        - cmd: echo "Linting"`,
 			createFile: true,
 			wantErr:    false,
 			wantCount:  2,
@@ -315,12 +323,12 @@ func TestBuildDependencyChain(t *testing.T) {
 			tasks: parser.TaskMap{
 				"task_a": &parser.Task{
 					Name:         "task_a",
-					Commands:     []string{"echo a"},
+					Commands:     []parser.Command{{Cmd: "echo a"}},
 					Dependencies: []string{"task_b"},
 				},
 				"task_b": &parser.Task{
 					Name:         "task_b",
-					Commands:     []string{"echo b"},
+					Commands:     []parser.Command{{Cmd: "echo b"}},
 					Dependencies: []string{"task_a"},
 				},
 			},
@@ -335,7 +343,7 @@ func TestBuildDependencyChain(t *testing.T) {
 			tasks: parser.TaskMap{
 				"task_a": &parser.Task{
 					Name:     "task_a",
-					Commands: []string{"echo a"},
+					Commands: []parser.Command{{Cmd: "echo a"}},
 				},
 			},
 			wantChain: "task_a",
@@ -351,17 +359,17 @@ func TestBuildDependencyChain(t *testing.T) {
 			tasks: parser.TaskMap{
 				"task_a": &parser.Task{
 					Name:         "task_a",
-					Commands:     []string{"echo a"},
+					Commands:     []parser.Command{{Cmd: "echo a"}},
 					Dependencies: []string{"task_b"},
 				},
 				"task_b": &parser.Task{
 					Name:         "task_b",
-					Commands:     []string{"echo b"},
+					Commands:     []parser.Command{{Cmd: "echo b"}},
 					Dependencies: []string{"task_c"},
 				},
 				"task_c": &parser.Task{
 					Name:         "task_c",
-					Commands:     []string{"echo c"},
+					Commands:     []parser.Command{{Cmd: "echo c"}},
 					Dependencies: []string{"task_a"},
 				},
 			},

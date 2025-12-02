@@ -1,9 +1,11 @@
 tasks:
   test:
     desc: Run all unit tests
-    run: go test ./...
+    run:
+      - cmd: go test ./...
 
   coverage:
     desc: Generate coverage report
     deps: test
-    run: go tool cover -html=coverage.txt
+    run:
+      - cmd: go tool cover -html=coverage.txt

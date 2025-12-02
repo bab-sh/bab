@@ -4,4 +4,5 @@ includes:
 
 tasks:
   task_b:
-    run: echo "b"
+    run:
+      - cmd: echo "b"

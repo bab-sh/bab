@@ -2,6 +2,7 @@ package parser
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,8 +26,8 @@ func TestParseSimpleTask(t *testing.T) {
 	if len(task.Commands) != 1 {
 		t.Errorf("expected 1 command, got %d", len(task.Commands))
 	}
-	if task.Commands[0] != `echo "Hello World"` {
-		t.Errorf("unexpected command: %q", task.Commands[0])
+	if task.Commands[0].Cmd != `echo "Hello World"` {
+		t.Errorf("unexpected command: %q", task.Commands[0].Cmd)
 	}
 }
 
@@ -51,8 +52,8 @@ func TestParseMultiCommand(t *testing.T) {
 		`echo "Done!"`,
 	}
 	for i, expected := range expectedCmds {
-		if task.Commands[i] != expected {
-			t.Errorf("command[%d]: expected %q, got %q", i, expected, task.Commands[i])
+		if task.Commands[i].Cmd != expected {
+			t.Errorf("command[%d]: expected %q, got %q", i, expected, task.Commands[i].Cmd)
 		}
 	}
 }
@@ -176,7 +177,7 @@ func TestParseInvalidFiles(t *testing.T) {
 				t.Errorf("Parse() expected error containing %q, got nil", tt.errMsg)
 				return
 			}
-			if !contains(err.Error(), tt.errMsg) {
+			if !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("Parse() error = %q, want error containing %q", err.Error(), tt.errMsg)
 			}
 		})
@@ -200,23 +201,9 @@ func TestParseInvalidPaths(t *testing.T) {
 				t.Errorf("Parse() expected error containing %q, got nil", tt.errMsg)
 				return
 			}
-			if !contains(err.Error(), tt.errMsg) {
+			if !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("Parse() error = %q, want error containing %q", err.Error(), tt.errMsg)
 			}
 		})
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && indexOf(s, substr) >= 0))
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

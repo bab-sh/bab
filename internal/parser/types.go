@@ -1,9 +1,26 @@
 package parser
 
+type Command struct {
+	Cmd       string
+	Platforms []string
+}
+
+func (c Command) ShouldRunOnPlatform(platform string) bool {
+	if len(c.Platforms) == 0 {
+		return true
+	}
+	for _, p := range c.Platforms {
+		if p == platform {
+			return true
+		}
+	}
+	return false
+}
+
 type Task struct {
 	Name         string
 	Description  string
-	Commands     []string
+	Commands     []Command
 	Dependencies []string
 }
 

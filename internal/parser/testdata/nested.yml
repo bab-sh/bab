@@ -1,17 +1,21 @@
 tasks:
   ci:
     test:
-      run: echo "Running tests"
+      run:
+        - cmd: echo "Running tests"
 
     lint:
-      run: echo "Linting code"
+      run:
+        - cmd: echo "Linting code"
 
     full:
       deps:
         - ci:test
         - ci:lint
-      run: echo "CI complete"
+      run:
+        - cmd: echo "CI complete"
 
   dev:
     start:
-      run: echo "Starting dev server"
+      run:
+        - cmd: echo "Starting dev server"

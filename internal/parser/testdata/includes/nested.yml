@@ -1,6 +1,8 @@
 tasks:
   docker:
     build:
-      run: docker build .
+      run:
+        - cmd: docker build .
     push:
-      run: docker push
+      run:
+        - cmd: docker push
