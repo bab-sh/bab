@@ -33,11 +33,12 @@ func (c *CLI) execute(ctx context.Context) error {
 
 func (c *CLI) buildCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:           "bab [task]",
-		Short:         "Custom commands for every project",
-		Version:       version.Version,
-		SilenceErrors: true,
-		SilenceUsage:  true,
+		Use:               "bab [task]",
+		Short:             "Custom commands for every project",
+		Version:           version.Version,
+		SilenceErrors:     true,
+		SilenceUsage:      true,
+		ValidArgsFunction: completeTaskNames,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if c.verbose {
 				log.SetLevel(log.DebugLevel)
