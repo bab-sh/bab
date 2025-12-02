@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v3"
 )
@@ -17,7 +18,7 @@ func Parse(path string) (TaskMap, error) {
 func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
 	log.Debug("Starting to parse Babfile", "path", path)
 
-	if err := validatePath(path); err != nil {
+	if err := validation.ValidatePath(path); err != nil {
 		return nil, fmt.Errorf("invalid babfile path: %w", err)
 	}
 
