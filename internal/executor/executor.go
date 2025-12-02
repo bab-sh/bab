@@ -40,8 +40,10 @@ func Execute(ctx context.Context, task *parser.Task) error {
 	}
 
 	shell, shellArg := getShellCommand()
-	log.Debug("Using shell", "shell", shell, "arg", shellArg, "platform", runtime.GOOS)
+	platform := runtime.GOOS
+	log.Debug("Using shell", "shell", shell, "arg", shellArg, "platform", platform)
 
+	executedCount := 0
 	for i, command := range task.Commands {
 		select {
 		case <-ctx.Done():
@@ -49,22 +51,37 @@ func Execute(ctx context.Context, task *parser.Task) error {
 		default:
 		}
 
-		log.Debug("Executing command", "task", task.Name, "index", i+1, "total", len(task.Commands), "command", command)
+		if !command.ShouldRunOnPlatform(platform) {
+			log.Debug("Skipping command (platform filter)",
+				"task", task.Name,
+				"index", i+1,
+				"command", command.Cmd,
+				"platforms", command.Platforms,
+				"current", platform)
+			continue
+		}
 
-		if err := validation.ValidateCommand(command); err != nil {
+		log.Debug("Executing command", "task", task.Name, "index", i+1, "total", len(task.Commands), "command", command.Cmd)
+
+		if err := validation.ValidateCommand(command.Cmd); err != nil {
 			log.Debug("Invalid command detected", "task", task.Name, "index", i+1, "error", err)
 			return fmt.Errorf("task %q has invalid command at index %d: %w", task.Name, i+1, err)
 		}
 
-		if err := executeCommand(ctx, shell, shellArg, command); err != nil {
+		if err := executeCommand(ctx, shell, shellArg, command.Cmd); err != nil {
 			log.Debug("Command failed", "task", task.Name, "index", i+1, "error", err)
 			return fmt.Errorf("command %d failed: %w", i+1, err)
 		}
 
+		executedCount++
 		log.Debug("Command completed successfully", "task", task.Name, "index", i+1)
 	}
 
-	log.Debug("Task execution completed", "task", task.Name)
+	if executedCount == 0 {
+		return fmt.Errorf("task %q has no commands for platform %q", task.Name, platform)
+	}
+
+	log.Debug("Task execution completed", "task", task.Name, "executed", executedCount)
 	return nil
 }
 
@@ -97,6 +114,8 @@ func DryRun(ctx context.Context, task *parser.Task) error {
 		log.Debug("Dependencies", "deps", task.Dependencies)
 	}
 
+	platform := runtime.GOOS
+	executedCount := 0
 	for i, command := range task.Commands {
 		select {
 		case <-ctx.Done():
@@ -104,9 +123,22 @@ func DryRun(ctx context.Context, task *parser.Task) error {
 		default:
 		}
 
-		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", i+1, len(task.Commands)), "cmd", command)
+		if !command.ShouldRunOnPlatform(platform) {
+			log.Debug("Command (skipped - platform filter)",
+				"step", fmt.Sprintf("[%d/%d]", i+1, len(task.Commands)),
+				"cmd", command.Cmd,
+				"platforms", command.Platforms)
+			continue
+		}
+
+		log.Debug("Command", "step", fmt.Sprintf("[%d/%d]", i+1, len(task.Commands)), "cmd", command.Cmd)
+		executedCount++
 	}
 
-	log.Debug("Dry-run completed", "task", task.Name)
+	if executedCount == 0 {
+		return fmt.Errorf("task %q has no commands for platform %q", task.Name, platform)
+	}
+
+	log.Debug("Dry-run completed", "task", task.Name, "would-execute", executedCount)
 	return nil
 }

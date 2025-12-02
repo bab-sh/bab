@@ -29,6 +29,9 @@ func buildTaskName(prefix, key string) string {
 	if prefix == "" {
 		return key
 	}
+	if key == keyDefault {
+		return prefix
+	}
 	return prefix + ":" + key
 }
 

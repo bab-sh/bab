@@ -36,3 +36,14 @@ func ValidateDependencyName(dep string, index int, taskName string) error {
 	}
 	return nil
 }
+
+var ValidPlatforms = []string{"linux", "darwin", "windows"}
+
+func ValidatePlatform(platform string) error {
+	for _, valid := range ValidPlatforms {
+		if platform == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid platform %q (valid: %s)", platform, strings.Join(ValidPlatforms, ", "))
+}

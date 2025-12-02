@@ -7,4 +7,8 @@ const (
 	keyIncludes = "includes"
 	keyBabfile  = "babfile"
 	keyTasks    = "tasks"
+	keyDefault  = "default"
+
+	keyCmd       = "cmd"
+	keyPlatforms = "platforms"
 )

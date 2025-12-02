@@ -1,21 +1,24 @@
 tasks:
   build:
     desc: Build the bab binary
-    run: go build -o bab .
+    run:
+      - cmd: go build -o bab .
 
   install:
     desc: Install bab to $GOPATH/bin
-    run: go install .
+    run:
+      - cmd: go install .
 
   deps:
     desc: Download and tidy dependencies
     run:
-      - go mod download
-      - go mod tidy
+      - cmd: go mod download
+      - cmd: go mod tidy
 
   clean:
     desc: Clean build artifacts and generated files
-    run: go clean -cache
+    run:
+      - cmd: go clean -cache
 
   check:
     desc: Run all checks that CI runs (lint, test with race)
@@ -28,39 +31,51 @@ tasks:
   dev:
     desc: Build and run bab in one command
     deps: [build]
-    run: ./bab
+    run:
+      - cmd: ./bab
 
   test:
-    desc: Run tests with coverage
-    run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+    default:
+      desc: Run tests with coverage
+      run:
+        - cmd: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
     race:
       desc: Run tests with race detector (matches CI)
-      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+      run:
+        - cmd: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
   coverage:
     desc: Generate and open HTML coverage report
     run:
-      - go test -coverprofile=coverage.txt ./...
-      - go tool cover -html=coverage.txt -o coverage.html
+      - cmd: go test -coverprofile=coverage.txt ./...
+      - cmd: go tool cover -html=coverage.txt -o coverage.html
 
   lint:
-    desc: Run golangci-lint (matches CI)
-    run: golangci-lint run --config=.golangci.yaml --timeout=5m
+    default:
+      desc: Run golangci-lint (matches CI)
+      run:
+        - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m
     fix:
       desc: Run golangci-lint and auto-fix issues
-      run: golangci-lint run --config=.golangci.yaml --timeout=5m --fix
+      run:
+        - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m --fix
 
   format:
-    desc: Format code with gofmt
-    run: gofmt -w .
+    default:
+      desc: Format code with gofmt
+      run:
+        - cmd: gofmt -w .
     check:
       desc: Check if code is formatted correctly
-      run: gofmt -l .
+      run:
+        - cmd: gofmt -l .
 
   hooks:
     install:
       desc: Install git hooks via lefthook
-      run: lefthook install
+      run:
+        - cmd: lefthook install
     uninstall:
       desc: Uninstall git hooks
-      run: lefthook uninstall
+      run:
+        - cmd: lefthook uninstall

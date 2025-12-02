@@ -31,3 +31,24 @@ func safeSliceCast(v interface{}) ([]interface{}, bool) {
 	s, ok := v.([]interface{})
 	return s, ok
 }
+
+func safeStringSliceCast(v interface{}) ([]string, bool) {
+	if v == nil {
+		return nil, false
+	}
+
+	slice, ok := v.([]interface{})
+	if !ok {
+		return nil, false
+	}
+
+	result := make([]string, 0, len(slice))
+	for _, item := range slice {
+		str, err := safeStringCast(item)
+		if err != nil {
+			return nil, false
+		}
+		result = append(result, str)
+	}
+	return result, true
+}
