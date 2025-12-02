@@ -15,10 +15,25 @@ pre-commit:
       stage_fixed: true
       fail_text: "Formatting failed"
 
+    vet:
+      glob: "*.go"
+      run: go vet ./...
+      fail_text: "Go vet failed"
+
+    tidy:
+      glob: "*.go"
+      run: go mod tidy && git diff --exit-code go.mod go.sum
+      fail_text: "go.mod is not tidy. Run: go mod tidy"
+
     lint:
       glob: "*.go"
-      run: golangci-lint run --config=".golangci.yaml" --new --timeout=2m
+      run: golangci-lint run --config=".golangci.yaml" --new --timeout=5m
       fail_text: "Linting failed. Run: task lint:fix"
+
+    test:
+      glob: "*.go"
+      run: go test -race ./...
+      fail_text: "Tests failed"
 
 commit-msg:
   commands:
