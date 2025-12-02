@@ -130,6 +130,16 @@ tasks:
       - task --list
     silent: true
 
+  hooks:install:
+    desc: Install git hooks via lefthook
+    cmds:
+      - lefthook install
+
+  hooks:uninstall:
+    desc: Uninstall git hooks
+    cmds:
+      - lefthook uninstall
+
   default:
     desc: Run the default task (help)
     cmds:
