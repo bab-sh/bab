@@ -5,16 +5,6 @@ import (
 	"strings"
 )
 
-func validatePath(path string) error {
-	if path == "" {
-		return fmt.Errorf("path cannot be empty")
-	}
-	if strings.TrimSpace(path) == "" {
-		return fmt.Errorf("path cannot be only whitespace")
-	}
-	return nil
-}
-
 func ValidateDependencies(tasks TaskMap) error {
 	for taskName, task := range tasks {
 		if len(task.Dependencies) == 0 {

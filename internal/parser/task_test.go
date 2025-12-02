@@ -90,7 +90,7 @@ func TestParseCommands(t *testing.T) {
 			taskName: "test",
 			runCmd:   []interface{}{},
 			wantErr:  true,
-			errMsg:   "empty 'run' command list",
+			errMsg:   "'run' command list cannot be empty",
 		},
 		{
 			name:     "slice with empty string",
@@ -165,14 +165,14 @@ func TestParseDependencies(t *testing.T) {
 			taskName:  "test",
 			depsValue: "",
 			wantErr:   true,
-			errMsg:    "empty 'deps' string",
+			errMsg:    "empty dependency at index 0",
 		},
 		{
 			name:      "empty slice",
 			taskName:  "test",
 			depsValue: []interface{}{},
 			wantErr:   true,
-			errMsg:    "empty 'deps' list",
+			errMsg:    "'deps' list cannot be empty",
 		},
 		{
 			name:      "slice with empty string",
