@@ -309,7 +309,6 @@ chocolateys:
   - name: bab
     ids:
       - default
-    skip_upload: true
     owners: bab-sh
     authors: Sebastian Stepper
     title: Bab - Custom commands for every project
@@ -336,6 +335,7 @@ chocolateys:
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
     goamd64: v1
+    skip_publish: true
 
 snapcrafts:
   - name: bab-sh
