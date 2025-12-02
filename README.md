@@ -31,17 +31,30 @@ For more installation options, see the [Installation Documentation](https://docs
 
 Create a `Babfile.yml` in your project root:
 ```yaml
-setup:
-  desc: Install dependencies
-  run: npm install
+tasks:
+  setup:
+    desc: Install dependencies
+    run:
+      - cmd: npm install
 
-dev:
-  desc: Start development server
-  run: npm run dev
+  dev:
+    desc: Start development server
+    deps: [setup]
+    run:
+      - cmd: npm run dev
 
-test:
-  desc: Run test suite
-  run: npm test
+  test:
+    desc: Run test suite
+    run:
+      - cmd: npm test
+
+  deploy:
+    desc: Deploy to production
+    run:
+      - cmd: ./scripts/deploy.sh
+        platforms: [linux, darwin]
+      - cmd: powershell scripts/deploy.ps1
+        platforms: [windows]
 ```
 
 Run your tasks:
