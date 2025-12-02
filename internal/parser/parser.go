@@ -12,7 +12,17 @@ import (
 
 func Parse(path string) (TaskMap, error) {
 	ctx := NewParseContext()
-	return parseWithContext(path, ctx)
+	tasks, err := parseWithContext(path, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ValidateDependencies(tasks); err != nil {
+		log.Debug("Failed to validate dependencies", "error", err)
+		return nil, fmt.Errorf("dependency validation failed: %w", err)
+	}
+
+	return tasks, nil
 }
 
 func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
@@ -74,11 +84,6 @@ func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
 		if err := resolveInclude(namespace, path, tasks, ctx); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := ValidateDependencies(tasks); err != nil {
-		log.Debug("Failed to validate dependencies", "error", err)
-		return nil, fmt.Errorf("dependency validation failed: %w", err)
 	}
 
 	log.Debug("Successfully parsed Babfile", "task-count", len(tasks))
