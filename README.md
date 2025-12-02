@@ -56,6 +56,14 @@ bab dev              # Start development server
 - 💬 [Discord](https://discord.bab.sh) - Questions and discussions
 - 📚 [Documentation](https://docs.bab.sh) - Comprehensive guides
 - 🐛 [Issues](https://github.com/bab-sh/bab/issues) - Bug reports and feature requests
+
+## Acknowledgments
+
+Bab stands on the shoulders of giants. Special thanks to:
+
+- [Task](https://taskfile.dev) - The modern task runner that inspired Bab's approach
+- [Charm](https://charm.sh) - For their beautiful terminal UI libraries that make Bab a joy to use
+
 ---
 
 <div align="center">
