@@ -309,7 +309,7 @@ chocolateys:
   - name: bab
     ids:
       - default
-
+    skip_upload: true
     owners: bab-sh
     authors: Sebastian Stepper
     title: Bab - Custom commands for every project
