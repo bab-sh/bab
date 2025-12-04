@@ -14,27 +14,32 @@ See [installation guide](/guide/installation) for other methods.
 
 ## Create Babfile
 
-Create a `Babfile` in your project root:
+Create a `Babfile.yml` in your project root:
 
 ```yaml
-setup:
-  desc: Install dependencies
-  run: npm install
+tasks:
+  setup:
+    desc: Install dependencies
+    run:
+      - cmd: npm install
 
-dev:
-  desc: Start development server
-  deps: [setup]
-  run: npm run dev
+  dev:
+    desc: Start development server
+    deps: [setup]
+    run:
+      - cmd: npm run dev
 
-test:
-  desc: Run tests
-  deps: [setup]
-  run: npm test
+  test:
+    desc: Run tests
+    deps: [setup]
+    run:
+      - cmd: npm test
 
-build:
-  desc: Build for production
-  deps: [setup, test]
-  run: npm run build
+  build:
+    desc: Build for production
+    deps: [setup, test]
+    run:
+      - cmd: npm run build
 ```
 
 ## Usage
@@ -69,17 +74,21 @@ bab build
 # Runs: setup → test → build
 ```
 
-## Nested Tasks
+## Namespaced Tasks
+
+Use colon notation for logical groupings:
 
 ```yaml
-dev:
-  start:
+tasks:
+  dev:start:
     desc: Start server
-    run: npm run dev
+    run:
+      - cmd: npm run dev
 
-  watch:
+  dev:watch:
     desc: Watch files
-    run: npm run watch
+    run:
+      - cmd: npm run watch
 ```
 
 Run with `bab dev:start`.
