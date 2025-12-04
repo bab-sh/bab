@@ -37,7 +37,7 @@ setup:
 
 build:
   desc: Build application
-  deps: setup
+  deps: [setup]
   run: npm run build
 
 deploy:
@@ -46,28 +46,26 @@ deploy:
   run: ./deploy.sh
 ```
 
-## Nested Tasks
+## Namespaced Tasks
 
-Organize tasks with colon notation:
+Use colon notation for task namespaces:
 
 ```yaml
-dev:
-  start:
-    desc: Start dev server
-    run: npm run dev
+dev:start:
+  desc: Start dev server
+  run: npm run dev
 
-  watch:
-    desc: Watch files
-    run: npm run watch
+dev:watch:
+  desc: Watch files
+  run: npm run watch
 
-test:
-  unit:
-    desc: Unit tests
-    run: npm run test:unit
+test:unit:
+  desc: Unit tests
+  run: npm run test:unit
 
-  e2e:
-    desc: E2E tests
-    run: npm run test:e2e
+test:e2e:
+  desc: E2E tests
+  run: npm run test:e2e
 ```
 
 Run with `bab dev:start` or `bab test:unit`.
@@ -81,7 +79,7 @@ setup:
 
 lint:
   desc: Run linter
-  deps: setup
+  deps: [setup]
   run: npm run lint
 
 build:
@@ -91,7 +89,7 @@ build:
 
 test:
   desc: Run tests
-  deps: build
+  deps: [build]
   run: npm test
 
 deploy:

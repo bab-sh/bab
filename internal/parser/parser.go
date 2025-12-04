@@ -1,92 +1,79 @@
 package parser
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/bab-sh/bab/internal/babfile"
-	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v3"
 )
 
-func Parse(path string) (babfile.TaskMap, error) {
-	ctx := babfile.NewParseContext()
-	tasks, err := parseWithContext(path, ctx)
+func Parse(path string) (TaskMap, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, &ParseError{Path: path, Message: "path cannot be empty"}
+	}
+
+	absPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return nil, &ParseError{Path: path, Message: "invalid path", Cause: err}
+	}
+
+	visited := make(map[string]bool)
+	tasks, err := parseFile(absPath, visited)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ValidateDependencies(tasks); err != nil {
-		log.Debug("Failed to validate dependencies", "error", err)
-		return nil, fmt.Errorf("dependency validation failed: %w", err)
+	if err := validateDependencies(tasks); err != nil {
+		return nil, err
 	}
 
 	return tasks, nil
 }
 
-func parseWithContext(path string, ctx *babfile.ParseContext) (babfile.TaskMap, error) {
-	log.Debug("Starting to parse Babfile", "path", path)
+func parseFile(absPath string, visited map[string]bool) (TaskMap, error) {
+	log.Debug("Parsing babfile", "path", absPath)
 
-	if err := validation.ValidatePath(path); err != nil {
-		return nil, fmt.Errorf("invalid babfile path: %w", err)
+	if visited[absPath] {
+		chain := chainFromVisited(visited, absPath)
+		return nil, &CircularError{Type: "include", Chain: chain}
 	}
-
-	absPath, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
-	}
+	visited[absPath] = true
+	defer delete(visited, absPath)
 
 	data, err := os.ReadFile(absPath)
 	if err != nil {
-		log.Debug("Failed to read Babfile", "path", path, "error", err)
-		return nil, fmt.Errorf("failed to read Babfile: %w", err)
-	}
-	log.Debug("Successfully read Babfile", "size", len(data))
-
-	var raw interface{}
-	if err := yaml.Unmarshal(data, &raw); err != nil {
-		log.Debug("Failed to unmarshal YAML", "error", err)
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+		return nil, &ParseError{Path: absPath, Message: "failed to read file", Cause: err}
 	}
 
-	normalized := normalizeMap(raw)
-	rootMap, ok := normalized.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("root of Babfile must be a map")
-	}
-	log.Debug("Successfully unmarshaled YAML", "top-level-keys", len(rootMap))
-
-	includes, err := parseIncludes(rootMap, absPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse includes: %w", err)
+	var bf babfile.Schema
+	if err := yaml.Unmarshal(data, &bf); err != nil {
+		return nil, &ParseError{Path: absPath, Message: "invalid YAML", Cause: err}
 	}
 
-	delete(rootMap, keyIncludes)
-
-	tasksRaw, exists := rootMap[keyTasks]
-	if !exists {
-		return nil, fmt.Errorf("babfile must contain a 'tasks' key")
+	tasks := make(TaskMap, len(bf.Tasks))
+	for name, schemaTask := range bf.Tasks {
+		tasks[name] = convertTask(name, schemaTask)
 	}
 
-	tasksSection, ok := safeMapCast(tasksRaw)
-	if !ok {
-		return nil, fmt.Errorf("'tasks' must be a map, got %T", tasksRaw)
-	}
-
-	tasks := make(babfile.TaskMap)
-	if err := flatten(tasksSection, "", tasks); err != nil {
-		log.Debug("Failed to flatten tasks", "error", err)
-		return nil, err
-	}
-
-	for namespace, path := range includes {
-		if err := resolveInclude(namespace, path, tasks, ctx); err != nil {
-			return nil, err
+	baseDir := filepath.Dir(absPath)
+	for namespace, inc := range bf.Includes {
+		if err := resolveInclude(namespace, inc.Babfile, baseDir, tasks, visited); err != nil {
+			return nil, &ParseError{Path: absPath, Message: "include " + namespace + " failed", Cause: err}
 		}
 	}
 
-	log.Debug("Successfully parsed Babfile", "task-count", len(tasks))
+	log.Debug("Parsed babfile", "path", absPath, "tasks", len(tasks))
 	return tasks, nil
+}
+
+func chainFromVisited(visited map[string]bool, current string) []string {
+	chain := make([]string, 0, len(visited)+1)
+	for path := range visited {
+		chain = append(chain, filepath.Base(path))
+	}
+	chain = append(chain, filepath.Base(current))
+	return chain
 }

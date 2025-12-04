@@ -35,14 +35,14 @@ tasks:
       - cmd: ./bab
 
   test:
-    default:
-      desc: Run tests with coverage
-      run:
-        - cmd: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
-    race:
-      desc: Run tests with race detector (matches CI)
-      run:
-        - cmd: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+    desc: Run tests with coverage
+    run:
+      - cmd: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+
+  test:race:
+    desc: Run tests with race detector (matches CI)
+    run:
+      - cmd: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
   coverage:
     desc: Generate and open HTML coverage report
@@ -51,31 +51,31 @@ tasks:
       - cmd: go tool cover -html=coverage.txt -o coverage.html
 
   lint:
-    default:
-      desc: Run golangci-lint (matches CI)
-      run:
-        - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m
-    fix:
-      desc: Run golangci-lint and auto-fix issues
-      run:
-        - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m --fix
+    desc: Run golangci-lint (matches CI)
+    run:
+      - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m
+
+  lint:fix:
+    desc: Run golangci-lint and auto-fix issues
+    run:
+      - cmd: golangci-lint run --config=.golangci.yaml --timeout=5m --fix
 
   format:
-    default:
-      desc: Format code with gofmt
-      run:
-        - cmd: gofmt -w .
-    check:
-      desc: Check if code is formatted correctly
-      run:
-        - cmd: gofmt -l .
+    desc: Format code with gofmt
+    run:
+      - cmd: gofmt -w .
 
-  hooks:
-    install:
-      desc: Install git hooks via lefthook
-      run:
-        - cmd: lefthook install
-    uninstall:
-      desc: Uninstall git hooks
-      run:
-        - cmd: lefthook uninstall
+  format:check:
+    desc: Check if code is formatted correctly
+    run:
+      - cmd: gofmt -l .
+
+  hooks:install:
+    desc: Install git hooks via lefthook
+    run:
+      - cmd: lefthook install
+
+  hooks:uninstall:
+    desc: Uninstall git hooks
+    run:
+      - cmd: lefthook uninstall

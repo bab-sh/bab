@@ -6,6 +6,6 @@ tasks:
 
   coverage:
     desc: Generate coverage report
-    deps: test
+    deps: [test]
     run:
       - cmd: go tool cover -html=coverage.txt

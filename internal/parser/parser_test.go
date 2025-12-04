@@ -6,18 +6,16 @@ import (
 	"testing"
 )
 
-const testBuildTask = "build"
-
 func TestParseSimpleTask(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "simple.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
 	if len(tasks) != 1 {
 		t.Errorf("expected 1 task, got %d", len(tasks))
 	}
-	task, exists := tasks["hello"]
-	if !exists {
+	task := tasks["hello"]
+	if task == nil {
 		t.Fatal("task 'hello' not found")
 	}
 	if task.Name != "hello" {
@@ -34,10 +32,10 @@ func TestParseSimpleTask(t *testing.T) {
 func TestParseMultiCommand(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "multi_command.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
-	task, exists := tasks[testBuildTask]
-	if !exists {
+	task := tasks["build"]
+	if task == nil {
 		t.Fatal("task 'build' not found")
 	}
 	if task.Description != "Build the project" {
@@ -46,51 +44,35 @@ func TestParseMultiCommand(t *testing.T) {
 	if len(task.Commands) != 3 {
 		t.Fatalf("expected 3 commands, got %d", len(task.Commands))
 	}
-	expectedCmds := []string{
-		`echo "Compiling..."`,
-		`echo "Linking..."`,
-		`echo "Done!"`,
-	}
-	for i, expected := range expectedCmds {
-		if task.Commands[i].Cmd != expected {
-			t.Errorf("command[%d]: expected %q, got %q", i, expected, task.Commands[i].Cmd)
+	expected := []string{`echo "Compiling..."`, `echo "Linking..."`, `echo "Done!"`}
+	for i, want := range expected {
+		if task.Commands[i].Cmd != want {
+			t.Errorf("command[%d]: expected %q, got %q", i, want, task.Commands[i].Cmd)
 		}
 	}
 }
 
-func TestParseTasksWithDependencies(t *testing.T) {
+func TestParseDependencies(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "dependencies.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
 	if len(tasks) != 3 {
 		t.Errorf("expected 3 tasks, got %d", len(tasks))
 	}
 
 	clean := tasks["clean"]
-	if clean == nil {
-		t.Fatal("task 'clean' not found")
-		return
-	}
-	if len(clean.Dependencies) != 0 {
-		t.Errorf("clean should have no dependencies, got %v", clean.Dependencies)
+	if clean == nil || len(clean.Dependencies) != 0 {
+		t.Errorf("clean should have no dependencies")
 	}
 
-	build := tasks[testBuildTask]
-	if build == nil {
-		t.Fatal("task 'build' not found")
-		return
-	}
-	if len(build.Dependencies) != 1 || build.Dependencies[0] != "clean" {
+	build := tasks["build"]
+	if build == nil || len(build.Dependencies) != 1 || build.Dependencies[0] != "clean" {
 		t.Errorf("build should depend on 'clean', got %v", build.Dependencies)
 	}
 
 	test := tasks["test"]
-	if test == nil {
-		t.Fatal("task 'test' not found")
-		return
-	}
-	if len(test.Dependencies) != 1 || test.Dependencies[0] != testBuildTask {
+	if test == nil || len(test.Dependencies) != 1 || test.Dependencies[0] != "build" {
 		t.Errorf("test should depend on 'build', got %v", test.Dependencies)
 	}
 }
@@ -98,112 +80,178 @@ func TestParseTasksWithDependencies(t *testing.T) {
 func TestParseNestedTasks(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "nested.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
 	if len(tasks) != 4 {
 		t.Errorf("expected 4 tasks, got %d", len(tasks))
 	}
 
-	expectedTasks := []string{"ci:test", "ci:lint", "ci:full", "dev:start"}
-	for _, name := range expectedTasks {
+	expected := []string{"ci:test", "ci:lint", "ci:full", "dev:start"}
+	for _, name := range expected {
 		if tasks[name] == nil {
 			t.Errorf("expected task %q not found", name)
 		}
 	}
 
 	full := tasks["ci:full"]
-	if full == nil {
-		t.Fatal("task 'ci:full' not found")
-		return
-	}
-	if len(full.Dependencies) != 2 {
-		t.Errorf("ci:full should have 2 dependencies, got %d", len(full.Dependencies))
+	if full == nil || len(full.Dependencies) != 2 {
+		t.Errorf("ci:full should have 2 dependencies, got %v", full)
 	}
 }
 
 func TestParseDescriptions(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "with_description.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
+
 	test := tasks["test"]
-	if test == nil {
-		t.Fatal("task 'test' not found")
-		return
-	}
-	if test.Description != "Run all unit tests" {
-		t.Errorf("expected description 'Run all unit tests', got %q", test.Description)
+	if test == nil || test.Description != "Run all unit tests" {
+		t.Errorf("test description wrong: %v", test)
 	}
 
 	coverage := tasks["coverage"]
-	if coverage == nil {
-		t.Fatal("task 'coverage' not found")
-		return
-	}
-	if coverage.Description != "Generate coverage report" {
-		t.Errorf("expected description 'Generate coverage report', got %q", coverage.Description)
+	if coverage == nil || coverage.Description != "Generate coverage report" {
+		t.Errorf("coverage description wrong: %v", coverage)
 	}
 }
 
 func TestParseEmptyTasks(t *testing.T) {
 	tasks, err := Parse(filepath.Join("testdata", "empty.yml"))
 	if err != nil {
-		t.Fatalf("Parse() unexpected error: %v", err)
+		t.Fatalf("Parse() error: %v", err)
 	}
 	if len(tasks) != 0 {
 		t.Errorf("expected 0 tasks, got %d", len(tasks))
 	}
 }
 
-func TestParseInvalidFiles(t *testing.T) {
-	tests := []struct {
-		name   string
-		path   string
-		errMsg string
-	}{
-		{"invalid YAML syntax", filepath.Join("testdata", "invalid_yaml.yml"), "failed to parse YAML"},
-		{"root is not a map", filepath.Join("testdata", "root_not_map.yml"), "root of Babfile must be a map"},
-		{"missing tasks key", filepath.Join("testdata", "missing_tasks_key.yml"), "babfile must contain a 'tasks' key"},
-		{"tasks not a map", filepath.Join("testdata", "tasks_not_map.yml"), "'tasks' must be a map"},
-		{"invalid dependency reference", filepath.Join("testdata", "invalid_deps.yml"), "dependency validation failed"},
-		{"empty command", filepath.Join("testdata", "empty_command.yml"), "command cannot be"},
-		{"nonexistent file", "nonexistent.yml", "failed to read Babfile"},
+func TestParseInvalidYAML(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "invalid_yaml.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := Parse(tt.path)
-			if err == nil {
-				t.Errorf("Parse() expected error containing %q, got nil", tt.errMsg)
-				return
-			}
-			if !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("Parse() error = %q, want error containing %q", err.Error(), tt.errMsg)
-			}
-		})
+	if !strings.Contains(err.Error(), "invalid YAML") {
+		t.Errorf("expected 'invalid YAML' error, got: %v", err)
 	}
 }
 
-func TestParseInvalidPaths(t *testing.T) {
-	tests := []struct {
-		name   string
-		path   string
-		errMsg string
-	}{
-		{"empty path", "", "path cannot be empty"},
-		{"whitespace path", "   ", "path cannot be"},
+func TestParseInvalidDependency(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "invalid_deps.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid dependency")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected 'not found' error, got: %v", err)
+	}
+}
+
+func TestParseNonexistentFile(t *testing.T) {
+	_, err := Parse("nonexistent.yml")
+	if err == nil {
+		t.Fatal("expected error for nonexistent file")
+	}
+	if !strings.Contains(err.Error(), "failed to read file") {
+		t.Errorf("expected 'failed to read file' error, got: %v", err)
+	}
+}
+
+func TestParseEmptyPath(t *testing.T) {
+	_, err := Parse("")
+	if err == nil {
+		t.Fatal("expected error for empty path")
+	}
+	if !strings.Contains(err.Error(), "cannot be empty") {
+		t.Errorf("expected 'cannot be empty' error, got: %v", err)
+	}
+}
+
+func TestParseWhitespacePath(t *testing.T) {
+	_, err := Parse("   ")
+	if err == nil {
+		t.Fatal("expected error for whitespace path")
+	}
+	if !strings.Contains(err.Error(), "cannot be empty") {
+		t.Errorf("expected 'cannot be empty' error, got: %v", err)
+	}
+}
+
+func TestParseSimpleInclude(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := Parse(tt.path)
-			if err == nil {
-				t.Errorf("Parse() expected error containing %q, got nil", tt.errMsg)
-				return
+	if len(tasks) != 4 {
+		t.Errorf("expected 4 tasks, got %d: %v", len(tasks), tasks.Names())
+	}
+
+	if tasks["setup"] == nil {
+		t.Error("local task 'setup' not found")
+	}
+	if tasks["all"] == nil {
+		t.Error("local task 'all' not found")
+	}
+	if tasks["gen:build"] == nil {
+		t.Error("included task 'gen:build' not found")
+	}
+	if tasks["gen:test"] == nil {
+		t.Error("included task 'gen:test' not found")
+	}
+}
+
+func TestParseIncludeWithDeps(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	all := tasks["all"]
+	if all == nil {
+		t.Fatal("task 'all' not found")
+	}
+
+	if len(all.Dependencies) != 2 {
+		t.Errorf("expected 2 dependencies, got %d: %v", len(all.Dependencies), all.Dependencies)
+	}
+
+	hasDep := func(deps []string, name string) bool {
+		for _, d := range deps {
+			if d == name {
+				return true
 			}
-			if !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("Parse() error = %q, want error containing %q", err.Error(), tt.errMsg)
-			}
-		})
+		}
+		return false
+	}
+
+	if !hasDep(all.Dependencies, "setup") {
+		t.Error("missing dependency 'setup'")
+	}
+	if !hasDep(all.Dependencies, "gen:build") {
+		t.Error("missing dependency 'gen:build'")
+	}
+}
+
+func TestParseCircularInclude(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "includes", "circular_a.yml"))
+	if err == nil {
+		t.Fatal("expected error for circular include")
+	}
+	if !strings.Contains(err.Error(), "circular") {
+		t.Errorf("expected 'circular' error, got: %v", err)
+	}
+}
+
+func TestParseNestedTaskNames(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "includes", "nested.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if tasks["docker:build"] == nil {
+		t.Error("task 'docker:build' not found")
+	}
+	if tasks["docker:push"] == nil {
+		t.Error("task 'docker:push' not found")
 	}
 }

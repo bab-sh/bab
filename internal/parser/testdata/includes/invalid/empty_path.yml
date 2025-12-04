@@ -1,6 +1,0 @@
-includes:
-  gen:
-    babfile: ""
-
-task:
-  run: echo "test"

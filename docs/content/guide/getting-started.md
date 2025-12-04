@@ -23,12 +23,12 @@ setup:
 
 dev:
   desc: Start development server
-  deps: setup
+  deps: [setup]
   run: npm run dev
 
 test:
   desc: Run tests
-  deps: setup
+  deps: [setup]
   run: npm test
 
 build:

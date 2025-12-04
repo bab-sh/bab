@@ -84,17 +84,16 @@ func TestCompleteTaskNames(t *testing.T) {
 			createFile: true,
 		},
 		{
-			name: "hierarchical task names",
+			name: "task names with colons",
 			babfileYAML: `tasks:
-  test:
-    unit:
-      desc: Run unit tests
-      run:
-        - cmd: go test
-    integration:
-      desc: Run integration tests
-      run:
-        - cmd: go test -tags=integration`,
+  test:unit:
+    desc: Run unit tests
+    run:
+      - cmd: go test
+  test:integration:
+    desc: Run integration tests
+    run:
+      - cmd: go test -tags=integration`,
 			args:       []string{},
 			toComplete: "test:",
 			wantTasks:  []string{"test:unit", "test:integration"},

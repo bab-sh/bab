@@ -39,20 +39,18 @@ func TestCLI_runList(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "list nested tasks",
+			name: "list tasks with colons in names",
 			babfileYAML: `tasks:
-  ci:
-    test:
-      run:
-        - cmd: echo "Testing"
-    lint:
-      run:
-        - cmd: echo "Linting"
-  dev:
-    start:
-      desc: Start dev server
-      run:
-        - cmd: echo "Starting"`,
+  ci:test:
+    run:
+      - cmd: echo "Testing"
+  ci:lint:
+    run:
+      - cmd: echo "Linting"
+  dev:start:
+    desc: Start dev server
+    run:
+      - cmd: echo "Starting"`,
 			wantErr: false,
 		},
 		{
@@ -68,11 +66,11 @@ func TestCLI_runList(t *testing.T) {
     run:
       - cmd: echo "Cleaning"
   build:
-    deps: clean
+    deps: [clean]
     run:
       - cmd: echo "Building"
   test:
-    deps: build
+    deps: [build]
     run:
       - cmd: echo "Testing"`,
 			wantErr: false,

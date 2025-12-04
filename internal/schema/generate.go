@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/schema"
 )
 
 func main() {
-	s := babfile.GenerateSchema()
+	s := schema.GenerateSchema()
 
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
