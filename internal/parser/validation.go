@@ -3,9 +3,11 @@ package parser
 import (
 	"fmt"
 	"strings"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
-func ValidateDependencies(tasks TaskMap) error {
+func ValidateDependencies(tasks babfile.TaskMap) error {
 	for taskName, task := range tasks {
 		if len(task.Dependencies) == 0 {
 			continue

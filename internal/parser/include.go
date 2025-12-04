@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/log"
 )
 
-func parseIncludes(rootMap map[string]interface{}, basePath string) (IncludeMap, error) {
+func parseIncludes(rootMap map[string]interface{}, basePath string) (babfile.IncludeMap, error) {
 	includesRaw, exists := rootMap[keyIncludes]
 	if !exists {
 		return nil, nil
@@ -19,7 +20,7 @@ func parseIncludes(rootMap map[string]interface{}, basePath string) (IncludeMap,
 		return nil, fmt.Errorf("'includes' must be a map, got %T", includesRaw)
 	}
 
-	includes := make(IncludeMap)
+	includes := make(babfile.IncludeMap)
 	baseDir := filepath.Dir(basePath)
 
 	for namespace, config := range includesMap {
@@ -48,16 +49,16 @@ func parseIncludes(rootMap map[string]interface{}, basePath string) (IncludeMap,
 	return includes, nil
 }
 
-func resolveInclude(namespace, path string, tasks TaskMap, ctx *ParseContext) error {
-	if ctx.visited[path] {
+func resolveInclude(namespace, path string, tasks babfile.TaskMap, ctx *babfile.ParseContext) error {
+	if ctx.Visited[path] {
 		return fmt.Errorf("circular include detected: %s -> %s\nInclude chain: %s",
-			ctx.stack[len(ctx.stack)-1], path,
-			strings.Join(append(ctx.stack, path), " -> "))
+			ctx.Stack[len(ctx.Stack)-1], path,
+			strings.Join(append(ctx.Stack, path), " -> "))
 	}
 
-	ctx.visited[path] = true
-	ctx.stack = append(ctx.stack, path)
-	defer func() { ctx.stack = ctx.stack[:len(ctx.stack)-1] }()
+	ctx.Visited[path] = true
+	ctx.Stack = append(ctx.Stack, path)
+	defer func() { ctx.Stack = ctx.Stack[:len(ctx.Stack)-1] }()
 
 	log.Debug("Resolving include", "namespace", namespace, "path", path)
 
@@ -69,7 +70,7 @@ func resolveInclude(namespace, path string, tasks TaskMap, ctx *ParseContext) er
 	return mergeTasks(tasks, includedTasks, namespace)
 }
 
-func mergeTasks(parent, included TaskMap, namespace string) error {
+func mergeTasks(parent, included babfile.TaskMap, namespace string) error {
 	for name, task := range included {
 		prefixedName := namespace + ":" + name
 
@@ -77,7 +78,7 @@ func mergeTasks(parent, included TaskMap, namespace string) error {
 			return fmt.Errorf("task name collision: %q", prefixedName)
 		}
 
-		parent[prefixedName] = &Task{
+		parent[prefixedName] = &babfile.Task{
 			Name:         prefixedName,
 			Description:  task.Description,
 			Commands:     task.Commands,

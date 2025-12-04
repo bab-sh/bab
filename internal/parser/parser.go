@@ -5,13 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v3"
 )
 
-func Parse(path string) (TaskMap, error) {
-	ctx := NewParseContext()
+func Parse(path string) (babfile.TaskMap, error) {
+	ctx := babfile.NewParseContext()
 	tasks, err := parseWithContext(path, ctx)
 	if err != nil {
 		return nil, err
@@ -25,7 +26,7 @@ func Parse(path string) (TaskMap, error) {
 	return tasks, nil
 }
 
-func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
+func parseWithContext(path string, ctx *babfile.ParseContext) (babfile.TaskMap, error) {
 	log.Debug("Starting to parse Babfile", "path", path)
 
 	if err := validation.ValidatePath(path); err != nil {
@@ -74,7 +75,7 @@ func parseWithContext(path string, ctx *ParseContext) (TaskMap, error) {
 		return nil, fmt.Errorf("'tasks' must be a map, got %T", tasksRaw)
 	}
 
-	tasks := make(TaskMap)
+	tasks := make(babfile.TaskMap)
 	if err := flatten(tasksSection, "", tasks); err != nil {
 		log.Debug("Failed to flatten tasks", "error", err)
 		return nil, err

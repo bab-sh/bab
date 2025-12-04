@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestGetShellCommand(t *testing.T) {
@@ -33,23 +33,23 @@ func TestGetShellCommand(t *testing.T) {
 func TestExecute(t *testing.T) {
 	tests := []struct {
 		name    string
-		task    *parser.Task
+		task    *babfile.Task
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name: "valid task with single command",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "test",
-				Commands: []parser.Command{{Cmd: "echo hello"}},
+				Commands: []babfile.Command{{Cmd: "echo hello"}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid task with multiple commands",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "build",
-				Commands: []parser.Command{
+				Commands: []babfile.Command{
 					{Cmd: "echo step1"},
 					{Cmd: "echo step2"},
 					{Cmd: "echo step3"},
@@ -65,54 +65,54 @@ func TestExecute(t *testing.T) {
 		},
 		{
 			name: "task with no commands",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "empty",
-				Commands: []parser.Command{},
+				Commands: []babfile.Command{},
 			},
 			wantErr: true,
 			errMsg:  "has no commands to execute",
 		},
 		{
 			name: "task with empty command string",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "invalid",
-				Commands: []parser.Command{{Cmd: ""}},
+				Commands: []babfile.Command{{Cmd: ""}},
 			},
 			wantErr: true,
 			errMsg:  "command cannot be empty",
 		},
 		{
 			name: "task with whitespace-only command",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "invalid",
-				Commands: []parser.Command{{Cmd: "   "}},
+				Commands: []babfile.Command{{Cmd: "   "}},
 			},
 			wantErr: true,
 			errMsg:  "command cannot be",
 		},
 		{
 			name: "task with valid and invalid commands",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "mixed",
-				Commands: []parser.Command{{Cmd: "echo valid"}, {Cmd: ""}},
+				Commands: []babfile.Command{{Cmd: "echo valid"}, {Cmd: ""}},
 			},
 			wantErr: true,
 			errMsg:  "command cannot be empty",
 		},
 		{
 			name: "task with failing command",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "fail",
-				Commands: []parser.Command{{Cmd: "exit 1"}},
+				Commands: []babfile.Command{{Cmd: "exit 1"}},
 			},
 			wantErr: true,
 			errMsg:  "command 1 failed",
 		},
 		{
 			name: "task with nonexistent command",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "nonexistent",
-				Commands: []parser.Command{{Cmd: "this-command-definitely-does-not-exist-12345"}},
+				Commands: []babfile.Command{{Cmd: "this-command-definitely-does-not-exist-12345"}},
 			},
 			wantErr: true,
 		},
@@ -146,25 +146,25 @@ func TestExecutePlatformFiltering(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		task    *parser.Task
+		task    *babfile.Task
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name: "command matches current platform",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo hello", Platforms: []string{currentPlatform}},
+				Commands: []babfile.Command{
+					{Cmd: "echo hello", Platforms: []babfile.Platform{babfile.Platform(currentPlatform)}},
 				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "command without platform filter runs",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
+				Commands: []babfile.Command{
 					{Cmd: "echo hello"},
 				},
 			},
@@ -172,10 +172,10 @@ func TestExecutePlatformFiltering(t *testing.T) {
 		},
 		{
 			name: "all commands filtered out",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo hello", Platforms: []string{"nonexistent_platform"}},
+				Commands: []babfile.Command{
+					{Cmd: "echo hello", Platforms: []babfile.Platform{"nonexistent_platform"}},
 				},
 			},
 			wantErr: true,
@@ -183,10 +183,10 @@ func TestExecutePlatformFiltering(t *testing.T) {
 		},
 		{
 			name: "mixed commands - some filtered some not",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo filtered", Platforms: []string{"nonexistent_platform"}},
+				Commands: []babfile.Command{
+					{Cmd: "echo filtered", Platforms: []babfile.Platform{"nonexistent_platform"}},
 					{Cmd: "echo runs"},
 				},
 			},
@@ -194,10 +194,10 @@ func TestExecutePlatformFiltering(t *testing.T) {
 		},
 		{
 			name: "platform-specific with multiple platforms",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo hello", Platforms: []string{"linux", "darwin", "windows"}},
+				Commands: []babfile.Command{
+					{Cmd: "echo hello", Platforms: []babfile.Platform{"linux", "darwin", "windows"}},
 				},
 			},
 			wantErr: false,
@@ -232,9 +232,9 @@ func TestExecuteWithContext(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		task := &parser.Task{
+		task := &babfile.Task{
 			Name:     "test",
-			Commands: []parser.Command{{Cmd: "sleep 10"}},
+			Commands: []babfile.Command{{Cmd: "sleep 10"}},
 		}
 
 		err := Execute(ctx, task)
@@ -252,9 +252,9 @@ func TestExecuteWithContext(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
 
-		task := &parser.Task{
+		task := &babfile.Task{
 			Name:     "test",
-			Commands: []parser.Command{{Cmd: "sleep 10"}},
+			Commands: []babfile.Command{{Cmd: "sleep 10"}},
 		}
 
 		err := Execute(ctx, task)
@@ -267,24 +267,24 @@ func TestExecuteWithContext(t *testing.T) {
 func TestDryRun(t *testing.T) {
 	tests := []struct {
 		name    string
-		task    *parser.Task
+		task    *babfile.Task
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name: "valid task with single command",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:        "test",
 				Description: "Test task",
-				Commands:    []parser.Command{{Cmd: "echo hello"}},
+				Commands:    []babfile.Command{{Cmd: "echo hello"}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid task with multiple commands",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "build",
-				Commands: []parser.Command{
+				Commands: []babfile.Command{
 					{Cmd: "echo step1"},
 					{Cmd: "echo step2"},
 					{Cmd: "echo step3"},
@@ -294,10 +294,10 @@ func TestDryRun(t *testing.T) {
 		},
 		{
 			name: "task with description and dependencies",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:         "deploy",
 				Description:  "Deploy application",
-				Commands:     []parser.Command{{Cmd: "kubectl apply"}},
+				Commands:     []babfile.Command{{Cmd: "kubectl apply"}},
 				Dependencies: []string{"build", "test"},
 			},
 			wantErr: false,
@@ -310,26 +310,26 @@ func TestDryRun(t *testing.T) {
 		},
 		{
 			name: "task with no commands",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "empty",
-				Commands: []parser.Command{},
+				Commands: []babfile.Command{},
 			},
 			wantErr: true,
 			errMsg:  "has no commands to execute",
 		},
 		{
 			name: "task without description",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "nodesc",
-				Commands: []parser.Command{{Cmd: "echo test"}},
+				Commands: []babfile.Command{{Cmd: "echo test"}},
 			},
 			wantErr: false,
 		},
 		{
 			name: "task without dependencies",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name:     "nodeps",
-				Commands: []parser.Command{{Cmd: "echo test"}},
+				Commands: []babfile.Command{{Cmd: "echo test"}},
 			},
 			wantErr: false,
 		},
@@ -361,16 +361,16 @@ func TestDryRun(t *testing.T) {
 func TestDryRunPlatformFiltering(t *testing.T) {
 	tests := []struct {
 		name    string
-		task    *parser.Task
+		task    *babfile.Task
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name: "all commands filtered out in dry run",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo hello", Platforms: []string{"nonexistent_platform"}},
+				Commands: []babfile.Command{
+					{Cmd: "echo hello", Platforms: []babfile.Platform{"nonexistent_platform"}},
 				},
 			},
 			wantErr: true,
@@ -378,10 +378,10 @@ func TestDryRunPlatformFiltering(t *testing.T) {
 		},
 		{
 			name: "mixed commands in dry run - some filtered",
-			task: &parser.Task{
+			task: &babfile.Task{
 				Name: "test",
-				Commands: []parser.Command{
-					{Cmd: "echo filtered", Platforms: []string{"nonexistent_platform"}},
+				Commands: []babfile.Command{
+					{Cmd: "echo filtered", Platforms: []babfile.Platform{"nonexistent_platform"}},
 					{Cmd: "echo runs"},
 				},
 			},
@@ -417,9 +417,9 @@ func TestDryRunWithContext(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		task := &parser.Task{
+		task := &babfile.Task{
 			Name: "test",
-			Commands: []parser.Command{
+			Commands: []babfile.Command{
 				{Cmd: "echo 1"},
 				{Cmd: "echo 2"},
 				{Cmd: "echo 3"},

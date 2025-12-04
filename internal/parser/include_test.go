@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestParseIncludes(t *testing.T) {
@@ -164,8 +166,8 @@ func TestParseIncludesPathResolution(t *testing.T) {
 func TestMergeTasks(t *testing.T) {
 	tests := []struct {
 		name      string
-		parent    TaskMap
-		included  TaskMap
+		parent    babfile.TaskMap
+		included  babfile.TaskMap
 		namespace string
 		wantErr   bool
 		errMsg    string
@@ -173,9 +175,9 @@ func TestMergeTasks(t *testing.T) {
 	}{
 		{
 			name:   "merge single task",
-			parent: TaskMap{},
-			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
+			parent: babfile.TaskMap{},
+			included: babfile.TaskMap{
+				"build": &babfile.Task{Name: "build", Commands: []babfile.Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -183,10 +185,10 @@ func TestMergeTasks(t *testing.T) {
 		},
 		{
 			name:   "merge multiple tasks",
-			parent: TaskMap{},
-			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
-				"test":  &Task{Name: "test", Commands: []Command{{Cmd: "go test"}}},
+			parent: babfile.TaskMap{},
+			included: babfile.TaskMap{
+				"build": &babfile.Task{Name: "build", Commands: []babfile.Command{{Cmd: "go build"}}},
+				"test":  &babfile.Task{Name: "test", Commands: []babfile.Command{{Cmd: "go test"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -194,11 +196,11 @@ func TestMergeTasks(t *testing.T) {
 		},
 		{
 			name: "merge with existing parent tasks",
-			parent: TaskMap{
-				"setup": &Task{Name: "setup", Commands: []Command{{Cmd: "echo setup"}}},
+			parent: babfile.TaskMap{
+				"setup": &babfile.Task{Name: "setup", Commands: []babfile.Command{{Cmd: "echo setup"}}},
 			},
-			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
+			included: babfile.TaskMap{
+				"build": &babfile.Task{Name: "build", Commands: []babfile.Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   false,
@@ -206,11 +208,11 @@ func TestMergeTasks(t *testing.T) {
 		},
 		{
 			name: "task collision",
-			parent: TaskMap{
-				"gen:build": &Task{Name: "gen:build", Commands: []Command{{Cmd: "existing"}}},
+			parent: babfile.TaskMap{
+				"gen:build": &babfile.Task{Name: "gen:build", Commands: []babfile.Command{{Cmd: "existing"}}},
 			},
-			included: TaskMap{
-				"build": &Task{Name: "build", Commands: []Command{{Cmd: "go build"}}},
+			included: babfile.TaskMap{
+				"build": &babfile.Task{Name: "build", Commands: []babfile.Command{{Cmd: "go build"}}},
 			},
 			namespace: "gen",
 			wantErr:   true,
@@ -218,19 +220,19 @@ func TestMergeTasks(t *testing.T) {
 		},
 		{
 			name:      "empty included tasks",
-			parent:    TaskMap{"setup": &Task{Name: "setup", Commands: []Command{{Cmd: "echo"}}}},
-			included:  TaskMap{},
+			parent:    babfile.TaskMap{"setup": &babfile.Task{Name: "setup", Commands: []babfile.Command{{Cmd: "echo"}}}},
+			included:  babfile.TaskMap{},
 			namespace: "gen",
 			wantErr:   false,
 			wantTasks: []string{"setup"},
 		},
 		{
 			name:   "preserves dependencies",
-			parent: TaskMap{},
-			included: TaskMap{
-				"build": &Task{
+			parent: babfile.TaskMap{},
+			included: babfile.TaskMap{
+				"build": &babfile.Task{
 					Name:         "build",
-					Commands:     []Command{{Cmd: "go build"}},
+					Commands:     []babfile.Command{{Cmd: "go build"}},
 					Dependencies: []string{"gen:lint", "setup"},
 				},
 			},
@@ -270,11 +272,11 @@ func TestMergeTasks(t *testing.T) {
 }
 
 func TestMergeTasksPreservesDependencies(t *testing.T) {
-	parent := TaskMap{}
-	included := TaskMap{
-		"build": &Task{
+	parent := babfile.TaskMap{}
+	included := babfile.TaskMap{
+		"build": &babfile.Task{
 			Name:         "build",
-			Commands:     []Command{{Cmd: "go build"}},
+			Commands:     []babfile.Command{{Cmd: "go build"}},
 			Dependencies: []string{"gen:lint", "setup"},
 		},
 	}
@@ -428,9 +430,9 @@ func TestParseIncludeFileNotFound(t *testing.T) {
 		t.Fatalf("parseIncludes() unexpected error: %v", err)
 	}
 
-	ctx := NewParseContext()
-	ctx.stack = append(ctx.stack, "/project/Babfile.yml")
-	tasks := TaskMap{}
+	ctx := babfile.NewParseContext()
+	ctx.Stack = append(ctx.Stack, "/project/Babfile.yml")
+	tasks := babfile.TaskMap{}
 
 	err = resolveInclude("gen", includes["gen"], tasks, ctx)
 	if err == nil {
@@ -443,21 +445,21 @@ func TestParseIncludeFileNotFound(t *testing.T) {
 }
 
 func TestNewParseContext(t *testing.T) {
-	ctx := NewParseContext()
+	ctx := babfile.NewParseContext()
 
-	if ctx.visited == nil {
-		t.Error("NewParseContext() visited map is nil")
+	if ctx.Visited == nil {
+		t.Error("babfile.NewParseContext() Visited map is nil")
 	}
 
-	if ctx.stack == nil {
-		t.Error("NewParseContext() stack is nil")
+	if ctx.Stack == nil {
+		t.Error("babfile.NewParseContext() Stack is nil")
 	}
 
-	if len(ctx.visited) != 0 {
-		t.Errorf("NewParseContext() visited map should be empty, got %d entries", len(ctx.visited))
+	if len(ctx.Visited) != 0 {
+		t.Errorf("babfile.NewParseContext() Visited map should be empty, got %d entries", len(ctx.Visited))
 	}
 
-	if len(ctx.stack) != 0 {
-		t.Errorf("NewParseContext() stack should be empty, got %d entries", len(ctx.stack))
+	if len(ctx.Stack) != 0 {
+		t.Errorf("babfile.NewParseContext() Stack should be empty, got %d entries", len(ctx.Stack))
 	}
 }

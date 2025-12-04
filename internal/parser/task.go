@@ -3,11 +3,12 @@ package parser
 import (
 	"fmt"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 )
 
-func processTaskNode(taskMap map[string]interface{}, taskName string, tasks TaskMap) error {
+func processTaskNode(taskMap map[string]interface{}, taskName string, tasks babfile.TaskMap) error {
 	runCmd, hasRun := taskMap[keyRun]
 
 	if hasRun {
@@ -44,8 +45,8 @@ func processTaskNode(taskMap map[string]interface{}, taskName string, tasks Task
 	return nil
 }
 
-func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) (*Task, error) {
-	task := &Task{Name: name}
+func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) (*babfile.Task, error) {
+	task := &babfile.Task{Name: name}
 
 	if desc, ok := taskMap[keyDesc]; ok {
 		descStr, err := safeStringCast(desc)
@@ -75,7 +76,7 @@ func buildTask(name string, taskMap map[string]interface{}, runCmd interface{}) 
 	return task, nil
 }
 
-func parseCommands(taskName string, runCmd interface{}) ([]Command, error) {
+func parseCommands(taskName string, runCmd interface{}) ([]babfile.Command, error) {
 	if runCmd == nil {
 		return nil, fmt.Errorf("task %q has nil 'run' field", taskName)
 	}
@@ -89,7 +90,7 @@ func parseCommands(taskName string, runCmd interface{}) ([]Command, error) {
 		return nil, err
 	}
 
-	commands := make([]Command, 0, len(cmdSlice))
+	commands := make([]babfile.Command, 0, len(cmdSlice))
 	for i, item := range cmdSlice {
 		cmd, err := parseCommandObject(taskName, i, item)
 		if err != nil {
@@ -102,33 +103,33 @@ func parseCommands(taskName string, runCmd interface{}) ([]Command, error) {
 	return commands, nil
 }
 
-func parseCommandObject(taskName string, index int, item interface{}) (Command, error) {
+func parseCommandObject(taskName string, index int, item interface{}) (babfile.Command, error) {
 	cmdMap, ok := safeMapCast(item)
 	if !ok {
-		return Command{}, fmt.Errorf("task %q command at index %d must be an object with 'cmd' field", taskName, index)
+		return babfile.Command{}, fmt.Errorf("task %q command at index %d must be an object with 'cmd' field", taskName, index)
 	}
 
-	cmd := Command{}
+	cmd := babfile.Command{}
 
 	cmdRaw, hasCmd := cmdMap[keyCmd]
 	if !hasCmd {
-		return Command{}, fmt.Errorf("task %q command at index %d missing required 'cmd' field", taskName, index)
+		return babfile.Command{}, fmt.Errorf("task %q command at index %d missing required 'cmd' field", taskName, index)
 	}
 
 	cmdStr, err := safeStringCast(cmdRaw)
 	if err != nil {
-		return Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
+		return babfile.Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
 	}
 
 	if err := validation.ValidateCommand(cmdStr); err != nil {
-		return Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
+		return babfile.Command{}, fmt.Errorf("task %q command at index %d has invalid 'cmd': %w", taskName, index, err)
 	}
 	cmd.Cmd = cmdStr
 
 	if platformsRaw, hasPlatforms := cmdMap[keyPlatforms]; hasPlatforms {
 		platforms, err := parsePlatforms(taskName, index, platformsRaw)
 		if err != nil {
-			return Command{}, err
+			return babfile.Command{}, err
 		}
 		cmd.Platforms = platforms
 	}
@@ -136,16 +137,18 @@ func parseCommandObject(taskName string, index int, item interface{}) (Command, 
 	return cmd, nil
 }
 
-func parsePlatforms(taskName string, index int, raw interface{}) ([]string, error) {
-	platforms, ok := safeStringSliceCast(raw)
+func parsePlatforms(taskName string, index int, raw interface{}) ([]babfile.Platform, error) {
+	platformStrings, ok := safeStringSliceCast(raw)
 	if !ok {
 		return nil, fmt.Errorf("task %q command at index %d 'platforms' must be a list of strings", taskName, index)
 	}
 
-	for _, p := range platforms {
+	platforms := make([]babfile.Platform, 0, len(platformStrings))
+	for _, p := range platformStrings {
 		if err := validation.ValidatePlatform(p); err != nil {
 			return nil, fmt.Errorf("task %q command at index %d: %w", taskName, index, err)
 		}
+		platforms = append(platforms, babfile.Platform(p))
 	}
 
 	return platforms, nil

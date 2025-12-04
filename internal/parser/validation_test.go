@@ -3,30 +3,32 @@ package parser
 import (
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestValidateDependencies(t *testing.T) {
 	tests := []struct {
 		name    string
-		tasks   TaskMap
+		tasks   babfile.TaskMap
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name: "valid dependencies",
-			tasks: TaskMap{
-				"clean": &Task{
+			tasks: babfile.TaskMap{
+				"clean": &babfile.Task{
 					Name:     "clean",
-					Commands: []Command{{Cmd: "rm -rf dist"}},
+					Commands: []babfile.Command{{Cmd: "rm -rf dist"}},
 				},
-				"build": &Task{
+				"build": &babfile.Task{
 					Name:         "build",
-					Commands:     []Command{{Cmd: "go build"}},
+					Commands:     []babfile.Command{{Cmd: "go build"}},
 					Dependencies: []string{"clean"},
 				},
-				"test": &Task{
+				"test": &babfile.Task{
 					Name:         "test",
-					Commands:     []Command{{Cmd: "go test"}},
+					Commands:     []babfile.Command{{Cmd: "go test"}},
 					Dependencies: []string{"build"},
 				},
 			},
@@ -34,18 +36,18 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			name: "multiple valid dependencies",
-			tasks: TaskMap{
-				"lint": &Task{
+			tasks: babfile.TaskMap{
+				"lint": &babfile.Task{
 					Name:     "lint",
-					Commands: []Command{{Cmd: "golangci-lint run"}},
+					Commands: []babfile.Command{{Cmd: "golangci-lint run"}},
 				},
-				"test": &Task{
+				"test": &babfile.Task{
 					Name:     "test",
-					Commands: []Command{{Cmd: "go test"}},
+					Commands: []babfile.Command{{Cmd: "go test"}},
 				},
-				"ci": &Task{
+				"ci": &babfile.Task{
 					Name:         "ci",
-					Commands:     []Command{{Cmd: "echo done"}},
+					Commands:     []babfile.Command{{Cmd: "echo done"}},
 					Dependencies: []string{"lint", "test"},
 				},
 			},
@@ -53,24 +55,24 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			name: "no dependencies",
-			tasks: TaskMap{
-				"build": &Task{
+			tasks: babfile.TaskMap{
+				"build": &babfile.Task{
 					Name:     "build",
-					Commands: []Command{{Cmd: "go build"}},
+					Commands: []babfile.Command{{Cmd: "go build"}},
 				},
-				"test": &Task{
+				"test": &babfile.Task{
 					Name:     "test",
-					Commands: []Command{{Cmd: "go test"}},
+					Commands: []babfile.Command{{Cmd: "go test"}},
 				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid dependency - task does not exist",
-			tasks: TaskMap{
-				"build": &Task{
+			tasks: babfile.TaskMap{
+				"build": &babfile.Task{
 					Name:         "build",
-					Commands:     []Command{{Cmd: "go build"}},
+					Commands:     []babfile.Command{{Cmd: "go build"}},
 					Dependencies: []string{"nonexistent"},
 				},
 			},
@@ -79,14 +81,14 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			name: "invalid dependency - one of multiple",
-			tasks: TaskMap{
-				"lint": &Task{
+			tasks: babfile.TaskMap{
+				"lint": &babfile.Task{
 					Name:     "lint",
-					Commands: []Command{{Cmd: "golangci-lint run"}},
+					Commands: []babfile.Command{{Cmd: "golangci-lint run"}},
 				},
-				"ci": &Task{
+				"ci": &babfile.Task{
 					Name:         "ci",
-					Commands:     []Command{{Cmd: "echo done"}},
+					Commands:     []babfile.Command{{Cmd: "echo done"}},
 					Dependencies: []string{"lint", "nonexistent", "alsonothere"},
 				},
 			},
@@ -95,23 +97,23 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			name:    "empty task map",
-			tasks:   TaskMap{},
+			tasks:   babfile.TaskMap{},
 			wantErr: false,
 		},
 		{
 			name: "nested task dependencies",
-			tasks: TaskMap{
-				"ci:test": &Task{
+			tasks: babfile.TaskMap{
+				"ci:test": &babfile.Task{
 					Name:     "ci:test",
-					Commands: []Command{{Cmd: "go test"}},
+					Commands: []babfile.Command{{Cmd: "go test"}},
 				},
-				"ci:lint": &Task{
+				"ci:lint": &babfile.Task{
 					Name:     "ci:lint",
-					Commands: []Command{{Cmd: "golangci-lint run"}},
+					Commands: []babfile.Command{{Cmd: "golangci-lint run"}},
 				},
-				"ci:full": &Task{
+				"ci:full": &babfile.Task{
 					Name:         "ci:full",
-					Commands:     []Command{{Cmd: "echo done"}},
+					Commands:     []babfile.Command{{Cmd: "echo done"}},
 					Dependencies: []string{"ci:test", "ci:lint"},
 				},
 			},
@@ -119,10 +121,10 @@ func TestValidateDependencies(t *testing.T) {
 		},
 		{
 			name: "self dependency should be allowed by this function",
-			tasks: TaskMap{
-				"test": &Task{
+			tasks: babfile.TaskMap{
+				"test": &babfile.Task{
 					Name:         "test",
-					Commands:     []Command{{Cmd: "go test"}},
+					Commands:     []babfile.Command{{Cmd: "go test"}},
 					Dependencies: []string{"test"},
 				},
 			},

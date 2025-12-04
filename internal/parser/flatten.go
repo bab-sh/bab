@@ -3,10 +3,11 @@ package parser
 import (
 	"fmt"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/log"
 )
 
-func flatten(data map[string]interface{}, prefix string, tasks TaskMap) error {
+func flatten(data map[string]interface{}, prefix string, tasks babfile.TaskMap) error {
 	for key, val := range data {
 		taskName := buildTaskName(prefix, key)
 		log.Debug("Processing task node", "name", taskName)

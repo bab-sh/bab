@@ -3,9 +3,11 @@ package parser
 import (
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
-func assertCommandResults(t *testing.T, funcName string, got []Command, want []Command, err error, wantErr bool, errMsg string) {
+func assertCommandResults(t *testing.T, funcName string, got []babfile.Command, want []babfile.Command, err error, wantErr bool, errMsg string) {
 	t.Helper()
 	if wantErr {
 		if err == nil {
@@ -79,7 +81,7 @@ func TestParseCommands(t *testing.T) {
 		name     string
 		taskName string
 		runCmd   interface{}
-		want     []Command
+		want     []babfile.Command
 		wantErr  bool
 		errMsg   string
 	}{
@@ -89,7 +91,7 @@ func TestParseCommands(t *testing.T) {
 			runCmd: []interface{}{
 				map[string]interface{}{"cmd": "echo hello"},
 			},
-			want:    []Command{{Cmd: "echo hello"}},
+			want:    []babfile.Command{{Cmd: "echo hello"}},
 			wantErr: false,
 		},
 		{
@@ -100,7 +102,7 @@ func TestParseCommands(t *testing.T) {
 				map[string]interface{}{"cmd": "npm build"},
 				map[string]interface{}{"cmd": "npm test"},
 			},
-			want: []Command{
+			want: []babfile.Command{
 				{Cmd: "npm install"},
 				{Cmd: "npm build"},
 				{Cmd: "npm test"},
@@ -116,8 +118,8 @@ func TestParseCommands(t *testing.T) {
 					"platforms": []interface{}{"linux", "darwin"},
 				},
 			},
-			want: []Command{
-				{Cmd: "bash scripts/deploy.sh", Platforms: []string{"linux", "darwin"}},
+			want: []babfile.Command{
+				{Cmd: "bash scripts/deploy.sh", Platforms: []babfile.Platform{"linux", "darwin"}},
 			},
 			wantErr: false,
 		},
@@ -135,10 +137,10 @@ func TestParseCommands(t *testing.T) {
 					"platforms": []interface{}{"windows"},
 				},
 			},
-			want: []Command{
+			want: []babfile.Command{
 				{Cmd: "echo 'Starting...'"},
-				{Cmd: "./unix-setup.sh", Platforms: []string{"linux", "darwin"}},
-				{Cmd: "powershell setup.ps1", Platforms: []string{"windows"}},
+				{Cmd: "./unix-setup.sh", Platforms: []babfile.Platform{"linux", "darwin"}},
+				{Cmd: "powershell setup.ps1", Platforms: []babfile.Platform{"windows"}},
 			},
 			wantErr: false,
 		},
@@ -320,7 +322,7 @@ func TestBuildTask(t *testing.T) {
 		taskMap  map[string]interface{}
 		runCmd   interface{}
 		wantErr  bool
-		validate func(t *testing.T, task *Task)
+		validate func(t *testing.T, task *babfile.Task)
 	}{
 		{
 			name:     "simple task with command only",
@@ -334,7 +336,7 @@ func TestBuildTask(t *testing.T) {
 				map[string]interface{}{"cmd": "go build"},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if task.Name != "build" {
 					t.Errorf("Name = %q, want %q", task.Name, "build")
 				}
@@ -365,7 +367,7 @@ func TestBuildTask(t *testing.T) {
 				map[string]interface{}{"cmd": "go test ./..."},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if task.Description != "Run tests" {
 					t.Errorf("Description = %q, want %q", task.Description, "Run tests")
 				}
@@ -384,7 +386,7 @@ func TestBuildTask(t *testing.T) {
 				map[string]interface{}{"cmd": "kubectl apply"},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if len(task.Dependencies) != 2 {
 					t.Fatalf("got %d dependencies, want 2", len(task.Dependencies))
 				}
@@ -412,7 +414,7 @@ func TestBuildTask(t *testing.T) {
 				map[string]interface{}{"cmd": "git push --tags"},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if task.Name != "release" {
 					t.Errorf("Name = %q, want %q", task.Name, "release")
 				}
@@ -454,7 +456,7 @@ func TestBuildTask(t *testing.T) {
 				},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if len(task.Commands) != 2 {
 					t.Fatalf("got %d commands, want 2", len(task.Commands))
 				}
@@ -485,7 +487,7 @@ func TestBuildTask(t *testing.T) {
 				map[string]interface{}{"cmd": "echo test"},
 			},
 			wantErr: false,
-			validate: func(t *testing.T, task *Task) {
+			validate: func(t *testing.T, task *babfile.Task) {
 				if task.Description != "123" {
 					t.Errorf("Description = %q, want %q", task.Description, "123")
 				}
@@ -523,43 +525,43 @@ func TestBuildTask(t *testing.T) {
 func TestCommandShouldRunOnPlatform(t *testing.T) {
 	tests := []struct {
 		name     string
-		command  Command
+		command  babfile.Command
 		platform string
 		want     bool
 	}{
 		{
 			name:     "no platforms specified - runs on any",
-			command:  Command{Cmd: "echo hello"},
+			command:  babfile.Command{Cmd: "echo hello"},
 			platform: "linux",
 			want:     true,
 		},
 		{
 			name:     "empty platforms - runs on any",
-			command:  Command{Cmd: "echo hello", Platforms: []string{}},
+			command:  babfile.Command{Cmd: "echo hello", Platforms: []babfile.Platform{}},
 			platform: "darwin",
 			want:     true,
 		},
 		{
 			name:     "platform matches",
-			command:  Command{Cmd: "echo hello", Platforms: []string{"linux", "darwin"}},
+			command:  babfile.Command{Cmd: "echo hello", Platforms: []babfile.Platform{"linux", "darwin"}},
 			platform: "linux",
 			want:     true,
 		},
 		{
 			name:     "platform does not match",
-			command:  Command{Cmd: "echo hello", Platforms: []string{"linux", "darwin"}},
+			command:  babfile.Command{Cmd: "echo hello", Platforms: []babfile.Platform{"linux", "darwin"}},
 			platform: "windows",
 			want:     false,
 		},
 		{
 			name:     "single platform matches",
-			command:  Command{Cmd: "echo hello", Platforms: []string{"windows"}},
+			command:  babfile.Command{Cmd: "echo hello", Platforms: []babfile.Platform{"windows"}},
 			platform: "windows",
 			want:     true,
 		},
 		{
 			name:     "single platform does not match",
-			command:  Command{Cmd: "echo hello", Platforms: []string{"windows"}},
+			command:  babfile.Command{Cmd: "echo hello", Platforms: []babfile.Platform{"windows"}},
 			platform: "linux",
 			want:     false,
 		},

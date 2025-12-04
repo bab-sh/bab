@@ -3,6 +3,8 @@ package validation
 import (
 	"fmt"
 	"strings"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func ValidateString(value, fieldName string) error {
@@ -37,13 +39,12 @@ func ValidateDependencyName(dep string, index int, taskName string) error {
 	return nil
 }
 
-var ValidPlatforms = []string{"linux", "darwin", "windows"}
+// ValidPlatforms is kept for backwards compatibility but delegates to babfile package.
+var ValidPlatforms = babfile.ValidPlatformStrings()
 
 func ValidatePlatform(platform string) error {
-	for _, valid := range ValidPlatforms {
-		if platform == valid {
-			return nil
-		}
+	if babfile.IsValidPlatform(platform) {
+		return nil
 	}
 	return fmt.Errorf("invalid platform %q (valid: %s)", platform, strings.Join(ValidPlatforms, ", "))
 }

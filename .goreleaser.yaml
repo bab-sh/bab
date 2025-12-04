@@ -10,6 +10,7 @@ before:
     - go mod tidy
     - go mod download
     - ./scripts/completions.sh
+    - ./scripts/schema.sh
 
 builds:
   - id: default
@@ -71,6 +72,7 @@ archives:
       - README.md
       - LICENSE
       - completions/*
+      - schema/*
 
 checksum:
   name_template: 'checksums.txt'
@@ -100,6 +102,8 @@ release:
     owner: bab-sh
     name: bab
   mode: append
+  extra_files:
+    - glob: ./schema/babfile.schema.json
 
 nfpms:
   - id: packages

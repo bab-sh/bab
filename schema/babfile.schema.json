@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bab.sh/schema/babfile.json",
+  "$ref": "#/$defs/BabfileSchema",
+  "$defs": {
+    "BabfileSchema": {
+      "properties": {
+        "includes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/IncludeConfig"
+          },
+          "type": "object",
+          "description": "External babfile imports with namespace prefixes"
+        },
+        "tasks": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TaskDef"
+          },
+          "type": "object",
+          "description": "Task definitions"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "tasks"
+      ]
+    },
+    "CommandDef": {
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command to execute"
+        },
+        "platforms": {
+          "items": {
+            "$ref": "#/$defs/Platform"
+          },
+          "type": "array",
+          "description": "Platforms to run this command on (if empty runs on all platforms)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "cmd"
+      ]
+    },
+    "Dependencies": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Single dependency task name"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of dependency task names"
+        }
+      ]
+    },
+    "IncludeConfig": {
+      "properties": {
+        "babfile": {
+          "type": "string",
+          "description": "Relative or absolute path to the babfile to include"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "babfile"
+      ]
+    },
+    "Platform": {
+      "type": "string",
+      "enum": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "description": "Target platform for the command"
+    },
+    "TaskDef": {
+      "properties": {
+        "desc": {
+          "type": "string",
+          "description": "Human-readable description of the task"
+        },
+        "deps": {
+          "$ref": "#/$defs/Dependencies",
+          "description": "Task dependencies to run before this task"
+        },
+        "run": {
+          "items": {
+            "$ref": "#/$defs/CommandDef"
+          },
+          "type": "array",
+          "description": "List of commands to execute"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/TaskDef"
+      },
+      "type": "object"
+    }
+  },
+  "title": "Babfile Schema",
+  "description": "Schema for Babfile task runner configuration (https://bab.sh)"
+}
