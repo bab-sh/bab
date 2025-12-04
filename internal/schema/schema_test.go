@@ -5,28 +5,29 @@ import (
 	"testing"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/schema"
 )
 
 func TestGenerateSchema(t *testing.T) {
-	schema := babfile.GenerateSchema()
+	s := schema.GenerateSchema()
 
-	if schema.Title != "Babfile Schema" {
-		t.Errorf("expected title 'Babfile Schema', got %q", schema.Title)
+	if s.Title != "Babfile Schema" {
+		t.Errorf("expected title 'Babfile Schema', got %q", s.Title)
 	}
 
-	if schema.ID != "https://bab.sh/schema/babfile.json" {
-		t.Errorf("expected ID 'https://bab.sh/schema/babfile.json', got %q", schema.ID)
+	if s.ID != "https://bab.sh/schema/babfile.json" {
+		t.Errorf("expected ID 'https://bab.sh/schema/babfile.json', got %q", s.ID)
 	}
 
-	if schema.Description == "" {
+	if s.Description == "" {
 		t.Error("schema should have a description")
 	}
 }
 
 func TestSchemaIsValidJSON(t *testing.T) {
-	schema := babfile.GenerateSchema()
+	s := schema.GenerateSchema()
 
-	data, err := json.MarshalIndent(schema, "", "  ")
+	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		t.Fatalf("failed to marshal schema to JSON: %v", err)
 	}
@@ -45,9 +46,9 @@ func TestSchemaIsValidJSON(t *testing.T) {
 }
 
 func TestSchemaHasRequiredDefinitions(t *testing.T) {
-	schema := babfile.GenerateSchema()
+	s := schema.GenerateSchema()
 
-	data, err := json.Marshal(schema)
+	data, err := json.Marshal(s)
 	if err != nil {
 		t.Fatalf("failed to marshal schema: %v", err)
 	}
@@ -63,12 +64,11 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 	}
 
 	requiredDefs := []string{
-		"BabfileSchema",
-		"TaskDef",
-		"CommandDef",
-		"Dependencies",
+		"Schema",
+		"Task",
+		"Command",
 		"Platform",
-		"IncludeConfig",
+		"Include",
 	}
 
 	for _, def := range requiredDefs {
@@ -78,33 +78,16 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 	}
 }
 
-func TestDependenciesSchemaHasOneOf(t *testing.T) {
-	deps := babfile.Dependencies{}
-	schema := deps.JSONSchema()
-
-	if len(schema.OneOf) != 2 {
-		t.Errorf("Dependencies schema should have 2 oneOf options, got %d", len(schema.OneOf))
-	}
-
-	if schema.OneOf[0].Type != "string" {
-		t.Errorf("first oneOf option should be string, got %q", schema.OneOf[0].Type)
-	}
-
-	if schema.OneOf[1].Type != "array" {
-		t.Errorf("second oneOf option should be array, got %q", schema.OneOf[1].Type)
-	}
-}
-
 func TestPlatformSchemaHasEnum(t *testing.T) {
 	platform := babfile.Platform("")
-	schema := platform.JSONSchema()
+	s := platform.JSONSchema()
 
-	if schema.Type != "string" {
-		t.Errorf("Platform schema type should be string, got %q", schema.Type)
+	if s.Type != "string" {
+		t.Errorf("Platform schema type should be string, got %q", s.Type)
 	}
 
-	if len(schema.Enum) != 3 {
-		t.Errorf("Platform schema should have 3 enum values, got %d", len(schema.Enum))
+	if len(s.Enum) != 3 {
+		t.Errorf("Platform schema should have 3 enum values, got %d", len(s.Enum))
 	}
 
 	expectedPlatforms := map[string]bool{
@@ -113,9 +96,9 @@ func TestPlatformSchemaHasEnum(t *testing.T) {
 		"windows": false,
 	}
 
-	for _, v := range schema.Enum {
-		if s, ok := v.(string); ok {
-			expectedPlatforms[s] = true
+	for _, v := range s.Enum {
+		if str, ok := v.(string); ok {
+			expectedPlatforms[str] = true
 		}
 	}
 
@@ -126,10 +109,10 @@ func TestPlatformSchemaHasEnum(t *testing.T) {
 	}
 }
 
-func TestTaskDefSchemaHasAdditionalProperties(t *testing.T) {
-	schema := babfile.GenerateSchema()
+func TestTaskSchemaNoNestedTasks(t *testing.T) {
+	s := schema.GenerateSchema()
 
-	data, err := json.Marshal(schema)
+	data, err := json.Marshal(s)
 	if err != nil {
 		t.Fatalf("failed to marshal schema: %v", err)
 	}
@@ -140,16 +123,15 @@ func TestTaskDefSchemaHasAdditionalProperties(t *testing.T) {
 	}
 
 	defs := parsed["$defs"].(map[string]interface{})
-	taskDef := defs["TaskDef"].(map[string]interface{})
+	taskDef := defs["Task"].(map[string]interface{})
 
 	additionalProps, ok := taskDef["additionalProperties"]
 	if !ok {
-		t.Error("TaskDef should have additionalProperties for nested subtasks")
+		t.Error("Task should have additionalProperties set")
+		return
 	}
 
-	if ref, ok := additionalProps.(map[string]interface{}); ok {
-		if ref["$ref"] != "#/$defs/TaskDef" {
-			t.Errorf("additionalProperties should reference TaskDef, got %v", ref["$ref"])
-		}
+	if additionalProps != false {
+		t.Errorf("Task additionalProperties should be false (no nested tasks), got %v", additionalProps)
 	}
 }

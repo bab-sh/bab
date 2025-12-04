@@ -1,32 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bab.sh/schema/babfile.json",
-  "$ref": "#/$defs/BabfileSchema",
+  "$ref": "#/$defs/Schema",
   "$defs": {
-    "BabfileSchema": {
-      "properties": {
-        "includes": {
-          "additionalProperties": {
-            "$ref": "#/$defs/IncludeConfig"
-          },
-          "type": "object",
-          "description": "External babfile imports with namespace prefixes"
-        },
-        "tasks": {
-          "additionalProperties": {
-            "$ref": "#/$defs/TaskDef"
-          },
-          "type": "object",
-          "description": "Task definitions"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "tasks"
-      ]
-    },
-    "CommandDef": {
+    "Command": {
       "properties": {
         "cmd": {
           "type": "string",
@@ -47,22 +24,7 @@
         "cmd"
       ]
     },
-    "Dependencies": {
-      "oneOf": [
-        {
-          "type": "string",
-          "description": "Single dependency task name"
-        },
-        {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of dependency task names"
-        }
-      ]
-    },
-    "IncludeConfig": {
+    "Include": {
       "properties": {
         "babfile": {
           "type": "string",
@@ -84,27 +46,51 @@
       ],
       "description": "Target platform for the command"
     },
-    "TaskDef": {
+    "Schema": {
+      "properties": {
+        "includes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Include"
+          },
+          "type": "object",
+          "description": "External babfile imports with namespace prefixes"
+        },
+        "tasks": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Task"
+          },
+          "type": "object",
+          "description": "Task definitions"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "tasks"
+      ]
+    },
+    "Task": {
       "properties": {
         "desc": {
           "type": "string",
           "description": "Human-readable description of the task"
         },
         "deps": {
-          "$ref": "#/$defs/Dependencies",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
           "description": "Task dependencies to run before this task"
         },
         "run": {
           "items": {
-            "$ref": "#/$defs/CommandDef"
+            "$ref": "#/$defs/Command"
           },
           "type": "array",
           "description": "List of commands to execute"
         }
       },
-      "additionalProperties": {
-        "$ref": "#/$defs/TaskDef"
-      },
+      "additionalProperties": false,
       "type": "object"
     }
   },

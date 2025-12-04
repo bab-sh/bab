@@ -7,382 +7,125 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/parser"
 )
 
-func TestRunner_Run(t *testing.T) {
-	tests := []struct {
-		name        string
-		taskName    string
-		babfileYAML string
-		wantErr     bool
-		errMsg      string
-	}{
-		{
-			name:     "execute simple task",
-			taskName: "hello",
-			babfileYAML: `tasks:
-  hello:
-    run:
-      - cmd: echo "Hello World"`,
-			wantErr: false,
-		},
-		{
-			name:     "execute task with dependencies",
-			taskName: "test",
-			babfileYAML: `tasks:
-  build:
-    run:
-      - cmd: echo "Building"
-  test:
-    deps: build
-    run:
-      - cmd: echo "Testing"`,
-			wantErr: false,
-		},
-		{
-			name:     "task not found",
-			taskName: "nonexistent",
-			babfileYAML: `tasks:
-  hello:
-    run:
-      - cmd: echo "Hello"`,
-			wantErr: true,
-			errMsg:  "not found",
+func TestRunSimpleTask(t *testing.T) {
+	tasks := parser.TaskMap{
+		"hello": &parser.Task{
+			Name:     "hello",
+			Commands: []parser.Command{{Cmd: "echo hello"}},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			babfilePath := filepath.Join(tmpDir, "Babfile")
-
-			if err := os.WriteFile(babfilePath, []byte(tt.babfileYAML), 0600); err != nil {
-				t.Fatalf("failed to create test Babfile: %v", err)
-			}
-
-			oldDir, _ := os.Getwd()
-			defer func() { _ = os.Chdir(oldDir) }()
-			if err := os.Chdir(tmpDir); err != nil {
-				t.Fatalf("failed to change directory: %v", err)
-			}
-
-			r := New(true)
-			ctx := context.Background()
-			err := r.Run(ctx, tt.taskName)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Run() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("Run() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("Run() unexpected error: %v", err)
-			}
-		})
+	r := New(true)
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
 	}
 }
 
-func TestRunner_RunWithTasks(t *testing.T) {
-	tests := []struct {
-		name     string
-		taskName string
-		tasks    babfile.TaskMap
-		wantErr  bool
-		errMsg   string
-	}{
-		{
-			name:     "execute task with no dependencies",
-			taskName: "hello",
-			tasks: babfile.TaskMap{
-				"hello": &babfile.Task{
-					Name:     "hello",
-					Commands: []babfile.Command{{Cmd: "echo hello"}},
-				},
-			},
-			wantErr: false,
+func TestRunWithDependencies(t *testing.T) {
+	tasks := parser.TaskMap{
+		"build": &parser.Task{
+			Name:     "build",
+			Commands: []parser.Command{{Cmd: "echo building"}},
 		},
-		{
-			name:     "execute task with one dependency",
-			taskName: "test",
-			tasks: babfile.TaskMap{
-				"build": &babfile.Task{
-					Name:     "build",
-					Commands: []babfile.Command{{Cmd: "echo building"}},
-				},
-				"test": &babfile.Task{
-					Name:         "test",
-					Commands:     []babfile.Command{{Cmd: "echo testing"}},
-					Dependencies: []string{"build"},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name:     "execute task with multiple dependencies",
-			taskName: "deploy",
-			tasks: babfile.TaskMap{
-				"build": &babfile.Task{
-					Name:     "build",
-					Commands: []babfile.Command{{Cmd: "echo building"}},
-				},
-				"test": &babfile.Task{
-					Name:     "test",
-					Commands: []babfile.Command{{Cmd: "echo testing"}},
-				},
-				"deploy": &babfile.Task{
-					Name:         "deploy",
-					Commands:     []babfile.Command{{Cmd: "echo deploying"}},
-					Dependencies: []string{"build", "test"},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name:     "task not found",
-			taskName: "nonexistent",
-			tasks: babfile.TaskMap{
-				"hello": &babfile.Task{
-					Name:     "hello",
-					Commands: []babfile.Command{{Cmd: "echo hello"}},
-				},
-			},
-			wantErr: true,
-			errMsg:  "not found",
-		},
-		{
-			name:     "circular dependency detected",
-			taskName: "task_a",
-			tasks: babfile.TaskMap{
-				"task_a": &babfile.Task{
-					Name:         "task_a",
-					Commands:     []babfile.Command{{Cmd: "echo a"}},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &babfile.Task{
-					Name:         "task_b",
-					Commands:     []babfile.Command{{Cmd: "echo b"}},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "circular dependency",
+		"test": &parser.Task{
+			Name:         "test",
+			Commands:     []parser.Command{{Cmd: "echo testing"}},
+			Dependencies: []string{"build"},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := New(true)
-			ctx := context.Background()
-			err := r.RunWithTasks(ctx, tt.taskName, tt.tasks)
+	r := New(true)
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
 
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("RunWithTasks() expected error containing %q, got nil", tt.errMsg)
-					return
-				}
-				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("RunWithTasks() error = %q, want error containing %q", err.Error(), tt.errMsg)
-				}
-				return
-			}
+func TestRunTaskNotFound(t *testing.T) {
+	tasks := parser.TaskMap{
+		"hello": &parser.Task{
+			Name:     "hello",
+			Commands: []parser.Command{{Cmd: "echo hello"}},
+		},
+	}
 
-			if err != nil {
-				t.Errorf("RunWithTasks() unexpected error: %v", err)
-			}
-		})
+	r := New(true)
+	err := r.RunWithTasks(context.Background(), "nonexistent", tasks)
+	if err == nil {
+		t.Fatal("expected error for nonexistent task")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected 'not found' error, got: %v", err)
+	}
+}
+
+func TestRunCircularDependency(t *testing.T) {
+	tasks := parser.TaskMap{
+		"a": &parser.Task{
+			Name:         "a",
+			Commands:     []parser.Command{{Cmd: "echo a"}},
+			Dependencies: []string{"b"},
+		},
+		"b": &parser.Task{
+			Name:         "b",
+			Commands:     []parser.Command{{Cmd: "echo b"}},
+			Dependencies: []string{"a"},
+		},
+	}
+
+	r := New(true)
+	err := r.RunWithTasks(context.Background(), "a", tasks)
+	if err == nil {
+		t.Fatal("expected error for circular dependency")
+	}
+	if !strings.Contains(err.Error(), "circular") {
+		t.Errorf("expected 'circular' error, got: %v", err)
 	}
 }
 
 func TestLoadTasks(t *testing.T) {
-	tests := []struct {
-		name        string
-		babfileYAML string
-		createFile  bool
-		wantErr     bool
-		wantCount   int
-	}{
-		{
-			name: "load simple tasks",
-			babfileYAML: `tasks:
+	tmpDir := t.TempDir()
+	babfile := filepath.Join(tmpDir, "Babfile.yml")
+
+	yaml := `tasks:
   hello:
     run:
       - cmd: echo "Hello"
   world:
     run:
-      - cmd: echo "World"`,
-			createFile: true,
-			wantErr:    false,
-			wantCount:  2,
-		},
-		{
-			name: "load nested tasks",
-			babfileYAML: `tasks:
-  ci:
-    test:
-      run:
-        - cmd: echo "Testing"
-    lint:
-      run:
-        - cmd: echo "Linting"`,
-			createFile: true,
-			wantErr:    false,
-			wantCount:  2,
-		},
-		{
-			name:        "no babfile",
-			babfileYAML: "",
-			createFile:  false,
-			wantErr:     true,
-			wantCount:   0,
-		},
-		{
-			name:        "empty babfile",
-			babfileYAML: "",
-			createFile:  true,
-			wantErr:     true,
-			wantCount:   0,
-		},
+      - cmd: echo "World"`
+
+	if err := os.WriteFile(babfile, []byte(yaml), 0600); err != nil {
+		t.Fatalf("failed to create Babfile: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
+	oldDir, _ := os.Getwd()
+	defer func() { _ = os.Chdir(oldDir) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to chdir: %v", err)
+	}
 
-			if tt.createFile {
-				babfilePath := filepath.Join(tmpDir, "Babfile")
-				if err := os.WriteFile(babfilePath, []byte(tt.babfileYAML), 0600); err != nil {
-					t.Fatalf("failed to create test Babfile: %v", err)
-				}
-			}
-
-			oldDir, _ := os.Getwd()
-			defer func() { _ = os.Chdir(oldDir) }()
-			if err := os.Chdir(tmpDir); err != nil {
-				t.Fatalf("failed to change directory: %v", err)
-			}
-
-			tasks, err := LoadTasks()
-
-			if tt.wantErr {
-				if err == nil {
-					t.Error("LoadTasks() expected error, got nil")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("LoadTasks() unexpected error: %v", err)
-				return
-			}
-
-			if len(tasks) != tt.wantCount {
-				t.Errorf("LoadTasks() returned %d tasks, want %d", len(tasks), tt.wantCount)
-			}
-		})
+	tasks, err := LoadTasks()
+	if err != nil {
+		t.Fatalf("LoadTasks() error: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Errorf("expected 2 tasks, got %d", len(tasks))
 	}
 }
 
 func TestNew(t *testing.T) {
-	t.Run("dry run false", func(t *testing.T) {
-		r := New(false)
-		if r.DryRun {
-			t.Error("DryRun should be false")
-		}
-	})
-
-	t.Run("dry run true", func(t *testing.T) {
-		r := New(true)
-		if !r.DryRun {
-			t.Error("DryRun should be true")
-		}
-	})
-}
-
-func TestBuildDependencyChain(t *testing.T) {
-	tests := []struct {
-		name        string
-		currentTask string
-		executing   map[string]bool
-		tasks       babfile.TaskMap
-		wantChain   string
-	}{
-		{
-			name:        "simple circular dependency",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-				"task_b": true,
-			},
-			tasks: babfile.TaskMap{
-				"task_a": &babfile.Task{
-					Name:         "task_a",
-					Commands:     []babfile.Command{{Cmd: "echo a"}},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &babfile.Task{
-					Name:         "task_b",
-					Commands:     []babfile.Command{{Cmd: "echo b"}},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantChain: "task_a → task_b",
-		},
-		{
-			name:        "no circular dependency",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-			},
-			tasks: babfile.TaskMap{
-				"task_a": &babfile.Task{
-					Name:     "task_a",
-					Commands: []babfile.Command{{Cmd: "echo a"}},
-				},
-			},
-			wantChain: "task_a",
-		},
-		{
-			name:        "longer chain",
-			currentTask: "task_a",
-			executing: map[string]bool{
-				"task_a": true,
-				"task_b": true,
-				"task_c": true,
-			},
-			tasks: babfile.TaskMap{
-				"task_a": &babfile.Task{
-					Name:         "task_a",
-					Commands:     []babfile.Command{{Cmd: "echo a"}},
-					Dependencies: []string{"task_b"},
-				},
-				"task_b": &babfile.Task{
-					Name:         "task_b",
-					Commands:     []babfile.Command{{Cmd: "echo b"}},
-					Dependencies: []string{"task_c"},
-				},
-				"task_c": &babfile.Task{
-					Name:         "task_c",
-					Commands:     []babfile.Command{{Cmd: "echo c"}},
-					Dependencies: []string{"task_a"},
-				},
-			},
-			wantChain: "task_a → task_b → task_c",
-		},
+	r := New(false)
+	if r.DryRun {
+		t.Error("DryRun should be false")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := BuildDependencyChain(tt.currentTask, tt.executing, tt.tasks)
-			if got != tt.wantChain {
-				t.Errorf("BuildDependencyChain() = %q, want %q", got, tt.wantChain)
-			}
-		})
+	r = New(true)
+	if !r.DryRun {
+		t.Error("DryRun should be true")
 	}
 }

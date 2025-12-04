@@ -1,5 +1,5 @@
 tasks:
   test:
-    deps: nonexistent_task
+    deps: [nonexistent_task]
     run:
       - cmd: echo "Testing"

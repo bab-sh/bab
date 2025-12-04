@@ -3,13 +3,22 @@ package runner
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 
-	"github.com/bab-sh/bab/internal/babfile"
-	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/log"
+)
+
+type status int
+
+const (
+	_ status = iota
+	running
+	done
 )
 
 type Runner struct {
@@ -20,113 +29,142 @@ func New(dryRun bool) *Runner {
 	return &Runner{DryRun: dryRun}
 }
 
-func LoadTasks() (babfile.TaskMap, error) {
+func LoadTasks() (parser.TaskMap, error) {
 	path, err := finder.FindBabfile()
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("Found Babfile", "path", path)
-
-	tasks, err := parser.Parse(path)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("Parsed Babfile", "task-count", len(tasks))
-
-	return tasks, nil
+	return parser.Parse(path)
 }
 
 func (r *Runner) Run(ctx context.Context, taskName string) error {
-	log.Debug("Executing task", "name", taskName, "dry-run", r.DryRun)
-
 	tasks, err := LoadTasks()
 	if err != nil {
 		return err
 	}
-
-	executed := make(map[string]bool)
-	executing := make(map[string]bool)
-
-	return r.runWithDeps(ctx, taskName, tasks, executed, executing)
+	return r.RunWithTasks(ctx, taskName, tasks)
 }
 
-func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
-	executed := make(map[string]bool)
-	executing := make(map[string]bool)
-
-	return r.runWithDeps(ctx, taskName, tasks, executed, executing)
+func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks parser.TaskMap) error {
+	state := make(map[string]status)
+	return r.runTask(ctx, taskName, tasks, state)
 }
 
-func (r *Runner) runWithDeps(ctx context.Context, taskName string, tasks babfile.TaskMap, executed, executing map[string]bool) error {
-	if executed[taskName] {
-		log.Debug("Task already executed, skipping", "name", taskName)
+func (r *Runner) runTask(ctx context.Context, name string, tasks parser.TaskMap, state map[string]status) error {
+	switch state[name] {
+	case done:
 		return nil
+	case running:
+		return fmt.Errorf("circular dependency detected: %s", buildChain(name, tasks, state))
 	}
 
-	if executing[taskName] {
-		chain := BuildDependencyChain(taskName, executing, tasks)
-		return fmt.Errorf("circular dependency detected: %s", chain)
+	task, ok := tasks[name]
+	if !ok {
+		return fmt.Errorf("task %q not found", name)
 	}
 
-	task, exists := tasks[taskName]
-	if !exists {
-		return fmt.Errorf("task %q not found", taskName)
-	}
-
-	executing[taskName] = true
-	defer delete(executing, taskName)
+	state[name] = running
 
 	for _, dep := range task.Dependencies {
-		log.Debug("Executing dependency", "task", taskName, "dependency", dep)
-		if err := r.runWithDeps(ctx, dep, tasks, executed, executing); err != nil {
-			return fmt.Errorf("dependency %q of task %q failed: %w", dep, taskName, err)
+		log.Debug("Running dependency", "task", name, "dep", dep)
+		if err := r.runTask(ctx, dep, tasks, state); err != nil {
+			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
 
-	log.Debug("Executing task", "name", taskName, "commands", len(task.Commands))
-
-	var err error
-	if r.DryRun {
-		err = executor.DryRun(ctx, task)
-	} else {
-		err = executor.Execute(ctx, task)
-	}
-
-	if err != nil {
+	if err := r.executeTask(ctx, task); err != nil {
 		return err
 	}
 
-	log.Debug("Task completed", "name", taskName)
-	executed[taskName] = true
+	state[name] = done
 	return nil
 }
 
-func BuildDependencyChain(currentTask string, executing map[string]bool, tasks babfile.TaskMap) string {
-	chain := []string{currentTask}
-	visited := make(map[string]bool)
+func (r *Runner) executeTask(ctx context.Context, task *parser.Task) error {
+	if len(task.Commands) == 0 {
+		return fmt.Errorf("task %q has no commands", task.Name)
+	}
 
-	for len(chain) < len(tasks) {
-		lastTask := chain[len(chain)-1]
-		if visited[lastTask] {
+	shell, shellArg := shellCommand()
+	platform := runtime.GOOS
+	executed := 0
+
+	log.Debug("Executing task", "name", task.Name, "commands", len(task.Commands), "dryRun", r.DryRun)
+
+	for i, cmd := range task.Commands {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("cancelled: %w", ctx.Err())
+		default:
+		}
+
+		if !cmd.ShouldRunOnPlatform(platform) {
+			log.Debug("Skipping command", "task", task.Name, "index", i+1, "reason", "platform")
+			continue
+		}
+
+		if strings.TrimSpace(cmd.Cmd) == "" {
+			return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
+		}
+
+		if r.DryRun {
+			log.Info("Would run", "cmd", cmd.Cmd)
+		} else {
+			log.Debug("Running", "cmd", cmd.Cmd)
+			if err := runCommand(ctx, shell, shellArg, cmd.Cmd); err != nil {
+				return fmt.Errorf("command %d failed: %w", i+1, err)
+			}
+		}
+		executed++
+	}
+
+	if executed == 0 {
+		return fmt.Errorf("task %q has no commands for platform %q", task.Name, platform)
+	}
+
+	return nil
+}
+
+func shellCommand() (string, string) {
+	if runtime.GOOS == "windows" {
+		return "cmd", "/C"
+	}
+	return "sh", "-c"
+}
+
+func runCommand(ctx context.Context, shell, shellArg, command string) error {
+	cmd := exec.CommandContext(ctx, shell, shellArg, command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd.Run()
+}
+
+func buildChain(current string, tasks parser.TaskMap, state map[string]status) string {
+	chain := []string{current}
+	seen := make(map[string]bool)
+
+	for {
+		last := chain[len(chain)-1]
+		if seen[last] {
 			break
 		}
-		visited[lastTask] = true
+		seen[last] = true
 
-		task, exists := tasks[lastTask]
-		if !exists || len(task.Dependencies) == 0 {
+		task, ok := tasks[last]
+		if !ok || len(task.Dependencies) == 0 {
 			break
 		}
 
 		for _, dep := range task.Dependencies {
-			if executing[dep] {
+			if state[dep] == running {
 				chain = append(chain, dep)
-				if dep == currentTask {
+				if dep == current {
 					return strings.Join(chain, " → ")
 				}
 				break
 			}
 		}
 	}
-
 	return strings.Join(chain, " → ")
 }

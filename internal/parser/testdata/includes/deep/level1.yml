@@ -1,8 +1,0 @@
-includes:
-  level2:
-    babfile: ./level2.yml
-
-tasks:
-  task1:
-    run:
-      - cmd: echo "level1"

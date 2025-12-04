@@ -4,12 +4,11 @@ tasks:
       - cmd: echo "Cleaning..."
 
   build:
-    deps: clean
+    deps: [clean]
     run:
       - cmd: echo "Building..."
 
   test:
-    deps:
-      - build
+    deps: [build]
     run:
       - cmd: echo "Testing..."

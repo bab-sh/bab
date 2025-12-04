@@ -3,7 +3,7 @@ package picker
 import (
 	"sort"
 
-	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/bubbles/textinput"
 )
 
@@ -14,21 +14,21 @@ const (
 
 type Model struct {
 	input   textinput.Model
-	tasks   []*babfile.Task
+	tasks   []*parser.Task
 	matches []Match
 
 	cursor int
 	offset int
 
-	selected *babfile.Task
+	selected *parser.Task
 	quitting bool
 
 	width  int
 	height int
 }
 
-func New(tasks babfile.TaskMap) Model {
-	list := make([]*babfile.Task, 0, len(tasks))
+func New(tasks parser.TaskMap) Model {
+	list := make([]*parser.Task, 0, len(tasks))
 	for _, t := range tasks {
 		list = append(list, t)
 	}
@@ -75,4 +75,4 @@ func (m *Model) visibleLines() int {
 	return max(1, m.height-headerLines)
 }
 
-func (m Model) Selected() *babfile.Task { return m.selected }
+func (m Model) Selected() *parser.Task { return m.selected }
