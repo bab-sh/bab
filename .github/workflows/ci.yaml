@@ -68,6 +68,27 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
+  schema:
+    name: Schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Check schema is current
+        run: |
+          ./scripts/schema.sh
+          git diff --exit-code schema/babfile.schema.json || {
+            echo "Schema is out of date. Run: ./scripts/schema.sh"
+            exit 1
+          }
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

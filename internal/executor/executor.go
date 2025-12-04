@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/validation"
 	"github.com/charmbracelet/log"
 )
@@ -26,7 +26,7 @@ func getShellCommand() (string, string) {
 	return unixShell, unixArg
 }
 
-func Execute(ctx context.Context, task *parser.Task) error {
+func Execute(ctx context.Context, task *babfile.Task) error {
 	if task == nil {
 		log.Debug("Execute called with nil task")
 		return fmt.Errorf("task cannot be nil")
@@ -93,7 +93,7 @@ func executeCommand(ctx context.Context, shell, shellArg, command string) error 
 	return cmd.Run()
 }
 
-func DryRun(ctx context.Context, task *parser.Task) error {
+func DryRun(ctx context.Context, task *babfile.Task) error {
 	if task == nil {
 		log.Debug("DryRun called with nil task")
 		return fmt.Errorf("task cannot be nil")

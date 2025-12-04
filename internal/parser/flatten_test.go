@@ -3,6 +3,8 @@ package parser
 import (
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestFlatten(t *testing.T) {
@@ -12,7 +14,7 @@ func TestFlatten(t *testing.T) {
 		prefix   string
 		wantErr  bool
 		errMsg   string
-		validate func(t *testing.T, tasks TaskMap)
+		validate func(t *testing.T, tasks babfile.TaskMap)
 	}{
 		{
 			name: "simple single task",
@@ -25,7 +27,7 @@ func TestFlatten(t *testing.T) {
 			},
 			prefix:  "",
 			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 1 {
 					t.Errorf("expected 1 task, got %d", len(tasks))
 				}
@@ -50,7 +52,7 @@ func TestFlatten(t *testing.T) {
 			},
 			prefix:  "",
 			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 2 {
 					t.Errorf("expected 2 tasks, got %d", len(tasks))
 				}
@@ -80,7 +82,7 @@ func TestFlatten(t *testing.T) {
 			},
 			prefix:  "",
 			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 2 {
 					t.Errorf("expected 2 tasks, got %d", len(tasks))
 				}
@@ -121,7 +123,7 @@ func TestFlatten(t *testing.T) {
 			},
 			prefix:  "ci",
 			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 1 {
 					t.Errorf("expected 1 task, got %d", len(tasks))
 				}
@@ -145,7 +147,7 @@ func TestFlatten(t *testing.T) {
 			},
 			prefix:  "",
 			wantErr: false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 1 {
 					t.Errorf("expected 1 task, got %d", len(tasks))
 				}
@@ -185,7 +187,7 @@ func TestFlatten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tasks := make(TaskMap)
+			tasks := make(babfile.TaskMap)
 			err := flatten(tt.data, tt.prefix, tasks)
 
 			if tt.wantErr {
@@ -312,7 +314,7 @@ func TestProcessTaskNode(t *testing.T) {
 		taskMap  map[string]interface{}
 		taskName string
 		wantErr  bool
-		validate func(t *testing.T, tasks TaskMap)
+		validate func(t *testing.T, tasks babfile.TaskMap)
 	}{
 		{
 			name: "task with run command",
@@ -323,7 +325,7 @@ func TestProcessTaskNode(t *testing.T) {
 			},
 			taskName: "hello",
 			wantErr:  false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 1 {
 					t.Errorf("expected 1 task, got %d", len(tasks))
 				}
@@ -343,7 +345,7 @@ func TestProcessTaskNode(t *testing.T) {
 			},
 			taskName: "ci",
 			wantErr:  false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 1 {
 					t.Errorf("expected 1 task, got %d", len(tasks))
 				}
@@ -394,7 +396,7 @@ func TestProcessTaskNode(t *testing.T) {
 			},
 			taskName: "test",
 			wantErr:  false,
-			validate: func(t *testing.T, tasks TaskMap) {
+			validate: func(t *testing.T, tasks babfile.TaskMap) {
 				if len(tasks) != 2 {
 					t.Errorf("expected 2 tasks, got %d", len(tasks))
 				}
@@ -413,7 +415,7 @@ func TestProcessTaskNode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tasks := make(TaskMap)
+			tasks := make(babfile.TaskMap)
 			err := processTaskNode(tt.taskMap, tt.taskName, tasks)
 
 			if tt.wantErr {

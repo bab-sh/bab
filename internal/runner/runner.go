@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/executor"
 	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/parser"
@@ -19,7 +20,7 @@ func New(dryRun bool) *Runner {
 	return &Runner{DryRun: dryRun}
 }
 
-func LoadTasks() (parser.TaskMap, error) {
+func LoadTasks() (babfile.TaskMap, error) {
 	path, err := finder.FindBabfile()
 	if err != nil {
 		return nil, err
@@ -49,14 +50,14 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	return r.runWithDeps(ctx, taskName, tasks, executed, executing)
 }
 
-func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks parser.TaskMap) error {
+func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
 	executed := make(map[string]bool)
 	executing := make(map[string]bool)
 
 	return r.runWithDeps(ctx, taskName, tasks, executed, executing)
 }
 
-func (r *Runner) runWithDeps(ctx context.Context, taskName string, tasks parser.TaskMap, executed, executing map[string]bool) error {
+func (r *Runner) runWithDeps(ctx context.Context, taskName string, tasks babfile.TaskMap, executed, executing map[string]bool) error {
 	if executed[taskName] {
 		log.Debug("Task already executed, skipping", "name", taskName)
 		return nil
@@ -100,7 +101,7 @@ func (r *Runner) runWithDeps(ctx context.Context, taskName string, tasks parser.
 	return nil
 }
 
-func BuildDependencyChain(currentTask string, executing map[string]bool, tasks parser.TaskMap) string {
+func BuildDependencyChain(currentTask string, executing map[string]bool, tasks babfile.TaskMap) string {
 	chain := []string{currentTask}
 	visited := make(map[string]bool)
 

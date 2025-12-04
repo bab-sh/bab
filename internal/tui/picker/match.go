@@ -3,17 +3,17 @@ package picker
 import (
 	"strings"
 
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 )
 
 type Match struct {
-	Task    *parser.Task
+	Task    *babfile.Task
 	Indexes []int
 }
 
-func search(query string, tasks []*parser.Task) []Match {
+func search(query string, tasks []*babfile.Task) []Match {
 	if query == "" {
 		results := make([]Match, len(tasks))
 		for i, t := range tasks {
