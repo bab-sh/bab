@@ -15,7 +15,7 @@ func (Include) JSONSchema() *jsonschema.Schema {
 	props.Set("babfile", &jsonschema.Schema{
 		Type:        "string",
 		MinLength:   &minLen,
-		Pattern:     ".*babfile(\\..*)?\\.(ya?ml)$",
+		Pattern:     ".*[Bb]abfile(\\..*)?\\.(ya?ml)$",
 		Description: "Path to babfile",
 	})
 

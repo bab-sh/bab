@@ -1,0 +1,10 @@
+includes:
+  second:
+    babfile: ./second.yml
+
+tasks:
+  build:
+    deps: [second:compile]
+    run:
+      - cmd: echo "first:build"
+      - task: second:test

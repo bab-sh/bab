@@ -354,3 +354,46 @@ func TestParseTaskRunNotFound(t *testing.T) {
 		t.Errorf("expected 'not found' error, got: %v", err)
 	}
 }
+
+func TestParseDeepNestedInclude(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "includes", "deep", "main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	expectedTasks := []string{
+		"root",
+		"first:build",
+		"first:second:compile",
+		"first:second:test",
+	}
+
+	if len(tasks) != len(expectedTasks) {
+		t.Errorf("expected %d tasks, got %d: %v", len(expectedTasks), len(tasks), tasks.Names())
+	}
+
+	for _, name := range expectedTasks {
+		if tasks[name] == nil {
+			t.Errorf("expected task %q not found", name)
+		}
+	}
+
+	firstBuild := tasks["first:build"]
+	if firstBuild == nil {
+		t.Fatal("task 'first:build' not found")
+	}
+	if len(firstBuild.Dependencies) != 1 || firstBuild.Dependencies[0] != "first:second:compile" {
+		t.Errorf("expected dep 'first:second:compile', got %v", firstBuild.Dependencies)
+	}
+
+	if len(firstBuild.RunItems) < 2 {
+		t.Fatalf("expected at least 2 run items, got %d", len(firstBuild.RunItems))
+	}
+	taskRun, ok := firstBuild.RunItems[1].(TaskRun)
+	if !ok {
+		t.Fatal("expected second run item to be TaskRun")
+	}
+	if taskRun.TaskRef != "first:second:test" {
+		t.Errorf("expected task ref 'first:second:test', got %q", taskRun.TaskRef)
+	}
+}

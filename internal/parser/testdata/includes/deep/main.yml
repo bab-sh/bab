@@ -1,0 +1,9 @@
+includes:
+  first:
+    babfile: ./first.yml
+
+tasks:
+  root:
+    deps: [first:build]
+    run:
+      - cmd: echo "root"

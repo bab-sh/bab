@@ -2,7 +2,6 @@ package parser
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -43,11 +42,7 @@ func prefixDeps(deps []string, namespace string) []string {
 	}
 	prefixed := make([]string, len(deps))
 	for i, dep := range deps {
-		if !strings.Contains(dep, ":") {
-			prefixed[i] = namespace + ":" + dep
-		} else {
-			prefixed[i] = dep
-		}
+		prefixed[i] = namespace + ":" + dep
 	}
 	return prefixed
 }
@@ -62,13 +57,9 @@ func prefixTaskRuns(items []RunItem, namespace string) []RunItem {
 		case CommandRun:
 			prefixed[i] = v
 		case TaskRun:
-			if !strings.Contains(v.TaskRef, ":") {
-				prefixed[i] = TaskRun{
-					TaskRef:   namespace + ":" + v.TaskRef,
-					Platforms: v.Platforms,
-				}
-			} else {
-				prefixed[i] = v
+			prefixed[i] = TaskRun{
+				TaskRef:   namespace + ":" + v.TaskRef,
+				Platforms: v.Platforms,
 			}
 		}
 	}
