@@ -8,7 +8,7 @@
         "babfile": {
           "type": "string",
           "minLength": 1,
-          "pattern": ".*babfile(\\..*)?\\.(ya?ml)$",
+          "pattern": ".*[Bb]abfile(\\..*)?\\.(ya?ml)$",
           "description": "Path to babfile"
         }
       },
