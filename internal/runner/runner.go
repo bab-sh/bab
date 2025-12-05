@@ -72,7 +72,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks parser.TaskMap,
 		}
 	}
 
-	if err := r.executeTask(ctx, task); err != nil {
+	if err := r.executeTask(ctx, task, tasks, state); err != nil {
 		return err
 	}
 
@@ -80,46 +80,60 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks parser.TaskMap,
 	return nil
 }
 
-func (r *Runner) executeTask(ctx context.Context, task *parser.Task) error {
-	if len(task.Commands) == 0 {
-		return fmt.Errorf("task %q has no commands", task.Name)
+func (r *Runner) executeTask(ctx context.Context, task *parser.Task, tasks parser.TaskMap, state map[string]status) error {
+	if len(task.RunItems) == 0 {
+		return fmt.Errorf("task %q has no run items", task.Name)
 	}
 
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
 
-	log.Debug("Executing task", "name", task.Name, "commands", len(task.Commands), "dryRun", r.DryRun)
+	log.Debug("Executing task", "name", task.Name, "runItems", len(task.RunItems), "dryRun", r.DryRun)
 
-	for i, cmd := range task.Commands {
+	for i, item := range task.RunItems {
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("cancelled: %w", ctx.Err())
 		default:
 		}
 
-		if !cmd.ShouldRunOnPlatform(platform) {
-			log.Debug("Skipping command", "task", task.Name, "index", i+1, "reason", "platform")
+		if !item.ShouldRunOnPlatform(platform) {
+			log.Debug("Skipping run item", "task", task.Name, "index", i+1, "reason", "platform")
 			continue
 		}
 
-		if strings.TrimSpace(cmd.Cmd) == "" {
-			return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
-		}
+		switch v := item.(type) {
+		case parser.CommandRun:
+			if strings.TrimSpace(v.Cmd) == "" {
+				return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
+			}
 
-		if r.DryRun {
-			log.Info("Would run", "cmd", cmd.Cmd)
-		} else {
-			log.Debug("Running", "cmd", cmd.Cmd)
-			if err := runCommand(ctx, shell, shellArg, cmd.Cmd); err != nil {
-				return fmt.Errorf("command %d failed: %w", i+1, err)
+			if r.DryRun {
+				log.Info("Would run", "cmd", v.Cmd)
+			} else {
+				log.Debug("Running", "cmd", v.Cmd)
+				if err := runCommand(ctx, shell, shellArg, v.Cmd); err != nil {
+					return fmt.Errorf("command %d failed: %w", i+1, err)
+				}
+			}
+
+		case parser.TaskRun:
+			if r.DryRun {
+				log.Info("Would run task", "task", v.TaskRef)
+			} else {
+				log.Debug("Running task", "task", v.TaskRef)
+				if err := r.runTask(ctx, v.TaskRef, tasks, state); err != nil {
+					return fmt.Errorf("task %q failed: %w", v.TaskRef, err)
+				}
 			}
 		}
+
 		executed++
 	}
 
 	if executed == 0 {
-		return fmt.Errorf("task %q has no commands for platform %q", task.Name, platform)
+		return fmt.Errorf("task %q has no run items for platform %q", task.Name, platform)
 	}
 
 	return nil

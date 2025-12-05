@@ -1,0 +1,14 @@
+tasks:
+  main:
+    run:
+      - cmd: echo "main command"
+      - task: helper
+      - task: nested:task
+
+  helper:
+    run:
+      - cmd: echo "helper"
+
+  nested:task:
+    run:
+      - cmd: echo "nested task"

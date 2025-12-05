@@ -1,41 +1,23 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://bab.sh/schema/babfile.json",
   "$ref": "#/$defs/Schema",
   "$defs": {
-    "Command": {
-      "properties": {
-        "cmd": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Shell command to execute"
-        },
-        "platforms": {
-          "items": {
-            "$ref": "#/$defs/Platform"
-          },
-          "type": "array",
-          "description": "Platforms to run this command on (if empty runs on all platforms)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "cmd"
-      ]
-    },
     "Include": {
       "properties": {
         "babfile": {
           "type": "string",
-          "description": "Relative or absolute path to the babfile to include"
+          "minLength": 1,
+          "pattern": ".*babfile(\\..*)?\\.(ya?ml)$",
+          "description": "Path to babfile"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
         "babfile"
-      ]
+      ],
+      "description": "External babfile reference"
     },
     "Platform": {
       "type": "string",
@@ -44,7 +26,7 @@
         "darwin",
         "windows"
       ],
-      "description": "Target platform for the command"
+      "description": "Target operating system"
     },
     "Schema": {
       "properties": {
@@ -52,14 +34,21 @@
           "additionalProperties": {
             "$ref": "#/$defs/Include"
           },
+          "propertyNames": {
+            "pattern": "^[a-zA-Z0-9_-]+$"
+          },
           "type": "object",
-          "description": "External babfile imports with namespace prefixes"
+          "description": "External babfiles to import"
         },
         "tasks": {
           "additionalProperties": {
             "$ref": "#/$defs/Task"
           },
+          "propertyNames": {
+            "pattern": "^[a-zA-Z0-9_-]+$"
+          },
           "type": "object",
+          "minProperties": 1,
           "description": "Task definitions"
         }
       },
@@ -67,31 +56,83 @@
       "type": "object",
       "required": [
         "tasks"
-      ]
+      ],
+      "description": "Babfile configuration"
     },
     "Task": {
       "properties": {
         "desc": {
           "type": "string",
-          "description": "Human-readable description of the task"
+          "description": "Task description"
         },
         "deps": {
           "items": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)?$"
           },
           "type": "array",
-          "description": "Task dependencies to run before this task"
+          "uniqueItems": true,
+          "description": "Tasks to run first"
         },
         "run": {
           "items": {
-            "$ref": "#/$defs/Command"
+            "oneOf": [
+              {
+                "properties": {
+                  "cmd": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Shell command to execute"
+                  },
+                  "platforms": {
+                    "items": {
+                      "$ref": "#/$defs/Platform"
+                    },
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "Run only on specified platforms"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "cmd"
+                ],
+                "description": "Shell command"
+              },
+              {
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)?$",
+                    "description": "Task reference"
+                  },
+                  "platforms": {
+                    "items": {
+                      "$ref": "#/$defs/Platform"
+                    },
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "Run only on specified platforms"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "task"
+                ],
+                "description": "Task reference"
+              }
+            ]
           },
           "type": "array",
-          "description": "List of commands to execute"
+          "description": "Commands or tasks to execute"
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "description": "Task definition"
     }
   },
   "title": "Babfile Schema",
