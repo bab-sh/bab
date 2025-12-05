@@ -11,7 +11,7 @@ type Schema struct {
 }
 
 func (Schema) JSONSchema() *jsonschema.Schema {
-	namePattern := "^[a-zA-Z0-9_-]+$"
+	namePattern := "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
 
 	props := orderedmap.New[string, *jsonschema.Schema]()
 	props.Set("includes", &jsonschema.Schema{
