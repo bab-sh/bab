@@ -38,7 +38,7 @@ func DepsSchema() *jsonschema.Schema {
 		Description: "Tasks to run first",
 		Items: &jsonschema.Schema{
 			Type:    "string",
-			Pattern: "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)?$",
+			Pattern: "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
 		},
 		UniqueItems: true,
 	}

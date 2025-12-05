@@ -48,7 +48,7 @@ func (TaskRun) JSONSchema() *jsonschema.Schema {
 	props.Set("task", &jsonschema.Schema{
 		Type:        "string",
 		MinLength:   &minLen,
-		Pattern:     "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)?$",
+		Pattern:     "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
 		Description: "Task reference",
 	})
 	props.Set("platforms", PlatformsArraySchema())
