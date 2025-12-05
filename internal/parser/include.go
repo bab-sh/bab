@@ -29,7 +29,7 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks TaskMap, visit
 		tasks[prefixedName] = &Task{
 			Name:         prefixedName,
 			Description:  task.Description,
-			Commands:     task.Commands,
+			RunItems:     prefixTaskRuns(task.RunItems, namespace),
 			Dependencies: prefixDeps(task.Dependencies, namespace),
 		}
 	}
@@ -47,6 +47,29 @@ func prefixDeps(deps []string, namespace string) []string {
 			prefixed[i] = namespace + ":" + dep
 		} else {
 			prefixed[i] = dep
+		}
+	}
+	return prefixed
+}
+
+func prefixTaskRuns(items []RunItem, namespace string) []RunItem {
+	if len(items) == 0 {
+		return items
+	}
+	prefixed := make([]RunItem, len(items))
+	for i, item := range items {
+		switch v := item.(type) {
+		case CommandRun:
+			prefixed[i] = v
+		case TaskRun:
+			if !strings.Contains(v.TaskRef, ":") {
+				prefixed[i] = TaskRun{
+					TaskRef:   namespace + ":" + v.TaskRef,
+					Platforms: v.Platforms,
+				}
+			} else {
+				prefixed[i] = v
+			}
 		}
 	}
 	return prefixed

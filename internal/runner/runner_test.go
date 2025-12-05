@@ -14,7 +14,7 @@ func TestRunSimpleTask(t *testing.T) {
 	tasks := parser.TaskMap{
 		"hello": &parser.Task{
 			Name:     "hello",
-			Commands: []parser.Command{{Cmd: "echo hello"}},
+			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo hello"}},
 		},
 	}
 
@@ -29,11 +29,11 @@ func TestRunWithDependencies(t *testing.T) {
 	tasks := parser.TaskMap{
 		"build": &parser.Task{
 			Name:     "build",
-			Commands: []parser.Command{{Cmd: "echo building"}},
+			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo building"}},
 		},
 		"test": &parser.Task{
 			Name:         "test",
-			Commands:     []parser.Command{{Cmd: "echo testing"}},
+			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo testing"}},
 			Dependencies: []string{"build"},
 		},
 	}
@@ -49,7 +49,7 @@ func TestRunTaskNotFound(t *testing.T) {
 	tasks := parser.TaskMap{
 		"hello": &parser.Task{
 			Name:     "hello",
-			Commands: []parser.Command{{Cmd: "echo hello"}},
+			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo hello"}},
 		},
 	}
 
@@ -67,12 +67,12 @@ func TestRunCircularDependency(t *testing.T) {
 	tasks := parser.TaskMap{
 		"a": &parser.Task{
 			Name:         "a",
-			Commands:     []parser.Command{{Cmd: "echo a"}},
+			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo a"}},
 			Dependencies: []string{"b"},
 		},
 		"b": &parser.Task{
 			Name:         "b",
-			Commands:     []parser.Command{{Cmd: "echo b"}},
+			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo b"}},
 			Dependencies: []string{"a"},
 		},
 	}
@@ -127,5 +127,49 @@ func TestNew(t *testing.T) {
 	r = New(true)
 	if !r.DryRun {
 		t.Error("DryRun should be true")
+	}
+}
+
+func TestRunTaskWithTaskRef(t *testing.T) {
+	tasks := parser.TaskMap{
+		"main": &parser.Task{
+			Name: "main",
+			RunItems: []parser.RunItem{
+				parser.CommandRun{Cmd: "echo main"},
+				parser.TaskRun{TaskRef: "helper"},
+			},
+		},
+		"helper": &parser.Task{
+			Name:     "helper",
+			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo helper"}},
+		},
+	}
+
+	r := New(true)
+	err := r.RunWithTasks(context.Background(), "main", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunTaskRefCircular(t *testing.T) {
+	tasks := parser.TaskMap{
+		"a": &parser.Task{
+			Name:     "a",
+			RunItems: []parser.RunItem{parser.TaskRun{TaskRef: "b"}},
+		},
+		"b": &parser.Task{
+			Name:     "b",
+			RunItems: []parser.RunItem{parser.TaskRun{TaskRef: "a"}},
+		},
+	}
+
+	r := New(false)
+	err := r.RunWithTasks(context.Background(), "a", tasks)
+	if err == nil {
+		t.Fatal("expected error for circular task run")
+	}
+	if !strings.Contains(err.Error(), "circular") {
+		t.Errorf("expected 'circular' error, got: %v", err)
 	}
 }

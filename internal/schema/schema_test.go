@@ -66,8 +66,6 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 	requiredDefs := []string{
 		"Schema",
 		"Task",
-		"Command",
-		"Platform",
 		"Include",
 	}
 

@@ -30,6 +30,14 @@ func Parse(path string) (TaskMap, error) {
 		return nil, err
 	}
 
+	if err := validateRunTaskRefs(tasks); err != nil {
+		return nil, err
+	}
+
+	if err := validateRunCycles(tasks); err != nil {
+		return nil, err
+	}
+
 	return tasks, nil
 }
 

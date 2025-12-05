@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -21,11 +22,15 @@ func TestParseSimpleTask(t *testing.T) {
 	if task.Name != "hello" {
 		t.Errorf("expected name 'hello', got %q", task.Name)
 	}
-	if len(task.Commands) != 1 {
-		t.Errorf("expected 1 command, got %d", len(task.Commands))
+	if len(task.RunItems) != 1 {
+		t.Errorf("expected 1 run item, got %d", len(task.RunItems))
 	}
-	if task.Commands[0].Cmd != `echo "Hello World"` {
-		t.Errorf("unexpected command: %q", task.Commands[0].Cmd)
+	cmd, ok := task.RunItems[0].(CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun")
+	}
+	if cmd.Cmd != `echo "Hello World"` {
+		t.Errorf("unexpected command: %q", cmd.Cmd)
 	}
 }
 
@@ -41,13 +46,17 @@ func TestParseMultiCommand(t *testing.T) {
 	if task.Description != "Build the project" {
 		t.Errorf("expected description 'Build the project', got %q", task.Description)
 	}
-	if len(task.Commands) != 3 {
-		t.Fatalf("expected 3 commands, got %d", len(task.Commands))
+	if len(task.RunItems) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(task.RunItems))
 	}
 	expected := []string{`echo "Compiling..."`, `echo "Linking..."`, `echo "Done!"`}
 	for i, want := range expected {
-		if task.Commands[i].Cmd != want {
-			t.Errorf("command[%d]: expected %q, got %q", i, want, task.Commands[i].Cmd)
+		cmd, ok := task.RunItems[i].(CommandRun)
+		if !ok {
+			t.Fatalf("run item[%d]: expected CommandRun", i)
+		}
+		if cmd.Cmd != want {
+			t.Errorf("command[%d]: expected %q, got %q", i, want, cmd.Cmd)
 		}
 	}
 }
@@ -253,5 +262,95 @@ func TestParseNestedTaskNames(t *testing.T) {
 	}
 	if tasks["docker:push"] == nil {
 		t.Error("task 'docker:push' not found")
+	}
+}
+
+func TestParseTaskRun(t *testing.T) {
+	tasks, err := Parse(filepath.Join("testdata", "task_run.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if len(tasks) != 3 {
+		t.Errorf("expected 3 tasks, got %d", len(tasks))
+	}
+
+	main := tasks["main"]
+	if main == nil {
+		t.Fatal("task 'main' not found")
+	}
+	if len(main.RunItems) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(main.RunItems))
+	}
+
+	// First item: cmd
+	cmd, ok := main.RunItems[0].(CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for first item")
+	}
+	if cmd.Cmd != `echo "main command"` {
+		t.Errorf("unexpected command: %q", cmd.Cmd)
+	}
+
+	// Second item: task reference
+	taskRef, ok := main.RunItems[1].(TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun for second item")
+	}
+	if taskRef.TaskRef != "helper" {
+		t.Errorf("expected task ref 'helper', got %q", taskRef.TaskRef)
+	}
+
+	// Third item: task reference with colon
+	taskRef2, ok := main.RunItems[2].(TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun for third item")
+	}
+	if taskRef2.TaskRef != "nested:task" {
+		t.Errorf("expected task ref 'nested:task', got %q", taskRef2.TaskRef)
+	}
+}
+
+func TestParseTaskRunCycle(t *testing.T) {
+	yaml := `tasks:
+  a:
+    run:
+      - task: b
+  b:
+    run:
+      - task: a`
+
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "cycle.yml")
+	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Parse(path)
+	if err == nil {
+		t.Fatal("expected error for circular task run")
+	}
+	if !strings.Contains(err.Error(), "circular") {
+		t.Errorf("expected 'circular' error, got: %v", err)
+	}
+}
+
+func TestParseTaskRunNotFound(t *testing.T) {
+	yaml := `tasks:
+  main:
+    run:
+      - task: nonexistent`
+
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "notfound.yml")
+	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Parse(path)
+	if err == nil {
+		t.Fatal("expected error for missing task reference")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected 'not found' error, got: %v", err)
 	}
 }
