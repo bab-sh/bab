@@ -5,9 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/log"
-	"gopkg.in/yaml.v3"
 )
 
 func Parse(path string) (TaskMap, error) {
@@ -56,14 +54,14 @@ func parseFile(absPath string, visited map[string]bool) (TaskMap, error) {
 		return nil, &ParseError{Path: absPath, Message: "failed to read file", Cause: err}
 	}
 
-	var bf babfile.Schema
-	if err := yaml.Unmarshal(data, &bf); err != nil {
+	bf, err := unmarshalBabfile(data)
+	if err != nil {
 		return nil, &ParseError{Path: absPath, Message: "invalid YAML", Cause: err}
 	}
 
 	tasks := make(TaskMap, len(bf.Tasks))
-	for name, schemaTask := range bf.Tasks {
-		tasks[name] = convertTask(name, schemaTask)
+	for name, task := range bf.Tasks {
+		tasks[name] = convertTask(name, task)
 	}
 
 	baseDir := filepath.Dir(absPath)

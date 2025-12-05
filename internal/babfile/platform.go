@@ -20,6 +20,15 @@ func (Platform) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		Type:        "string",
 		Enum:        enumValues,
-		Description: "Target platform for the command",
+		Description: "Target operating system",
+	}
+}
+
+func PlatformsArraySchema() *jsonschema.Schema {
+	return &jsonschema.Schema{
+		Type:        "array",
+		Description: "Run only on specified platforms",
+		Items:       &jsonschema.Schema{Ref: "#/$defs/Platform"},
+		UniqueItems: true,
 	}
 }

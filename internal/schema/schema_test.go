@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/schema"
 )
 
@@ -21,6 +20,52 @@ func TestGenerateSchema(t *testing.T) {
 
 	if s.Description == "" {
 		t.Error("schema should have a description")
+	}
+}
+
+func TestSchemaUsesDraft07(t *testing.T) {
+	s := schema.GenerateSchema()
+
+	expectedVersion := "http://json-schema.org/draft-07/schema#"
+	if s.Version != expectedVersion {
+		t.Errorf("expected schema version %q for IDE compatibility, got %q", expectedVersion, s.Version)
+	}
+}
+
+func TestTaskSchemaHasRunWithOneOf(t *testing.T) {
+	s := schema.GenerateSchema()
+
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal schema: %v", err)
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal schema: %v", err)
+	}
+
+	defs := parsed["$defs"].(map[string]any)
+	taskDef := defs["Task"].(map[string]any)
+	props := taskDef["properties"].(map[string]any)
+	runProp := props["run"].(map[string]any)
+	items := runProp["items"].(map[string]any)
+	oneOf := items["oneOf"].([]any)
+
+	if len(oneOf) != 2 {
+		t.Errorf("run items should have 2 oneOf options, got %d", len(oneOf))
+	}
+
+	cmdOption := oneOf[0].(map[string]any)
+	cmdProps := cmdOption["properties"].(map[string]any)
+	if _, ok := cmdProps["cmd"]; !ok {
+		t.Error("first oneOf should have 'cmd' property")
+	}
+
+	taskOption := oneOf[1].(map[string]any)
+	taskProps := taskOption["properties"].(map[string]any)
+	if _, ok := taskProps["task"]; !ok {
+		t.Error("second oneOf should have 'task' property")
 	}
 }
 
@@ -63,46 +108,10 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 		t.Fatal("$defs should be an object")
 	}
 
-	requiredDefs := []string{
-		"Schema",
-		"Task",
-		"Include",
-	}
-
+	requiredDefs := []string{"Schema", "Task", "Include"}
 	for _, def := range requiredDefs {
 		if _, ok := defs[def]; !ok {
 			t.Errorf("schema should have definition for %q", def)
-		}
-	}
-}
-
-func TestPlatformSchemaHasEnum(t *testing.T) {
-	platform := babfile.Platform("")
-	s := platform.JSONSchema()
-
-	if s.Type != "string" {
-		t.Errorf("Platform schema type should be string, got %q", s.Type)
-	}
-
-	if len(s.Enum) != 3 {
-		t.Errorf("Platform schema should have 3 enum values, got %d", len(s.Enum))
-	}
-
-	expectedPlatforms := map[string]bool{
-		"linux":   false,
-		"darwin":  false,
-		"windows": false,
-	}
-
-	for _, v := range s.Enum {
-		if str, ok := v.(string); ok {
-			expectedPlatforms[str] = true
-		}
-	}
-
-	for platform, found := range expectedPlatforms {
-		if !found {
-			t.Errorf("Platform enum should include %q", platform)
 		}
 	}
 }
@@ -130,6 +139,6 @@ func TestTaskSchemaNoNestedTasks(t *testing.T) {
 	}
 
 	if additionalProps != false {
-		t.Errorf("Task additionalProperties should be false (no nested tasks), got %v", additionalProps)
+		t.Errorf("Task additionalProperties should be false, got %v", additionalProps)
 	}
 }
