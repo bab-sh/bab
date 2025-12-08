@@ -11,14 +11,12 @@ type Schema struct {
 }
 
 func (Schema) JSONSchema() *jsonschema.Schema {
-	namePattern := "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
-
 	props := orderedmap.New[string, *jsonschema.Schema]()
 	props.Set("includes", &jsonschema.Schema{
 		Type:        "object",
 		Description: "External babfiles to import",
 		PropertyNames: &jsonschema.Schema{
-			Pattern: namePattern,
+			Pattern: TaskNamePattern,
 		},
 		AdditionalProperties: &jsonschema.Schema{Ref: "#/$defs/Include"},
 	})
@@ -29,7 +27,7 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 		Description:   "Task definitions",
 		MinProperties: &minTasks,
 		PropertyNames: &jsonschema.Schema{
-			Pattern: namePattern,
+			Pattern: TaskNamePattern,
 		},
 		AdditionalProperties: &jsonschema.Schema{Ref: "#/$defs/Task"},
 	})
@@ -40,5 +38,11 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 		Required:             []string{"tasks"},
 		AdditionalProperties: jsonschema.FalseSchema,
 		Properties:           props,
+		Definitions: jsonschema.Definitions{
+			"Task":     Task{}.JSONSchema(),
+			"TaskName": TaskNameSchema(),
+			"Include":  Include{}.JSONSchema(),
+			"Platform": Platform("").JSONSchema(),
+		},
 	}
 }

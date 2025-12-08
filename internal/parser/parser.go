@@ -1,16 +1,18 @@
 package parser
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/log"
 )
 
-func Parse(path string) (TaskMap, error) {
+func Parse(path string) (babfile.TaskMap, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, &ParseError{Path: path, Message: "path cannot be empty"}
+		return nil, &ParseError{Path: path, Message: "path cannot be empty", Cause: ErrPathEmpty}
 	}
 
 	absPath, err := filepath.Abs(filepath.Clean(path))
@@ -39,7 +41,7 @@ func Parse(path string) (TaskMap, error) {
 	return tasks, nil
 }
 
-func parseFile(absPath string, visited map[string]bool) (TaskMap, error) {
+func parseFile(absPath string, visited map[string]bool) (babfile.TaskMap, error) {
 	log.Debug("Parsing babfile", "path", absPath)
 
 	if visited[absPath] {
@@ -51,17 +53,18 @@ func parseFile(absPath string, visited map[string]bool) (TaskMap, error) {
 
 	data, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil, &ParseError{Path: absPath, Message: "failed to read file", Cause: err}
+		return nil, &ParseError{Path: absPath, Message: "failed to read file", Cause: fmt.Errorf("%w: %w", ErrFileNotFound, err)}
 	}
 
 	bf, err := unmarshalBabfile(data)
 	if err != nil {
-		return nil, &ParseError{Path: absPath, Message: "invalid YAML", Cause: err}
+		return nil, &ParseError{Path: absPath, Message: "invalid YAML", Cause: fmt.Errorf("%w: %w", ErrInvalidYAML, err)}
 	}
 
-	tasks := make(TaskMap, len(bf.Tasks))
+	tasks := make(babfile.TaskMap, len(bf.Tasks))
 	for name, task := range bf.Tasks {
-		tasks[name] = convertTask(name, task)
+		task.Name = name
+		tasks[name] = &task
 	}
 
 	baseDir := filepath.Dir(absPath)

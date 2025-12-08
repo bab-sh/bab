@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,8 +126,8 @@ func TestFindBabfileErrors(t *testing.T) {
 			t.Error("FindBabfile() expected error when no Babfile exists, got nil")
 		}
 
-		if err != nil && !strings.Contains(err.Error(), "no Babfile found") {
-			t.Errorf("FindBabfile() error = %q, want error containing 'no Babfile found'", err.Error())
+		if !errors.Is(err, ErrBabfileNotFound) {
+			t.Errorf("FindBabfile() expected ErrBabfileNotFound, got: %v", err)
 		}
 	})
 }

@@ -5,13 +5,32 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
+const TaskNamePattern = "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
+
 type Task struct {
+	Name string    `json:"-" yaml:"-"`
 	Desc string    `json:"desc,omitempty" yaml:"desc,omitempty"`
 	Deps []string  `json:"deps,omitempty" yaml:"deps,omitempty"`
 	Run  []RunItem `json:"-" yaml:"-"`
 }
 
+type TaskMap map[string]*Task
+
+func (tm TaskMap) Has(name string) bool {
+	_, exists := tm[name]
+	return exists
+}
+
+func (tm TaskMap) Names() []string {
+	names := make([]string, 0, len(tm))
+	for name := range tm {
+		names = append(names, name)
+	}
+	return names
+}
+
 func (Task) JSONSchema() *jsonschema.Schema {
+	minRunItems := uint64(1)
 	props := orderedmap.New[string, *jsonschema.Schema]()
 	props.Set("desc", &jsonschema.Schema{
 		Type:        "string",
@@ -21,6 +40,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 	props.Set("run", &jsonschema.Schema{
 		Type:        "array",
 		Description: "Commands or tasks to execute",
+		MinItems:    &minRunItems,
 		Items:       RunItemSchema(),
 	})
 
@@ -37,9 +57,18 @@ func DepsSchema() *jsonschema.Schema {
 		Type:        "array",
 		Description: "Tasks to run first",
 		Items: &jsonschema.Schema{
-			Type:    "string",
-			Pattern: "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
+			Type:        "string",
+			Pattern:     TaskNamePattern,
+			Description: "Task name to depend on",
 		},
 		UniqueItems: true,
+	}
+}
+
+func TaskNameSchema() *jsonschema.Schema {
+	return &jsonschema.Schema{
+		Type:        "string",
+		Pattern:     TaskNamePattern,
+		Description: "Task name (alphanumeric, hyphens, underscores, colons for namespacing)",
 	}
 }

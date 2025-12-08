@@ -7,14 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestRunSimpleTask(t *testing.T) {
-	tasks := parser.TaskMap{
-		"hello": &parser.Task{
-			Name:     "hello",
-			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo hello"}},
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
 		},
 	}
 
@@ -26,15 +26,15 @@ func TestRunSimpleTask(t *testing.T) {
 }
 
 func TestRunWithDependencies(t *testing.T) {
-	tasks := parser.TaskMap{
-		"build": &parser.Task{
-			Name:     "build",
-			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo building"}},
+	tasks := babfile.TaskMap{
+		"build": &babfile.Task{
+			Name: "build",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo building"}},
 		},
-		"test": &parser.Task{
-			Name:         "test",
-			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo testing"}},
-			Dependencies: []string{"build"},
+		"test": &babfile.Task{
+			Name: "test",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo testing"}},
+			Deps: []string{"build"},
 		},
 	}
 
@@ -46,10 +46,10 @@ func TestRunWithDependencies(t *testing.T) {
 }
 
 func TestRunTaskNotFound(t *testing.T) {
-	tasks := parser.TaskMap{
-		"hello": &parser.Task{
-			Name:     "hello",
-			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo hello"}},
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
 		},
 	}
 
@@ -64,16 +64,16 @@ func TestRunTaskNotFound(t *testing.T) {
 }
 
 func TestRunCircularDependency(t *testing.T) {
-	tasks := parser.TaskMap{
-		"a": &parser.Task{
-			Name:         "a",
-			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo a"}},
-			Dependencies: []string{"b"},
+	tasks := babfile.TaskMap{
+		"a": &babfile.Task{
+			Name: "a",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo a"}},
+			Deps: []string{"b"},
 		},
-		"b": &parser.Task{
-			Name:         "b",
-			RunItems:     []parser.RunItem{parser.CommandRun{Cmd: "echo b"}},
-			Dependencies: []string{"a"},
+		"b": &babfile.Task{
+			Name: "b",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo b"}},
+			Deps: []string{"a"},
 		},
 	}
 
@@ -89,7 +89,7 @@ func TestRunCircularDependency(t *testing.T) {
 
 func TestLoadTasks(t *testing.T) {
 	tmpDir := t.TempDir()
-	babfile := filepath.Join(tmpDir, "Babfile.yml")
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
 
 	yaml := `tasks:
   hello:
@@ -99,7 +99,7 @@ func TestLoadTasks(t *testing.T) {
     run:
       - cmd: echo "World"`
 
-	if err := os.WriteFile(babfile, []byte(yaml), 0600); err != nil {
+	if err := os.WriteFile(babfilePath, []byte(yaml), 0600); err != nil {
 		t.Fatalf("failed to create Babfile: %v", err)
 	}
 
@@ -131,17 +131,17 @@ func TestNew(t *testing.T) {
 }
 
 func TestRunTaskWithTaskRef(t *testing.T) {
-	tasks := parser.TaskMap{
-		"main": &parser.Task{
+	tasks := babfile.TaskMap{
+		"main": &babfile.Task{
 			Name: "main",
-			RunItems: []parser.RunItem{
-				parser.CommandRun{Cmd: "echo main"},
-				parser.TaskRun{TaskRef: "helper"},
+			Run: []babfile.RunItem{
+				babfile.CommandRun{Cmd: "echo main"},
+				babfile.TaskRun{Task: "helper"},
 			},
 		},
-		"helper": &parser.Task{
-			Name:     "helper",
-			RunItems: []parser.RunItem{parser.CommandRun{Cmd: "echo helper"}},
+		"helper": &babfile.Task{
+			Name: "helper",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo helper"}},
 		},
 	}
 
@@ -153,14 +153,14 @@ func TestRunTaskWithTaskRef(t *testing.T) {
 }
 
 func TestRunTaskRefCircular(t *testing.T) {
-	tasks := parser.TaskMap{
-		"a": &parser.Task{
-			Name:     "a",
-			RunItems: []parser.RunItem{parser.TaskRun{TaskRef: "b"}},
+	tasks := babfile.TaskMap{
+		"a": &babfile.Task{
+			Name: "a",
+			Run:  []babfile.RunItem{babfile.TaskRun{Task: "b"}},
 		},
-		"b": &parser.Task{
-			Name:     "b",
-			RunItems: []parser.RunItem{parser.TaskRun{TaskRef: "a"}},
+		"b": &babfile.Task{
+			Name: "b",
+			Run:  []babfile.RunItem{babfile.TaskRun{Task: "a"}},
 		},
 	}
 

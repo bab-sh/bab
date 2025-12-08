@@ -43,7 +43,7 @@ func (c *CLI) runList() error {
 			}
 			current = current.children[part]
 			if i == len(parts)-1 {
-				current.desc = task.Description
+				current.desc = task.Desc
 			}
 		}
 	}
