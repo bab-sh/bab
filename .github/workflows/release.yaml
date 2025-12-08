@@ -13,7 +13,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  schema:
+    name: Schema Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Check schema is current
+        run: |
+          ./scripts/schema.sh
+          git diff --exit-code schema/babfile.schema.json || {
+            echo "Schema is out of date. Run: ./scripts/schema.sh"
+            exit 1
+          }
+
   build:
+    needs: schema
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
