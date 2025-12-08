@@ -423,7 +423,6 @@ aur_sources:
       - go
       - git
     build: |-
-      export CGO_ENABLED=0
       export CGO_CPPFLAGS="${CPPFLAGS}"
       export CGO_CFLAGS="${CFLAGS}"
       export CGO_CXXFLAGS="${CXXFLAGS}"
@@ -440,9 +439,9 @@ aur_sources:
 
       # Generate shell completions
       mkdir -p completions
-      ./bab completion bash > completions/bab.bash
-      ./bab completion zsh > completions/bab.zsh
-      ./bab completion fish > completions/bab.fish
+      ./bab --completion bash > completions/bab.bash
+      ./bab --completion zsh > completions/bab.zsh
+      ./bab --completion fish > completions/bab.fish
 
     package: |-
       # Binary
