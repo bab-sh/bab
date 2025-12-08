@@ -412,7 +412,7 @@ aur_sources:
       name: goreleaserbot
       email: "[email protected]"
     commit_msg_template: "upgpkg: {{ .ProjectName }} {{ .Tag }}"
-    url_template: "https://github.com/bab-sh/bab/archive/refs/tags/{{ .Tag }}.tar.gz"
+    url_template: "https://github.com/bab-sh/bab/releases/download/{{ .Tag }}/{{ .ProjectName }}-{{ .Version }}.tar.gz"
     provides:
       - bab
     conflicts:
