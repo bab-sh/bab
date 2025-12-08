@@ -423,7 +423,6 @@ aur_sources:
       - go
       - git
     build: |-
-      cd "${pkgname}-${pkgver}"
       export CGO_ENABLED=0
       export CGO_CPPFLAGS="${CPPFLAGS}"
       export CGO_CFLAGS="${CFLAGS}"
@@ -446,8 +445,6 @@ aur_sources:
       ./bab completion fish > completions/bab.fish
 
     package: |-
-      cd "${pkgname}-${pkgver}"
-      
       # Binary
       install -Dm755 ./bab "${pkgdir}/usr/bin/bab"
       
