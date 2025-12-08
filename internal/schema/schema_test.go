@@ -108,7 +108,7 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 		t.Fatal("$defs should be an object")
 	}
 
-	requiredDefs := []string{"Schema", "Task", "Include"}
+	requiredDefs := []string{"Task", "TaskName", "Include", "Platform"}
 	for _, def := range requiredDefs {
 		if _, ok := defs[def]; !ok {
 			t.Errorf("schema should have definition for %q", def)
@@ -140,5 +140,66 @@ func TestTaskSchemaNoNestedTasks(t *testing.T) {
 
 	if additionalProps != false {
 		t.Errorf("Task additionalProperties should be false, got %v", additionalProps)
+	}
+}
+
+func TestTaskRunRequiresAtLeastOneItem(t *testing.T) {
+	s := schema.GenerateSchema()
+
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal schema: %v", err)
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal schema: %v", err)
+	}
+
+	defs := parsed["$defs"].(map[string]any)
+	taskDef := defs["Task"].(map[string]any)
+	props := taskDef["properties"].(map[string]any)
+	runProp := props["run"].(map[string]any)
+
+	minItems, ok := runProp["minItems"]
+	if !ok {
+		t.Error("run should have minItems constraint")
+		return
+	}
+
+	if minItems != float64(1) {
+		t.Errorf("run minItems should be 1, got %v", minItems)
+	}
+}
+
+func TestSchemaHasTaskNameDefinition(t *testing.T) {
+	s := schema.GenerateSchema()
+
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal schema: %v", err)
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal schema: %v", err)
+	}
+
+	defs := parsed["$defs"].(map[string]any)
+	taskNameDef, ok := defs["TaskName"].(map[string]any)
+	if !ok {
+		t.Fatal("schema should have TaskName definition")
+	}
+
+	if taskNameDef["type"] != "string" {
+		t.Errorf("TaskName type should be string, got %v", taskNameDef["type"])
+	}
+
+	if taskNameDef["pattern"] == nil {
+		t.Error("TaskName should have pattern")
+	}
+
+	if taskNameDef["description"] == nil {
+		t.Error("TaskName should have description")
 	}
 }

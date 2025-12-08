@@ -1,10 +1,12 @@
 package parser
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/babfile"
 )
 
 func TestParseSimpleTask(t *testing.T) {
@@ -22,10 +24,10 @@ func TestParseSimpleTask(t *testing.T) {
 	if task.Name != "hello" {
 		t.Errorf("expected name 'hello', got %q", task.Name)
 	}
-	if len(task.RunItems) != 1 {
-		t.Errorf("expected 1 run item, got %d", len(task.RunItems))
+	if len(task.Run) != 1 {
+		t.Errorf("expected 1 run item, got %d", len(task.Run))
 	}
-	cmd, ok := task.RunItems[0].(CommandRun)
+	cmd, ok := task.Run[0].(babfile.CommandRun)
 	if !ok {
 		t.Fatal("expected CommandRun")
 	}
@@ -43,15 +45,15 @@ func TestParseMultiCommand(t *testing.T) {
 	if task == nil {
 		t.Fatal("task 'build' not found")
 	}
-	if task.Description != "Build the project" {
-		t.Errorf("expected description 'Build the project', got %q", task.Description)
+	if task.Desc != "Build the project" {
+		t.Errorf("expected description 'Build the project', got %q", task.Desc)
 	}
-	if len(task.RunItems) != 3 {
-		t.Fatalf("expected 3 run items, got %d", len(task.RunItems))
+	if len(task.Run) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(task.Run))
 	}
 	expected := []string{`echo "Compiling..."`, `echo "Linking..."`, `echo "Done!"`}
 	for i, want := range expected {
-		cmd, ok := task.RunItems[i].(CommandRun)
+		cmd, ok := task.Run[i].(babfile.CommandRun)
 		if !ok {
 			t.Fatalf("run item[%d]: expected CommandRun", i)
 		}
@@ -71,18 +73,18 @@ func TestParseDependencies(t *testing.T) {
 	}
 
 	clean := tasks["clean"]
-	if clean == nil || len(clean.Dependencies) != 0 {
+	if clean == nil || len(clean.Deps) != 0 {
 		t.Errorf("clean should have no dependencies")
 	}
 
 	build := tasks["build"]
-	if build == nil || len(build.Dependencies) != 1 || build.Dependencies[0] != "clean" {
-		t.Errorf("build should depend on 'clean', got %v", build.Dependencies)
+	if build == nil || len(build.Deps) != 1 || build.Deps[0] != "clean" {
+		t.Errorf("build should depend on 'clean', got %v", build.Deps)
 	}
 
 	test := tasks["test"]
-	if test == nil || len(test.Dependencies) != 1 || test.Dependencies[0] != "build" {
-		t.Errorf("test should depend on 'build', got %v", test.Dependencies)
+	if test == nil || len(test.Deps) != 1 || test.Deps[0] != "build" {
+		t.Errorf("test should depend on 'build', got %v", test.Deps)
 	}
 }
 
@@ -103,7 +105,7 @@ func TestParseNestedTasks(t *testing.T) {
 	}
 
 	full := tasks["ci:full"]
-	if full == nil || len(full.Dependencies) != 2 {
+	if full == nil || len(full.Deps) != 2 {
 		t.Errorf("ci:full should have 2 dependencies, got %v", full)
 	}
 }
@@ -115,12 +117,12 @@ func TestParseDescriptions(t *testing.T) {
 	}
 
 	test := tasks["test"]
-	if test == nil || test.Description != "Run all unit tests" {
+	if test == nil || test.Desc != "Run all unit tests" {
 		t.Errorf("test description wrong: %v", test)
 	}
 
 	coverage := tasks["coverage"]
-	if coverage == nil || coverage.Description != "Generate coverage report" {
+	if coverage == nil || coverage.Desc != "Generate coverage report" {
 		t.Errorf("coverage description wrong: %v", coverage)
 	}
 }
@@ -140,8 +142,8 @@ func TestParseInvalidYAML(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
 	}
-	if !strings.Contains(err.Error(), "invalid YAML") {
-		t.Errorf("expected 'invalid YAML' error, got: %v", err)
+	if !errors.Is(err, ErrInvalidYAML) {
+		t.Errorf("expected ErrInvalidYAML, got: %v", err)
 	}
 }
 
@@ -150,8 +152,8 @@ func TestParseInvalidDependency(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid dependency")
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Errorf("expected 'not found' error, got: %v", err)
+	if !errors.Is(err, ErrTaskNotFound) {
+		t.Errorf("expected ErrTaskNotFound, got: %v", err)
 	}
 }
 
@@ -160,8 +162,8 @@ func TestParseNonexistentFile(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for nonexistent file")
 	}
-	if !strings.Contains(err.Error(), "failed to read file") {
-		t.Errorf("expected 'failed to read file' error, got: %v", err)
+	if !errors.Is(err, ErrFileNotFound) {
+		t.Errorf("expected ErrFileNotFound, got: %v", err)
 	}
 }
 
@@ -170,8 +172,8 @@ func TestParseEmptyPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty path")
 	}
-	if !strings.Contains(err.Error(), "cannot be empty") {
-		t.Errorf("expected 'cannot be empty' error, got: %v", err)
+	if !errors.Is(err, ErrPathEmpty) {
+		t.Errorf("expected ErrPathEmpty, got: %v", err)
 	}
 }
 
@@ -180,8 +182,8 @@ func TestParseWhitespacePath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for whitespace path")
 	}
-	if !strings.Contains(err.Error(), "cannot be empty") {
-		t.Errorf("expected 'cannot be empty' error, got: %v", err)
+	if !errors.Is(err, ErrPathEmpty) {
+		t.Errorf("expected ErrPathEmpty, got: %v", err)
 	}
 }
 
@@ -220,8 +222,8 @@ func TestParseIncludeWithDeps(t *testing.T) {
 		t.Fatal("task 'all' not found")
 	}
 
-	if len(all.Dependencies) != 2 {
-		t.Errorf("expected 2 dependencies, got %d: %v", len(all.Dependencies), all.Dependencies)
+	if len(all.Deps) != 2 {
+		t.Errorf("expected 2 dependencies, got %d: %v", len(all.Deps), all.Deps)
 	}
 
 	hasDep := func(deps []string, name string) bool {
@@ -233,10 +235,10 @@ func TestParseIncludeWithDeps(t *testing.T) {
 		return false
 	}
 
-	if !hasDep(all.Dependencies, "setup") {
+	if !hasDep(all.Deps, "setup") {
 		t.Error("missing dependency 'setup'")
 	}
-	if !hasDep(all.Dependencies, "gen:build") {
+	if !hasDep(all.Deps, "gen:build") {
 		t.Error("missing dependency 'gen:build'")
 	}
 }
@@ -246,8 +248,8 @@ func TestParseCircularInclude(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for circular include")
 	}
-	if !strings.Contains(err.Error(), "circular") {
-		t.Errorf("expected 'circular' error, got: %v", err)
+	if !errors.Is(err, ErrCircularDep) {
+		t.Errorf("expected ErrCircularDep, got: %v", err)
 	}
 }
 
@@ -278,12 +280,11 @@ func TestParseTaskRun(t *testing.T) {
 	if main == nil {
 		t.Fatal("task 'main' not found")
 	}
-	if len(main.RunItems) != 3 {
-		t.Fatalf("expected 3 run items, got %d", len(main.RunItems))
+	if len(main.Run) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(main.Run))
 	}
 
-	// First item: cmd
-	cmd, ok := main.RunItems[0].(CommandRun)
+	cmd, ok := main.Run[0].(babfile.CommandRun)
 	if !ok {
 		t.Fatal("expected CommandRun for first item")
 	}
@@ -291,22 +292,20 @@ func TestParseTaskRun(t *testing.T) {
 		t.Errorf("unexpected command: %q", cmd.Cmd)
 	}
 
-	// Second item: task reference
-	taskRef, ok := main.RunItems[1].(TaskRun)
+	taskRef, ok := main.Run[1].(babfile.TaskRun)
 	if !ok {
 		t.Fatal("expected TaskRun for second item")
 	}
-	if taskRef.TaskRef != "helper" {
-		t.Errorf("expected task ref 'helper', got %q", taskRef.TaskRef)
+	if taskRef.Task != "helper" {
+		t.Errorf("expected task ref 'helper', got %q", taskRef.Task)
 	}
 
-	// Third item: task reference with colon
-	taskRef2, ok := main.RunItems[2].(TaskRun)
+	taskRef2, ok := main.Run[2].(babfile.TaskRun)
 	if !ok {
 		t.Fatal("expected TaskRun for third item")
 	}
-	if taskRef2.TaskRef != "nested:task" {
-		t.Errorf("expected task ref 'nested:task', got %q", taskRef2.TaskRef)
+	if taskRef2.Task != "nested:task" {
+		t.Errorf("expected task ref 'nested:task', got %q", taskRef2.Task)
 	}
 }
 
@@ -329,8 +328,8 @@ func TestParseTaskRunCycle(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for circular task run")
 	}
-	if !strings.Contains(err.Error(), "circular") {
-		t.Errorf("expected 'circular' error, got: %v", err)
+	if !errors.Is(err, ErrCircularDep) {
+		t.Errorf("expected ErrCircularDep, got: %v", err)
 	}
 }
 
@@ -350,8 +349,8 @@ func TestParseTaskRunNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing task reference")
 	}
-	if !strings.Contains(err.Error(), "not found") {
-		t.Errorf("expected 'not found' error, got: %v", err)
+	if !errors.Is(err, ErrTaskNotFound) {
+		t.Errorf("expected ErrTaskNotFound, got: %v", err)
 	}
 }
 
@@ -382,18 +381,18 @@ func TestParseDeepNestedInclude(t *testing.T) {
 	if firstBuild == nil {
 		t.Fatal("task 'first:build' not found")
 	}
-	if len(firstBuild.Dependencies) != 1 || firstBuild.Dependencies[0] != "first:second:compile" {
-		t.Errorf("expected dep 'first:second:compile', got %v", firstBuild.Dependencies)
+	if len(firstBuild.Deps) != 1 || firstBuild.Deps[0] != "first:second:compile" {
+		t.Errorf("expected dep 'first:second:compile', got %v", firstBuild.Deps)
 	}
 
-	if len(firstBuild.RunItems) < 2 {
-		t.Fatalf("expected at least 2 run items, got %d", len(firstBuild.RunItems))
+	if len(firstBuild.Run) < 2 {
+		t.Fatalf("expected at least 2 run items, got %d", len(firstBuild.Run))
 	}
-	taskRun, ok := firstBuild.RunItems[1].(TaskRun)
+	taskRun, ok := firstBuild.Run[1].(babfile.TaskRun)
 	if !ok {
 		t.Fatal("expected second run item to be TaskRun")
 	}
-	if taskRun.TaskRef != "first:second:test" {
-		t.Errorf("expected task ref 'first:second:test', got %q", taskRun.TaskRef)
+	if taskRun.Task != "first:second:test" {
+		t.Errorf("expected task ref 'first:second:test', got %q", taskRun.Task)
 	}
 }
