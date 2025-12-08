@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/invopop/jsonschema v0.13.0
 	github.com/sahilm/fuzzy v0.1.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	gopkg.in/yaml.v3 v3.0.1
 )
