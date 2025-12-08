@@ -1,7 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://bab.sh/schema/babfile.json",
-  "$ref": "#/$defs/Schema",
   "$defs": {
     "Include": {
       "properties": {
@@ -28,37 +27,6 @@
       ],
       "description": "Target operating system"
     },
-    "Schema": {
-      "properties": {
-        "includes": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Include"
-          },
-          "propertyNames": {
-            "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
-          },
-          "type": "object",
-          "description": "External babfiles to import"
-        },
-        "tasks": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Task"
-          },
-          "propertyNames": {
-            "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
-          },
-          "type": "object",
-          "minProperties": 1,
-          "description": "Task definitions"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "tasks"
-      ],
-      "description": "Babfile configuration"
-    },
     "Task": {
       "properties": {
         "desc": {
@@ -68,7 +36,8 @@
         "deps": {
           "items": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
+            "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
+            "description": "Task name to depend on"
           },
           "type": "array",
           "uniqueItems": true,
@@ -127,14 +96,48 @@
             ]
           },
           "type": "array",
+          "minItems": 1,
           "description": "Commands or tasks to execute"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "description": "Task definition"
+    },
+    "TaskName": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
+      "description": "Task name (alphanumeric, hyphens, underscores, colons for namespacing)"
     }
   },
+  "properties": {
+    "includes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Include"
+      },
+      "propertyNames": {
+        "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
+      },
+      "type": "object",
+      "description": "External babfiles to import"
+    },
+    "tasks": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Task"
+      },
+      "propertyNames": {
+        "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
+      },
+      "type": "object",
+      "minProperties": 1,
+      "description": "Task definitions"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "tasks"
+  ],
   "title": "Babfile Schema",
   "description": "Schema for Babfile task runner configuration (https://bab.sh)"
 }
