@@ -7,6 +7,7 @@ import (
 
 type RunItem interface {
 	isRunItem()
+	ShouldRunOnPlatform(platform string) bool
 }
 
 type CommandRun struct {
@@ -15,6 +16,10 @@ type CommandRun struct {
 }
 
 func (CommandRun) isRunItem() {}
+
+func (c CommandRun) ShouldRunOnPlatform(platform string) bool {
+	return matchesPlatform(c.Platforms, platform)
+}
 
 func (CommandRun) JSONSchema() *jsonschema.Schema {
 	minLen := uint64(1)
@@ -42,13 +47,17 @@ type TaskRun struct {
 
 func (TaskRun) isRunItem() {}
 
+func (t TaskRun) ShouldRunOnPlatform(platform string) bool {
+	return matchesPlatform(t.Platforms, platform)
+}
+
 func (TaskRun) JSONSchema() *jsonschema.Schema {
 	minLen := uint64(1)
 	props := orderedmap.New[string, *jsonschema.Schema]()
 	props.Set("task", &jsonschema.Schema{
 		Type:        "string",
 		MinLength:   &minLen,
-		Pattern:     "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
+		Pattern:     TaskNamePattern,
 		Description: "Task reference",
 	})
 	props.Set("platforms", PlatformsArraySchema())
@@ -69,4 +78,16 @@ func RunItemSchema() *jsonschema.Schema {
 			TaskRun{}.JSONSchema(),
 		},
 	}
+}
+
+func matchesPlatform(platforms []Platform, platform string) bool {
+	if len(platforms) == 0 {
+		return true
+	}
+	for _, p := range platforms {
+		if string(p) == platform {
+			return true
+		}
+	}
+	return false
 }

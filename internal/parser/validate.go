@@ -1,8 +1,10 @@
 package parser
 
-func validateDependencies(tasks TaskMap) error {
+import "github.com/bab-sh/bab/internal/babfile"
+
+func validateDependencies(tasks babfile.TaskMap) error {
 	for name, task := range tasks {
-		for _, dep := range task.Dependencies {
+		for _, dep := range task.Deps {
 			if !tasks.Has(dep) {
 				return &NotFoundError{
 					TaskName:     dep,
@@ -15,13 +17,13 @@ func validateDependencies(tasks TaskMap) error {
 	return nil
 }
 
-func validateRunTaskRefs(tasks TaskMap) error {
+func validateRunTaskRefs(tasks babfile.TaskMap) error {
 	for name, task := range tasks {
-		for _, item := range task.RunItems {
-			if tr, ok := item.(TaskRun); ok {
-				if !tasks.Has(tr.TaskRef) {
+		for _, item := range task.Run {
+			if tr, ok := item.(babfile.TaskRun); ok {
+				if !tasks.Has(tr.Task) {
 					return &NotFoundError{
-						TaskName:     tr.TaskRef,
+						TaskName:     tr.Task,
 						ReferencedBy: name,
 						Available:    tasks.Names(),
 					}
@@ -32,7 +34,7 @@ func validateRunTaskRefs(tasks TaskMap) error {
 	return nil
 }
 
-func validateRunCycles(tasks TaskMap) error {
+func validateRunCycles(tasks babfile.TaskMap) error {
 	visited := make(map[string]bool)
 	recStack := make(map[string]bool)
 
@@ -43,17 +45,17 @@ func validateRunCycles(tasks TaskMap) error {
 		chain = append(chain, name)
 
 		task := tasks[name]
-		for _, item := range task.RunItems {
-			if tr, ok := item.(TaskRun); ok {
-				if recStack[tr.TaskRef] {
-					chain = append(chain, tr.TaskRef)
+		for _, item := range task.Run {
+			if tr, ok := item.(babfile.TaskRun); ok {
+				if recStack[tr.Task] {
+					chain = append(chain, tr.Task)
 					return &CircularError{
 						Type:  "task run",
 						Chain: chain,
 					}
 				}
-				if !visited[tr.TaskRef] {
-					if err := dfs(tr.TaskRef, chain); err != nil {
+				if !visited[tr.Task] {
+					if err := dfs(tr.Task, chain); err != nil {
 						return err
 					}
 				}

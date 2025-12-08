@@ -24,8 +24,8 @@ func completeTaskNames(_ *cobra.Command, args []string, toComplete string) ([]st
 			continue
 		}
 
-		if task.Description != "" {
-			completions = append(completions, taskName+"\t"+task.Description)
+		if task.Desc != "" {
+			completions = append(completions, taskName+"\t"+task.Desc)
 		} else {
 			completions = append(completions, taskName)
 		}

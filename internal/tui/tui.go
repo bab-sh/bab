@@ -4,14 +4,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/tui/picker"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 var ErrNoTasks = errors.New("no tasks available")
 
-func PickTask(tasks parser.TaskMap) (*parser.Task, error) {
+func PickTask(tasks babfile.TaskMap) (*babfile.Task, error) {
 	if len(tasks) == 0 {
 		return nil, ErrNoTasks
 	}

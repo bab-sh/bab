@@ -56,8 +56,8 @@ func (m Model) renderLine(i int) string {
 	}
 	b.WriteString(highlight(match.Task.Name, match.Indexes, style, matchStyle))
 
-	if match.Task.Description != "" {
-		b.WriteString("  " + descStyle.Render(match.Task.Description))
+	if match.Task.Desc != "" {
+		b.WriteString("  " + descStyle.Render(match.Task.Desc))
 	}
 	return b.String()
 }

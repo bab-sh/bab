@@ -1,8 +1,17 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+)
+
+var (
+	ErrPathEmpty    = errors.New("path cannot be empty")
+	ErrInvalidYAML  = errors.New("invalid YAML")
+	ErrFileNotFound = errors.New("failed to read file")
+	ErrCircularDep  = errors.New("circular dependency detected")
+	ErrTaskNotFound = errors.New("task not found")
 )
 
 type ParseError struct {
@@ -28,7 +37,11 @@ type CircularError struct {
 }
 
 func (e *CircularError) Error() string {
-	return fmt.Sprintf("circular %s detected: %s", e.Type, strings.Join(e.Chain, " -> "))
+	return fmt.Sprintf("circular %s detected: %s", e.Type, strings.Join(e.Chain, " → "))
+}
+
+func (e *CircularError) Is(target error) bool {
+	return target == ErrCircularDep
 }
 
 type NotFoundError struct {
@@ -44,4 +57,8 @@ func (e *NotFoundError) Error() string {
 	}
 	return fmt.Sprintf("task %q not found (available: %s)",
 		e.TaskName, strings.Join(e.Available, ", "))
+}
+
+func (e *NotFoundError) Is(target error) bool {
+	return target == ErrTaskNotFound
 }

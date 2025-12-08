@@ -1,12 +1,15 @@
 package finder
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/charmbracelet/log"
 )
+
+var ErrBabfileNotFound = errors.New("no Babfile found")
 
 var babfileNames = []string{
 	"Babfile",
@@ -27,11 +30,10 @@ func FindBabfile() (string, error) {
 	log.Debug("Searching for Babfile", "directory", cwd)
 
 	currentDir := cwd
-	searchedDirs := []string{}
+	depth := 0
 
 	for {
-		log.Debug("Searching directory", "path", currentDir)
-		searchedDirs = append(searchedDirs, currentDir)
+		log.Debug("Searching directory", "path", currentDir, "depth", depth)
 
 		for _, filename := range babfileNames {
 			path := filepath.Join(currentDir, filename)
@@ -44,13 +46,14 @@ func FindBabfile() (string, error) {
 
 		parentDir := filepath.Dir(currentDir)
 		if parentDir == currentDir {
-			log.Debug("Reached filesystem root", "root", currentDir)
+			log.Debug("Reached filesystem root", "root", currentDir, "searched_depth", depth+1)
 			break
 		}
 
 		currentDir = parentDir
+		depth++
 	}
 
-	log.Debug("No Babfile found", "searched", searchedDirs, "tried-names", babfileNames)
-	return "", fmt.Errorf("no Babfile found in current directory or any parent directories (searched: %s)", cwd)
+	log.Debug("No Babfile found", "cwd", cwd, "searched_depth", depth+1, "tried_names", babfileNames)
+	return "", fmt.Errorf("%w in current directory or any parent directories (searched: %s)", ErrBabfileNotFound, cwd)
 }

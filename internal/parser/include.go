@@ -3,10 +3,11 @@ package parser
 import (
 	"path/filepath"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/charmbracelet/log"
 )
 
-func resolveInclude(namespace, babfilePath, baseDir string, tasks TaskMap, visited map[string]bool) error {
+func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMap, visited map[string]bool) error {
 	incPath := babfilePath
 	if !filepath.IsAbs(incPath) {
 		incPath = filepath.Join(baseDir, incPath)
@@ -25,11 +26,11 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks TaskMap, visit
 		if tasks.Has(prefixedName) {
 			return &ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
 		}
-		tasks[prefixedName] = &Task{
-			Name:         prefixedName,
-			Description:  task.Description,
-			RunItems:     prefixTaskRuns(task.RunItems, namespace),
-			Dependencies: prefixDeps(task.Dependencies, namespace),
+		tasks[prefixedName] = &babfile.Task{
+			Name: prefixedName,
+			Desc: task.Desc,
+			Run:  prefixTaskRuns(task.Run, namespace),
+			Deps: prefixDeps(task.Deps, namespace),
 		}
 	}
 
@@ -47,18 +48,18 @@ func prefixDeps(deps []string, namespace string) []string {
 	return prefixed
 }
 
-func prefixTaskRuns(items []RunItem, namespace string) []RunItem {
+func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem {
 	if len(items) == 0 {
 		return items
 	}
-	prefixed := make([]RunItem, len(items))
+	prefixed := make([]babfile.RunItem, len(items))
 	for i, item := range items {
 		switch v := item.(type) {
-		case CommandRun:
+		case babfile.CommandRun:
 			prefixed[i] = v
-		case TaskRun:
-			prefixed[i] = TaskRun{
-				TaskRef:   namespace + ":" + v.TaskRef,
+		case babfile.TaskRun:
+			prefixed[i] = babfile.TaskRun{
+				Task:      namespace + ":" + v.Task,
 				Platforms: v.Platforms,
 			}
 		}
