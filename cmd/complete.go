@@ -8,12 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func completeTaskNames(_ *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func completeTaskNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	if len(args) > 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	tasks, err := runner.LoadTasks()
+	babfile, _ := cmd.Flags().GetString("babfile")
+	tasks, err := runner.LoadTasks(babfile)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}

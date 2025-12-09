@@ -26,6 +26,9 @@ func TestNewCLI(t *testing.T) {
 	if cli.completion != "" {
 		t.Errorf("completion should be empty by default, got %q", cli.completion)
 	}
+	if cli.babfile != "" {
+		t.Errorf("babfile should be empty by default, got %q", cli.babfile)
+	}
 }
 
 func TestCLI_buildCommand(t *testing.T) {
@@ -48,7 +51,7 @@ func TestCLI_buildCommand(t *testing.T) {
 	})
 
 	t.Run("flags exist", func(t *testing.T) {
-		persistentFlags := []string{"verbose", "dry-run"}
+		persistentFlags := []string{"verbose", "dry-run", "babfile"}
 		for _, name := range persistentFlags {
 			if cmd.PersistentFlags().Lookup(name) == nil {
 				t.Errorf("persistent flag %q not found", name)
@@ -67,6 +70,7 @@ func TestCLI_buildCommand(t *testing.T) {
 		shorthands := map[string]string{
 			"verbose":    "v",
 			"dry-run":    "n",
+			"babfile":    "b",
 			"list":       "l",
 			"completion": "c",
 		}
@@ -196,4 +200,70 @@ func TestCLI_run_dispatching(t *testing.T) {
 			t.Errorf("expected list to run successfully, got error: %v", err)
 		}
 	})
+}
+
+func TestCLI_runTask_withBabfile(t *testing.T) {
+	tmpDir := t.TempDir()
+	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
+	babfileYAML := `tasks:
+  custom:
+    run:
+      - cmd: echo "Custom task"`
+
+	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
+		t.Fatalf("failed to create custom Babfile: %v", err)
+	}
+
+	cli := newCLI()
+	cli.ctx = context.Background()
+	cli.dryRun = true
+	cli.babfile = customPath
+
+	err := cli.runTask("custom")
+	if err != nil {
+		t.Errorf("runTask() with custom babfile unexpected error: %v", err)
+	}
+}
+
+func TestCLI_runList_withBabfile(t *testing.T) {
+	tmpDir := t.TempDir()
+	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
+	babfileYAML := `tasks:
+  custom:
+    desc: "A custom task"
+    run:
+      - cmd: echo "Custom task"`
+
+	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
+		t.Fatalf("failed to create custom Babfile: %v", err)
+	}
+
+	cli := newCLI()
+	cli.babfile = customPath
+
+	err := cli.runList()
+	if err != nil {
+		t.Errorf("runList() with custom babfile unexpected error: %v", err)
+	}
+}
+
+func TestCLI_runValidate_withBabfile(t *testing.T) {
+	tmpDir := t.TempDir()
+	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
+	babfileYAML := `tasks:
+  custom:
+    run:
+      - cmd: echo "Custom task"`
+
+	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
+		t.Fatalf("failed to create custom Babfile: %v", err)
+	}
+
+	cli := newCLI()
+	cli.babfile = customPath
+
+	err := cli.runValidate()
+	if err != nil {
+		t.Errorf("runValidate() with custom babfile unexpected error: %v", err)
+	}
 }

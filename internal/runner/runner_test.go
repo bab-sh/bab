@@ -18,7 +18,7 @@ func TestRunSimpleTask(t *testing.T) {
 		},
 	}
 
-	r := New(true)
+	r := New(true, "")
 	err := r.RunWithTasks(context.Background(), "hello", tasks)
 	if err != nil {
 		t.Errorf("RunWithTasks() error: %v", err)
@@ -38,7 +38,7 @@ func TestRunWithDependencies(t *testing.T) {
 		},
 	}
 
-	r := New(true)
+	r := New(true, "")
 	err := r.RunWithTasks(context.Background(), "test", tasks)
 	if err != nil {
 		t.Errorf("RunWithTasks() error: %v", err)
@@ -53,7 +53,7 @@ func TestRunTaskNotFound(t *testing.T) {
 		},
 	}
 
-	r := New(true)
+	r := New(true, "")
 	err := r.RunWithTasks(context.Background(), "nonexistent", tasks)
 	if err == nil {
 		t.Fatal("expected error for nonexistent task")
@@ -77,7 +77,7 @@ func TestRunCircularDependency(t *testing.T) {
 		},
 	}
 
-	r := New(true)
+	r := New(true, "")
 	err := r.RunWithTasks(context.Background(), "a", tasks)
 	if err == nil {
 		t.Fatal("expected error for circular dependency")
@@ -109,7 +109,7 @@ func TestLoadTasks(t *testing.T) {
 		t.Fatalf("failed to chdir: %v", err)
 	}
 
-	tasks, err := LoadTasks()
+	tasks, err := LoadTasks("")
 	if err != nil {
 		t.Fatalf("LoadTasks() error: %v", err)
 	}
@@ -118,15 +118,53 @@ func TestLoadTasks(t *testing.T) {
 	}
 }
 
+func TestLoadTasksWithCustomPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
+
+	yaml := `tasks:
+  custom:
+    run:
+      - cmd: echo "Custom"`
+
+	if err := os.WriteFile(customPath, []byte(yaml), 0600); err != nil {
+		t.Fatalf("failed to create custom Babfile: %v", err)
+	}
+
+	tasks, err := LoadTasks(customPath)
+	if err != nil {
+		t.Fatalf("LoadTasks(customPath) error: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Errorf("expected 1 task, got %d", len(tasks))
+	}
+	if _, ok := tasks["custom"]; !ok {
+		t.Error("expected 'custom' task to exist")
+	}
+}
+
+func TestLoadTasksWithNonexistentPath(t *testing.T) {
+	_, err := LoadTasks("/nonexistent/path/Babfile.yml")
+	if err == nil {
+		t.Fatal("expected error for nonexistent path")
+	}
+}
+
 func TestNew(t *testing.T) {
-	r := New(false)
+	r := New(false, "")
 	if r.DryRun {
 		t.Error("DryRun should be false")
 	}
+	if r.Babfile != "" {
+		t.Error("Babfile should be empty")
+	}
 
-	r = New(true)
+	r = New(true, "/custom/path")
 	if !r.DryRun {
 		t.Error("DryRun should be true")
+	}
+	if r.Babfile != "/custom/path" {
+		t.Errorf("Babfile = %q, want %q", r.Babfile, "/custom/path")
 	}
 }
 
@@ -145,7 +183,7 @@ func TestRunTaskWithTaskRef(t *testing.T) {
 		},
 	}
 
-	r := New(true)
+	r := New(true, "")
 	err := r.RunWithTasks(context.Background(), "main", tasks)
 	if err != nil {
 		t.Errorf("RunWithTasks() error: %v", err)
@@ -164,7 +202,7 @@ func TestRunTaskRefCircular(t *testing.T) {
 		},
 	}
 
-	r := New(false)
+	r := New(false, "")
 	err := r.RunWithTasks(context.Background(), "a", tasks)
 	if err == nil {
 		t.Fatal("expected error for circular task run")

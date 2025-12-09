@@ -23,23 +23,30 @@ const (
 )
 
 type Runner struct {
-	DryRun bool
+	DryRun  bool
+	Babfile string
 }
 
-func New(dryRun bool) *Runner {
-	return &Runner{DryRun: dryRun}
+func New(dryRun bool, babfile string) *Runner {
+	return &Runner{DryRun: dryRun, Babfile: babfile}
 }
 
-func LoadTasks() (babfile.TaskMap, error) {
-	path, err := finder.FindBabfile()
-	if err != nil {
-		return nil, err
+func LoadTasks(customPath string) (babfile.TaskMap, error) {
+	var path string
+	if customPath != "" {
+		path = customPath
+	} else {
+		p, err := finder.FindBabfile()
+		if err != nil {
+			return nil, err
+		}
+		path = p
 	}
 	return parser.Parse(path)
 }
 
 func (r *Runner) Run(ctx context.Context, taskName string) error {
-	tasks, err := LoadTasks()
+	tasks, err := LoadTasks(r.Babfile)
 	if err != nil {
 		return err
 	}

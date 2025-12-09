@@ -6,7 +6,7 @@ import (
 )
 
 func (c *CLI) runValidate() error {
-	tasks, err := runner.LoadTasks()
+	tasks, err := runner.LoadTasks(c.babfile)
 	if err != nil {
 		return err
 	}

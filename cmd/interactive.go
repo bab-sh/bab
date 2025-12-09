@@ -7,7 +7,7 @@ import (
 )
 
 func (c *CLI) runInteractive() error {
-	tasks, err := runner.LoadTasks()
+	tasks, err := runner.LoadTasks(c.babfile)
 	if err != nil {
 		return err
 	}
