@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/bab-sh/bab/cmd"
+	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/log"
 )
 
@@ -34,9 +36,23 @@ func run() int {
 	}()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		log.Error(err)
+		handleError(err)
 		return 1
 	}
 
 	return 0
+}
+
+func handleError(err error) {
+	var verrs *parser.ValidationErrors
+	if errors.As(err, &verrs) {
+		for _, e := range verrs.Errors {
+			log.Error(e.Error())
+		}
+		return
+	}
+
+	if msg := err.Error(); msg != "" {
+		log.Error(msg)
+	}
 }

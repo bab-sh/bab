@@ -38,9 +38,6 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 }
 
 func prefixDeps(deps []string, namespace string) []string {
-	if len(deps) == 0 {
-		return deps
-	}
 	prefixed := make([]string, len(deps))
 	for i, dep := range deps {
 		prefixed[i] = namespace + ":" + dep
@@ -49,9 +46,6 @@ func prefixDeps(deps []string, namespace string) []string {
 }
 
 func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem {
-	if len(items) == 0 {
-		return items
-	}
 	prefixed := make([]babfile.RunItem, len(items))
 	for i, item := range items {
 		switch v := item.(type) {

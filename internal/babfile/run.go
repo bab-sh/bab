@@ -11,6 +11,7 @@ type RunItem interface {
 }
 
 type CommandRun struct {
+	Line      int        `json:"-" yaml:"-"`
 	Cmd       string     `json:"cmd" yaml:"cmd"`
 	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }
@@ -41,6 +42,7 @@ func (CommandRun) JSONSchema() *jsonschema.Schema {
 }
 
 type TaskRun struct {
+	Line      int        `json:"-" yaml:"-"`
 	Task      string     `json:"task" yaml:"task"`
 	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }

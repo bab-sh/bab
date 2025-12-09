@@ -14,11 +14,11 @@ type CLI struct {
 	verbose    bool
 	dryRun     bool
 	listTasks  bool
+	validate   bool
 	completion string
 }
 
 func ExecuteContext(ctx context.Context) error {
-	log.Debug("Starting bab execution")
 	return newCLI().execute(ctx)
 }
 
@@ -55,6 +55,7 @@ func (c *CLI) buildCommand() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&c.verbose, "verbose", "v", false, "Enable verbose output")
 	cmd.PersistentFlags().BoolVarP(&c.dryRun, "dry-run", "n", false, "Show commands without executing")
 	cmd.Flags().BoolVarP(&c.listTasks, "list", "l", false, "List all available tasks")
+	cmd.Flags().BoolVar(&c.validate, "validate", false, "Validate the Babfile without executing tasks")
 	cmd.Flags().StringVarP(&c.completion, "completion", "c", "", "Generate completion script (bash|zsh|fish|powershell)")
 
 	return cmd
@@ -63,6 +64,9 @@ func (c *CLI) buildCommand() *cobra.Command {
 func (c *CLI) run(cmd *cobra.Command, args []string) error {
 	if c.completion != "" {
 		return c.runCompletion(cmd)
+	}
+	if c.validate {
+		return c.runValidate()
 	}
 	if c.listTasks {
 		return c.runList()

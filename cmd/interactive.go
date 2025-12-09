@@ -7,8 +7,6 @@ import (
 )
 
 func (c *CLI) runInteractive() error {
-	log.Debug("Starting interactive task picker")
-
 	tasks, err := runner.LoadTasks()
 	if err != nil {
 		return err
@@ -24,6 +22,6 @@ func (c *CLI) runInteractive() error {
 		return nil
 	}
 
-	log.Debug("Task selected", "name", selected.Name)
+	log.Debug("Running task", "name", selected.Name)
 	return c.runTask(selected.Name)
 }

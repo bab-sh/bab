@@ -2,76 +2,90 @@ package parser
 
 import "github.com/bab-sh/bab/internal/babfile"
 
-func validateDependencies(tasks babfile.TaskMap) error {
+func validateAll(path string, tasks babfile.TaskMap) error {
+	errs := &ValidationErrors{}
+	validateDependencies(path, tasks, errs)
+	validateRunTaskRefs(path, tasks, errs)
+	validateRunCycles(path, tasks, errs)
+	return errs.OrNil()
+}
+
+func validateDependencies(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
 	for name, task := range tasks {
 		for _, dep := range task.Deps {
 			if !tasks.Has(dep) {
-				return &NotFoundError{
+				line := task.DepsLine
+				if line == 0 {
+					line = task.Line
+				}
+				errs.Add(&NotFoundError{
+					Path:         path,
+					Line:         line,
 					TaskName:     dep,
 					ReferencedBy: name,
 					Available:    tasks.Names(),
-				}
+				})
 			}
 		}
 	}
-	return nil
 }
 
-func validateRunTaskRefs(tasks babfile.TaskMap) error {
+func validateRunTaskRefs(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
 	for name, task := range tasks {
 		for _, item := range task.Run {
 			if tr, ok := item.(babfile.TaskRun); ok {
 				if !tasks.Has(tr.Task) {
-					return &NotFoundError{
+					errs.Add(&NotFoundError{
+						Path:         path,
+						Line:         tr.Line,
 						TaskName:     tr.Task,
 						ReferencedBy: name,
 						Available:    tasks.Names(),
-					}
+					})
 				}
 			}
 		}
 	}
-	return nil
 }
 
-func validateRunCycles(tasks babfile.TaskMap) error {
+func validateRunCycles(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
 	visited := make(map[string]bool)
 	recStack := make(map[string]bool)
 
-	var dfs func(name string, chain []string) error
-	dfs = func(name string, chain []string) error {
+	var dfs func(name string, chain []string)
+	dfs = func(name string, chain []string) {
 		visited[name] = true
 		recStack[name] = true
 		chain = append(chain, name)
 
 		task := tasks[name]
+		if task == nil {
+			recStack[name] = false
+			return
+		}
 		for _, item := range task.Run {
 			if tr, ok := item.(babfile.TaskRun); ok {
 				if recStack[tr.Task] {
 					chain = append(chain, tr.Task)
-					return &CircularError{
-						Type:  "task run",
+					errs.Add(&CircularError{
+						Path:  path,
+						Type:  "dependency",
 						Chain: chain,
-					}
+					})
+					return
 				}
-				if !visited[tr.Task] {
-					if err := dfs(tr.Task, chain); err != nil {
-						return err
-					}
+				if !visited[tr.Task] && tasks.Has(tr.Task) {
+					dfs(tr.Task, chain)
 				}
 			}
 		}
 
 		recStack[name] = false
-		return nil
 	}
 
 	for name := range tasks {
 		if !visited[name] {
-			if err := dfs(name, nil); err != nil {
-				return err
-			}
+			dfs(name, nil)
 		}
 	}
-	return nil
 }

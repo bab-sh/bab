@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,15 +26,7 @@ func Parse(path string) (babfile.TaskMap, error) {
 		return nil, err
 	}
 
-	if err := validateDependencies(tasks); err != nil {
-		return nil, err
-	}
-
-	if err := validateRunTaskRefs(tasks); err != nil {
-		return nil, err
-	}
-
-	if err := validateRunCycles(tasks); err != nil {
+	if err := validateAll(absPath, tasks); err != nil {
 		return nil, err
 	}
 
@@ -46,19 +38,40 @@ func parseFile(absPath string, visited map[string]bool) (babfile.TaskMap, error)
 
 	if visited[absPath] {
 		chain := chainFromVisited(visited, absPath)
-		return nil, &CircularError{Type: "include", Chain: chain}
+		return nil, &CircularError{Path: absPath, Type: "include", Chain: chain}
 	}
 	visited[absPath] = true
 	defer delete(visited, absPath)
 
 	data, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil, &ParseError{Path: absPath, Message: "failed to read file", Cause: fmt.Errorf("%w: %w", ErrFileNotFound, err)}
+		return nil, &ParseError{Path: absPath, Message: "file not found", Cause: err}
 	}
 
-	bf, err := unmarshalBabfile(data)
+	bf, err := unmarshalBabfile(absPath, data)
 	if err != nil {
-		return nil, &ParseError{Path: absPath, Message: "invalid YAML", Cause: fmt.Errorf("%w: %w", ErrInvalidYAML, err)}
+		var dupErr *DuplicateError
+		if errors.As(err, &dupErr) {
+			dupErr.Path = absPath
+			return nil, dupErr
+		}
+
+		var parseErr *ParseError
+		if errors.As(err, &parseErr) {
+			return nil, parseErr
+		}
+
+		line := extractYAMLLocation(err)
+		cleanMsg := cleanYAMLError(err)
+		if cleanMsg == "" {
+			cleanMsg = err.Error()
+		}
+		return nil, &ParseError{
+			Path:    absPath,
+			Line:    line,
+			Message: "invalid YAML syntax",
+			Cause:   errors.New(cleanMsg),
+		}
 	}
 
 	tasks := make(babfile.TaskMap, len(bf.Tasks))
