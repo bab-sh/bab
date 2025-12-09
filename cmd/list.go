@@ -17,24 +17,18 @@ type node struct {
 }
 
 func (c *CLI) runList() error {
-	log.Debug("Starting list command")
-
 	tasks, err := runner.LoadTasks()
 	if err != nil {
-		return fmt.Errorf("failed to load tasks: %w", err)
+		return err
 	}
-	log.Debug("Parsed tasks successfully", "count", len(tasks))
 
 	if len(tasks) == 0 {
-		log.Warn("No tasks found in Babfile")
+		log.Warn("No tasks found")
 		return nil
 	}
 
-	log.Debug("Building task tree for display")
-
 	root := &node{children: make(map[string]*node)}
 	for name, task := range tasks {
-		log.Debug("Adding task to tree", "name", name)
 		parts := strings.Split(name, ":")
 		current := root
 		for i, part := range parts {
@@ -47,7 +41,6 @@ func (c *CLI) runList() error {
 			}
 		}
 	}
-	log.Debug("Task tree built successfully")
 
 	enumStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).PaddingRight(1)
 	itemStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Bold(true)

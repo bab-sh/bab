@@ -8,10 +8,12 @@ import (
 const TaskNamePattern = "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
 
 type Task struct {
-	Name string    `json:"-" yaml:"-"`
-	Desc string    `json:"desc,omitempty" yaml:"desc,omitempty"`
-	Deps []string  `json:"deps,omitempty" yaml:"deps,omitempty"`
-	Run  []RunItem `json:"-" yaml:"-"`
+	Name     string    `json:"-" yaml:"-"`
+	Line     int       `json:"-" yaml:"-"`
+	DepsLine int       `json:"-" yaml:"-"`
+	Desc     string    `json:"desc,omitempty" yaml:"desc,omitempty"`
+	Deps     []string  `json:"deps,omitempty" yaml:"deps,omitempty"`
+	Run      []RunItem `json:"-" yaml:"-"`
 }
 
 type TaskMap map[string]*Task

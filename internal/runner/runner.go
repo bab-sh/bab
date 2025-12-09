@@ -56,12 +56,18 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 	case done:
 		return nil
 	case running:
-		return fmt.Errorf("circular dependency detected: %s", buildChain(name, tasks, state))
+		return &parser.CircularError{
+			Type:  "dependency",
+			Chain: buildChainSlice(name, tasks, state),
+		}
 	}
 
 	task, ok := tasks[name]
 	if !ok {
-		return fmt.Errorf("task %q not found (available: %s)", name, strings.Join(tasks.Names(), ", "))
+		return &parser.NotFoundError{
+			TaskName:  name,
+			Available: tasks.Names(),
+		}
 	}
 
 	state[name] = running
@@ -155,7 +161,7 @@ func runCommand(ctx context.Context, shell, shellArg, command string) error {
 	return cmd.Run()
 }
 
-func buildChain(current string, tasks babfile.TaskMap, state map[string]status) string {
+func buildChainSlice(current string, tasks babfile.TaskMap, state map[string]status) []string {
 	chain := []string{current}
 	seen := make(map[string]bool)
 
@@ -175,11 +181,11 @@ func buildChain(current string, tasks babfile.TaskMap, state map[string]status) 
 			if state[dep] == running {
 				chain = append(chain, dep)
 				if dep == current {
-					return strings.Join(chain, " → ")
+					return chain
 				}
 				break
 			}
 		}
 	}
-	return strings.Join(chain, " → ")
+	return chain
 }
