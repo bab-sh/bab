@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bab-sh/bab/internal/runner"
+	"github.com/bab-sh/bab/internal/theme"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/charmbracelet/log"
@@ -42,9 +43,9 @@ func (c *CLI) runList() error {
 		}
 	}
 
-	enumStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).PaddingRight(1)
-	itemStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("99")).Bold(true)
-	descStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Italic(true)
+	enumStyle := lipgloss.NewStyle().Foreground(theme.Gray).PaddingRight(1)
+	itemStyle := lipgloss.NewStyle().Foreground(theme.Purple).Bold(true)
+	descStyle := lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
 
 	var buildTree func(*node, string) *tree.Tree
 	buildTree = func(n *node, name string) *tree.Tree {

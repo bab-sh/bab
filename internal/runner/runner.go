@@ -10,6 +10,7 @@ import (
 
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/finder"
+	"github.com/bab-sh/bab/internal/output"
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/log"
 )
@@ -55,10 +56,10 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
 	state := make(map[string]status)
-	return r.runTask(ctx, taskName, tasks, state)
+	return r.runTask(ctx, taskName, tasks, state, true)
 }
 
-func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state map[string]status) error {
+func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state map[string]status, isMain bool) error {
 	switch state[name] {
 	case done:
 		return nil
@@ -79,15 +80,25 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	state[name] = running
 
+	if !r.DryRun {
+		if isMain {
+			output.Task(name)
+		} else {
+			output.Dep(name)
+		}
+	}
+
 	for _, dep := range task.Deps {
 		log.Debug("Running dependency", "task", name, "dep", dep)
-		if err := r.runTask(ctx, dep, tasks, state); err != nil {
+		if err := r.runTask(ctx, dep, tasks, state, false); err != nil {
 			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
 
-	if err := r.executeTask(ctx, task, tasks, state); err != nil {
-		return err
+	if len(task.Run) > 0 {
+		if err := r.executeTask(ctx, task, tasks, state); err != nil {
+			return err
+		}
 	}
 
 	state[name] = done
@@ -95,10 +106,6 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 }
 
 func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state map[string]status) error {
-	if len(task.Run) == 0 {
-		return fmt.Errorf("task %q has no run items", task.Name)
-	}
-
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
@@ -126,7 +133,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 			if r.DryRun {
 				log.Info("Would run", "cmd", v.Cmd)
 			} else {
-				log.Debug("Running", "cmd", v.Cmd)
+				output.Cmd(v.Cmd)
 				if err := runCommand(ctx, shell, shellArg, v.Cmd); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
@@ -137,7 +144,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				log.Info("Would run task", "task", v.Task)
 			} else {
 				log.Debug("Running task", "task", v.Task)
-				if err := r.runTask(ctx, v.Task, tasks, state); err != nil {
+				if err := r.runTask(ctx, v.Task, tasks, state, false); err != nil {
 					return fmt.Errorf("task %q failed: %w", v.Task, err)
 				}
 			}
