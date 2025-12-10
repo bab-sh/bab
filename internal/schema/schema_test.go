@@ -14,8 +14,8 @@ func TestGenerateSchema(t *testing.T) {
 		t.Errorf("expected title 'Babfile Schema', got %q", s.Title)
 	}
 
-	if s.ID != "https://bab.sh/schema/babfile.json" {
-		t.Errorf("expected ID 'https://bab.sh/schema/babfile.json', got %q", s.ID)
+	if s.ID != "https://bab.sh/schema/babfile.schema.json" {
+		t.Errorf("expected ID 'https://bab.sh/schema/babfile.schema.json', got %q", s.ID)
 	}
 
 	if s.Description == "" {

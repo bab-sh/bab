@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://bab.sh/schema/babfile.json",
+  "$id": "https://bab.sh/schema/babfile.schema.json",
   "$defs": {
     "Include": {
       "properties": {

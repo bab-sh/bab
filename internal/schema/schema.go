@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ID          = "https://bab.sh/schema/babfile.json"
+	ID          = "https://bab.sh/schema/babfile.schema.json"
 	Title       = "Babfile Schema"
 	Description = "Schema for Babfile task runner configuration (https://bab.sh)"
 )
