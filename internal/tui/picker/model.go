@@ -51,7 +51,7 @@ func New(tasks babfile.TaskMap) Model {
 
 func (m *Model) updateMatches() {
 	m.matches = search(m.input.Value(), m.tasks)
-	m.cursor = min(m.cursor, max(0, len(m.matches)-1))
+	m.cursor = 0
 	m.offset = 0
 }
 
