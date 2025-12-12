@@ -7,12 +7,12 @@ import (
 )
 
 func (c *CLI) runInteractive() error {
-	tasks, err := runner.LoadTasks(c.babfile)
+	result, err := runner.LoadTasks(c.babfile)
 	if err != nil {
 		return err
 	}
 
-	selected, err := tui.PickTask(tasks)
+	selected, err := tui.PickTask(result.Tasks)
 	if err != nil {
 		return err
 	}

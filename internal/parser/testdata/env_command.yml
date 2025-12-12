@@ -1,0 +1,8 @@
+tasks:
+  build:
+    run:
+      - cmd: echo "Debug mode"
+        env:
+          DEBUG: "true"
+          LOG_LEVEL: verbose
+      - cmd: echo "Normal mode"

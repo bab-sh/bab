@@ -1,0 +1,9 @@
+env:
+  NODE_ENV: production
+  PORT: "3000"
+  DEBUG: "false"
+
+tasks:
+  build:
+    run:
+      - cmd: echo "Building with $NODE_ENV"

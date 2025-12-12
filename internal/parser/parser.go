@@ -10,7 +10,12 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func Parse(path string) (babfile.TaskMap, error) {
+type ParseResult struct {
+	GlobalEnv map[string]string
+	Tasks     babfile.TaskMap
+}
+
+func Parse(path string) (*ParseResult, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, &ParseError{Path: path, Message: "path cannot be empty", Cause: ErrPathEmpty}
 	}
@@ -21,19 +26,19 @@ func Parse(path string) (babfile.TaskMap, error) {
 	}
 
 	visited := make(map[string]bool)
-	tasks, err := parseFile(absPath, visited)
+	result, err := parseFile(absPath, visited)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := validateAll(absPath, tasks); err != nil {
+	if err := validateAll(absPath, result.Tasks); err != nil {
 		return nil, err
 	}
 
-	return tasks, nil
+	return result, nil
 }
 
-func parseFile(absPath string, visited map[string]bool) (babfile.TaskMap, error) {
+func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 	log.Debug("Parsing babfile", "path", absPath)
 
 	if visited[absPath] {
@@ -88,7 +93,10 @@ func parseFile(absPath string, visited map[string]bool) (babfile.TaskMap, error)
 	}
 
 	log.Debug("Parsed babfile", "path", absPath, "tasks", len(tasks))
-	return tasks, nil
+	return &ParseResult{
+		GlobalEnv: bf.Env,
+		Tasks:     tasks,
+	}, nil
 }
 
 func chainFromVisited(visited map[string]bool, current string) []string {

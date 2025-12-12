@@ -8,6 +8,43 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	keyCmd       = "cmd"
+	keyDeps      = "deps"
+	keyDesc      = "desc"
+	keyEnv       = "env"
+	keyIncludes  = "includes"
+	keyPlatforms = "platforms"
+	keyRun       = "run"
+	keyTask      = "task"
+	keyTasks     = "tasks"
+)
+
+func parseEnvMap(path string, node *yaml.Node, env *map[string]string) error {
+	if node.Kind != yaml.MappingNode {
+		return &ParseError{Path: path, Line: node.Line, Message: "env must be a mapping"}
+	}
+
+	*env = make(map[string]string, len(node.Content)/2)
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+
+		if valNode.Kind != yaml.ScalarNode {
+			return &ParseError{
+				Path:    path,
+				Line:    valNode.Line,
+				Message: fmt.Sprintf("env value for %q must be a string", keyNode.Value),
+			}
+		}
+
+		(*env)[keyNode.Value] = valNode.Value
+	}
+
+	return nil
+}
+
 func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
@@ -24,6 +61,7 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	}
 
 	schema := &babfile.Schema{
+		Env:      make(map[string]string),
 		Tasks:    make(map[string]babfile.Task),
 		Includes: make(map[string]babfile.Include),
 	}
@@ -33,11 +71,15 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 		val := doc.Content[i+1]
 
 		switch key.Value {
-		case "tasks":
+		case keyEnv:
+			if err := parseEnvMap(path, val, &schema.Env); err != nil {
+				return nil, err
+			}
+		case keyTasks:
 			if err := parseTasks(path, val, schema); err != nil {
 				return nil, err
 			}
-		case "includes":
+		case keyIncludes:
 			if err := parseIncludes(path, val, schema); err != nil {
 				return nil, err
 			}
@@ -96,14 +138,18 @@ func parseTask(path string, node *yaml.Node) (babfile.Task, error) {
 		val := node.Content[i+1]
 
 		switch key.Value {
-		case "desc":
+		case keyDesc:
 			task.Desc = val.Value
-		case "deps":
+		case keyEnv:
+			if err := parseEnvMap(path, val, &task.Env); err != nil {
+				return babfile.Task{}, err
+			}
+		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
 				return babfile.Task{}, &ParseError{Path: path, Line: key.Line, Message: "invalid deps", Cause: err}
 			}
-		case "run":
+		case keyRun:
 			runItems, err := parseRunItems(path, val)
 			if err != nil {
 				return babfile.Task{}, err
@@ -143,6 +189,7 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 	}
 
 	var cmd, task string
+	var env map[string]string
 	var platforms []babfile.Platform
 	line := node.Line
 
@@ -151,11 +198,15 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 		val := node.Content[i+1]
 
 		switch key.Value {
-		case "cmd":
+		case keyCmd:
 			cmd = val.Value
-		case "task":
+		case keyTask:
 			task = val.Value
-		case "platforms":
+		case keyEnv:
+			if err := parseEnvMap(path, val, &env); err != nil {
+				return nil, err
+			}
+		case keyPlatforms:
 			if err := val.Decode(&platforms); err != nil {
 				return nil, &ParseError{Path: path, Line: key.Line, Message: "invalid platforms", Cause: err}
 			}
@@ -167,13 +218,13 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 
 	switch {
 	case hasCmd && hasTask:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "cannot have both 'cmd' and 'task'"}
+		return nil, &ParseError{Path: path, Line: node.Line, Message: "cannot have both '" + keyCmd + "' and '" + keyTask + "'"}
 	case hasCmd:
-		return babfile.CommandRun{Line: line, Cmd: cmd, Platforms: platforms}, nil
+		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Platforms: platforms}, nil
 	case hasTask:
 		return babfile.TaskRun{Line: line, Task: task, Platforms: platforms}, nil
 	default:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "must have either 'cmd' or 'task'"}
+		return nil, &ParseError{Path: path, Line: node.Line, Message: "must have either '" + keyCmd + "' or '" + keyTask + "'"}
 	}
 }
 

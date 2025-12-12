@@ -109,12 +109,12 @@ func TestLoadTasks(t *testing.T) {
 		t.Fatalf("failed to chdir: %v", err)
 	}
 
-	tasks, err := LoadTasks("")
+	result, err := LoadTasks("")
 	if err != nil {
 		t.Fatalf("LoadTasks() error: %v", err)
 	}
-	if len(tasks) != 2 {
-		t.Errorf("expected 2 tasks, got %d", len(tasks))
+	if len(result.Tasks) != 2 {
+		t.Errorf("expected 2 tasks, got %d", len(result.Tasks))
 	}
 }
 
@@ -131,14 +131,14 @@ func TestLoadTasksWithCustomPath(t *testing.T) {
 		t.Fatalf("failed to create custom Babfile: %v", err)
 	}
 
-	tasks, err := LoadTasks(customPath)
+	result, err := LoadTasks(customPath)
 	if err != nil {
 		t.Fatalf("LoadTasks(customPath) error: %v", err)
 	}
-	if len(tasks) != 1 {
-		t.Errorf("expected 1 task, got %d", len(tasks))
+	if len(result.Tasks) != 1 {
+		t.Errorf("expected 1 task, got %d", len(result.Tasks))
 	}
-	if _, ok := tasks["custom"]; !ok {
+	if _, ok := result.Tasks["custom"]; !ok {
 		t.Error("expected 'custom' task to exist")
 	}
 }
@@ -209,5 +209,79 @@ func TestRunTaskRefCircular(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "circular") {
 		t.Errorf("expected 'circular' error, got: %v", err)
+	}
+}
+
+func TestRunWithGlobalEnv(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+		},
+	}
+
+	r := New(true, "")
+	r.GlobalEnv = map[string]string{"FOO": "bar"}
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithTaskEnv(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Env:  map[string]string{"FOO": "task-value"},
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithCommandEnv(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run: []babfile.RunItem{
+				babfile.CommandRun{
+					Cmd: "echo $FOO",
+					Env: map[string]string{"FOO": "cmd-value"},
+				},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunEnvPrecedence(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name: "test",
+			Env:  map[string]string{"FOO": "task", "BAR": "task"},
+			Run: []babfile.RunItem{
+				babfile.CommandRun{
+					Cmd: "echo $FOO $BAR $BAZ",
+					Env: map[string]string{"FOO": "cmd"},
+				},
+			},
+		},
+	}
+
+	r := New(true, "")
+	r.GlobalEnv = map[string]string{"FOO": "global", "BAR": "global", "BAZ": "global"}
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
 	}
 }

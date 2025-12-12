@@ -14,13 +14,13 @@ func completeTaskNames(cmd *cobra.Command, args []string, toComplete string) ([]
 	}
 
 	babfile, _ := cmd.Flags().GetString("babfile")
-	tasks, err := runner.LoadTasks(babfile)
+	result, err := runner.LoadTasks(babfile)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	var completions []string
-	for taskName, task := range tasks {
+	for taskName, task := range result.Tasks {
 		if task == nil || !strings.HasPrefix(taskName, toComplete) {
 			continue
 		}

@@ -24,15 +24,16 @@ const (
 )
 
 type Runner struct {
-	DryRun  bool
-	Babfile string
+	DryRun    bool
+	Babfile   string
+	GlobalEnv map[string]string
 }
 
 func New(dryRun bool, babfile string) *Runner {
 	return &Runner{DryRun: dryRun, Babfile: babfile}
 }
 
-func LoadTasks(customPath string) (babfile.TaskMap, error) {
+func LoadTasks(customPath string) (*parser.ParseResult, error) {
 	var path string
 	if customPath != "" {
 		path = customPath
@@ -47,11 +48,12 @@ func LoadTasks(customPath string) (babfile.TaskMap, error) {
 }
 
 func (r *Runner) Run(ctx context.Context, taskName string) error {
-	tasks, err := LoadTasks(r.Babfile)
+	result, err := LoadTasks(r.Babfile)
 	if err != nil {
 		return err
 	}
-	return r.RunWithTasks(ctx, taskName, tasks)
+	r.GlobalEnv = result.GlobalEnv
+	return r.RunWithTasks(ctx, taskName, result.Tasks)
 }
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
@@ -110,7 +112,9 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	platform := runtime.GOOS
 	executed := 0
 
-	log.Debug("Executing task", "name", task.Name, "runItems", len(task.Run), "dryRun", r.DryRun)
+	taskEnv := babfile.MergeEnvMaps(r.GlobalEnv, task.Env)
+
+	log.Debug("Executing task", "name", task.Name, "runItems", len(task.Run), "dryRun", r.DryRun, "envVars", len(taskEnv))
 
 	for i, item := range task.Run {
 		select {
@@ -130,11 +134,13 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
 			}
 
+			cmdEnv := babfile.MergeEnvMaps(taskEnv, v.Env)
+
 			if r.DryRun {
-				log.Info("Would run", "cmd", v.Cmd)
+				log.Info("Would run", "cmd", v.Cmd, "env", len(cmdEnv))
 			} else {
 				output.Cmd(v.Cmd)
-				if err := runCommand(ctx, shell, shellArg, v.Cmd); err != nil {
+				if err := runCommand(ctx, shell, shellArg, v.Cmd, cmdEnv); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
 			}
@@ -167,11 +173,16 @@ func shellCommand() (string, string) {
 	return "sh", "-c"
 }
 
-func runCommand(ctx context.Context, shell, shellArg, command string) error {
+func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string) error {
 	cmd := exec.CommandContext(ctx, shell, shellArg, command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
+
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), babfile.MergeEnv(env)...)
+	}
+
 	return cmd.Run()
 }
 

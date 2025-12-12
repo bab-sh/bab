@@ -31,6 +31,9 @@ For more installation options, see the [Installation Documentation](https://docs
 
 Create a `Babfile.yml` in your project root:
 ```yaml
+env:
+  NODE_ENV: production
+
 tasks:
   setup:
     desc: Install dependencies
@@ -40,6 +43,8 @@ tasks:
   dev:
     desc: Start development server
     deps: [setup]
+    env:
+      PORT: "3000"
     run:
       - cmd: npm run dev
 
@@ -53,8 +58,12 @@ tasks:
     run:
       - cmd: ./scripts/deploy.sh
         platforms: [linux, darwin]
+        env:
+          DEPLOY_ENV: production
       - cmd: powershell scripts/deploy.ps1
         platforms: [windows]
+        env:
+          DEPLOY_ENV: production
 ```
 
 Run your tasks:
