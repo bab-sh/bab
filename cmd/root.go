@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bab-sh/bab/internal/runner"
+	"github.com/bab-sh/bab/internal/update"
 	"github.com/bab-sh/bab/internal/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -29,7 +30,18 @@ func newCLI() *CLI {
 
 func (c *CLI) execute(ctx context.Context) error {
 	c.ctx = ctx
-	return c.buildCommand().Execute()
+
+	update.StartBackgroundRefresh(version.Version)
+
+	err := c.buildCommand().Execute()
+
+	if info := update.CheckCached(version.Version); info != nil {
+		log.Warn("A new version of bab is available",
+			"latest", info.LatestVersion,
+			"current", info.CurrentVersion)
+	}
+
+	return err
 }
 
 func (c *CLI) buildCommand() *cobra.Command {

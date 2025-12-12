@@ -3,10 +3,12 @@ module github.com/bab-sh/bab
 go 1.25.1
 
 require (
+	github.com/adrg/xdg v0.5.3
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
+	github.com/hashicorp/go-version v1.8.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/spf13/cobra v1.10.2
