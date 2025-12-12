@@ -16,12 +16,12 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 
 	log.Debug("Resolving include", "namespace", namespace, "path", incPath)
 
-	includedTasks, err := parseFile(incPath, visited)
+	result, err := parseFile(incPath, visited)
 	if err != nil {
 		return err
 	}
 
-	for name, task := range includedTasks {
+	for name, task := range result.Tasks {
 		prefixedName := namespace + ":" + name
 		if tasks.Has(prefixedName) {
 			return &ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
@@ -29,6 +29,7 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 		tasks[prefixedName] = &babfile.Task{
 			Name: prefixedName,
 			Desc: task.Desc,
+			Env:  task.Env,
 			Run:  prefixTaskRuns(task.Run, namespace),
 			Deps: prefixDeps(task.Deps, namespace),
 		}
