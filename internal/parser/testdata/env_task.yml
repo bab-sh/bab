@@ -1,0 +1,8 @@
+tasks:
+  build:
+    desc: Build the project
+    env:
+      BUILD_TYPE: release
+      OPTIMIZE: "true"
+    run:
+      - cmd: echo "Build type"

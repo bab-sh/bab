@@ -1,0 +1,14 @@
+env:
+  LEVEL: global
+  GLOBAL_ONLY: global-only
+
+tasks:
+  test:
+    env:
+      LEVEL: task
+      TASK_ONLY: task-only
+    run:
+      - cmd: echo "$LEVEL"
+        env:
+          LEVEL: command
+          CMD_ONLY: cmd-only
