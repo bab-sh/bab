@@ -183,7 +183,11 @@ func runCommand(ctx context.Context, shell, shellArg, command string, env map[st
 		cmd.Env = append(os.Environ(), babfile.MergeEnv(env)...)
 	}
 
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
 }
 
 func buildChainSlice(current string, tasks babfile.TaskMap, state map[string]status) []string {

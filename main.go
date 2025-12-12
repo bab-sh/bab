@@ -12,6 +12,10 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+func isCancellation(err error) bool {
+	return errors.Is(err, context.Canceled)
+}
+
 func main() {
 	os.Exit(run())
 }
@@ -36,6 +40,9 @@ func run() int {
 	}()
 
 	if err := cmd.ExecuteContext(ctx); err != nil {
+		if isCancellation(err) {
+			return 0
+		}
 		handleError(err)
 		return 1
 	}
