@@ -33,6 +33,13 @@
           "type": "string",
           "description": "Task description"
         },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Environment variables as key-value pairs"
+        },
         "deps": {
           "items": {
             "type": "string",
@@ -52,6 +59,13 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Shell command to execute"
+                  },
+                  "env": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object",
+                    "description": "Environment variables as key-value pairs"
                   },
                   "platforms": {
                     "items": {
@@ -111,6 +125,13 @@
     }
   },
   "properties": {
+    "env": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object",
+      "description": "Environment variables as key-value pairs"
+    },
     "includes": {
       "additionalProperties": {
         "$ref": "#/$defs/Include"
