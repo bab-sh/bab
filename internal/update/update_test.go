@@ -70,6 +70,8 @@ func TestShouldSkip(t *testing.T) {
 	})
 
 	t.Run("does not skip normal version", func(t *testing.T) {
+		t.Setenv("CI", "")
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
 		if shouldSkip("v1.0.0") {
 			t.Error("expected false for normal version")
 		}
@@ -230,6 +232,8 @@ func TestCheckCached(t *testing.T) {
 	t.Run("no cache returns nil", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CACHE_HOME", tmpDir)
+		t.Setenv("CI", "")
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
 		xdg.Reload()
 
 		if CheckCached("v1.0.0") != nil {
@@ -240,6 +244,8 @@ func TestCheckCached(t *testing.T) {
 	t.Run("newer version returns info", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CACHE_HOME", tmpDir)
+		t.Setenv("CI", "")
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
 		xdg.Reload()
 
 		saveCache(&cache{CheckedAt: time.Now(), LatestVersion: "v2.0.0"})
@@ -256,6 +262,8 @@ func TestCheckCached(t *testing.T) {
 	t.Run("same version returns nil", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CACHE_HOME", tmpDir)
+		t.Setenv("CI", "")
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
 		xdg.Reload()
 
 		saveCache(&cache{CheckedAt: time.Now(), LatestVersion: "v1.0.0"})
