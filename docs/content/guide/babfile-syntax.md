@@ -99,6 +99,74 @@ tasks:
 
 Available platforms: `linux`, `darwin`, `windows`. Commands without a `platforms` array run on all platforms.
 
+## Environment Variables
+
+Define environment variables at three levels: global, task, or command. Variables cascade with lower levels overriding higher ones.
+
+### Global Environment
+
+Set variables for all tasks at the root level:
+
+```yaml
+env:
+  NODE_ENV: production
+  API_URL: https://api.example.com
+
+tasks:
+  build:
+    run:
+      - cmd: echo "Building for $NODE_ENV"
+```
+
+### Task Environment
+
+Set variables for a specific task:
+
+```yaml
+tasks:
+  dev:
+    desc: Start development server
+    env:
+      PORT: "3000"
+      DEBUG: "true"
+    run:
+      - cmd: npm run dev
+```
+
+### Command Environment
+
+Set variables for a specific command:
+
+```yaml
+tasks:
+  deploy:
+    run:
+      - cmd: ./deploy.sh
+        env:
+          DEPLOY_ENV: staging
+      - cmd: ./notify.sh
+        env:
+          DEPLOY_ENV: production
+```
+
+### Precedence
+
+When the same variable is defined at multiple levels, command-level overrides task-level, which overrides global:
+
+```yaml
+env:
+  MODE: global
+
+tasks:
+  example:
+    env:
+      MODE: task
+    run:
+      - cmd: echo $MODE  # prints "command"
+        env:
+          MODE: command
+```
+
 ## Includes
 
 Import tasks from other Babfiles with namespace prefixes:
@@ -121,6 +189,9 @@ Tasks from the included file are prefixed with the namespace (e.g., `utils:setup
 ## Complete Example
 
 ```yaml
+env:
+  NODE_ENV: production
+
 tasks:
   setup:
     desc: Install dependencies
@@ -136,6 +207,8 @@ tasks:
   build:
     desc: Build application
     deps: [setup, lint]
+    env:
+      BUILD_MODE: release
     run:
       - cmd: npm run build
 
@@ -151,6 +224,10 @@ tasks:
     run:
       - cmd: ./deploy.sh
         platforms: [linux, darwin]
+        env:
+          DEPLOY_ENV: production
       - cmd: powershell deploy.ps1
         platforms: [windows]
+        env:
+          DEPLOY_ENV: production
 ```

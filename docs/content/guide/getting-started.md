@@ -17,6 +17,9 @@ See [installation guide](/guide/installation) for other methods.
 Create a `Babfile.yml` in your project root:
 
 ```yaml
+env:
+  NODE_ENV: production
+
 tasks:
   setup:
     desc: Install dependencies
@@ -26,6 +29,8 @@ tasks:
   dev:
     desc: Start development server
     deps: [setup]
+    env:
+      PORT: "3000"
     run:
       - cmd: npm run dev
 
@@ -41,6 +46,8 @@ tasks:
     run:
       - cmd: npm run build
 ```
+
+Environment variables can be set at global, task, or command level. See [Babfile Syntax](/guide/babfile-syntax#environment-variables) for details.
 
 ## Usage
 
