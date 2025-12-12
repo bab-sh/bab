@@ -6,12 +6,14 @@ import (
 )
 
 type Schema struct {
+	Env      map[string]string  `json:"env,omitempty" yaml:"env,omitempty"`
 	Includes map[string]Include `json:"includes,omitempty" yaml:"includes,omitempty"`
 	Tasks    map[string]Task    `json:"tasks" yaml:"tasks"`
 }
 
 func (Schema) JSONSchema() *jsonschema.Schema {
 	props := orderedmap.New[string, *jsonschema.Schema]()
+	props.Set("env", EnvSchema())
 	props.Set("includes", &jsonschema.Schema{
 		Type:        "object",
 		Description: "External babfiles to import",

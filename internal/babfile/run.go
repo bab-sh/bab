@@ -11,9 +11,10 @@ type RunItem interface {
 }
 
 type CommandRun struct {
-	Line      int        `json:"-" yaml:"-"`
-	Cmd       string     `json:"cmd" yaml:"cmd"`
-	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	Line      int               `json:"-" yaml:"-"`
+	Cmd       string            `json:"cmd" yaml:"cmd"`
+	Env       map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
+	Platforms []Platform        `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }
 
 func (CommandRun) isRunItem() {}
@@ -30,6 +31,7 @@ func (CommandRun) JSONSchema() *jsonschema.Schema {
 		MinLength:   &minLen,
 		Description: "Shell command to execute",
 	})
+	props.Set("env", EnvSchema())
 	props.Set("platforms", PlatformsArraySchema())
 
 	return &jsonschema.Schema{
