@@ -18,18 +18,18 @@ type node struct {
 }
 
 func (c *CLI) runList() error {
-	tasks, err := runner.LoadTasks(c.babfile)
+	result, err := runner.LoadTasks(c.babfile)
 	if err != nil {
 		return err
 	}
 
-	if len(tasks) == 0 {
+	if len(result.Tasks) == 0 {
 		log.Warn("No tasks found")
 		return nil
 	}
 
 	root := &node{children: make(map[string]*node)}
-	for name, task := range tasks {
+	for name, task := range result.Tasks {
 		parts := strings.Split(name, ":")
 		current := root
 		for i, part := range parts {

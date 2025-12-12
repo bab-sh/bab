@@ -6,10 +6,10 @@ import (
 )
 
 func (c *CLI) runValidate() error {
-	tasks, err := runner.LoadTasks(c.babfile)
+	result, err := runner.LoadTasks(c.babfile)
 	if err != nil {
 		return err
 	}
-	log.Info("Babfile is valid", "tasks", len(tasks))
+	log.Info("Babfile is valid", "tasks", len(result.Tasks))
 	return nil
 }
