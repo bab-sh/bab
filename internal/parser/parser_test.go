@@ -10,14 +10,14 @@ import (
 )
 
 func TestParseSimpleTask(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "simple.yml"))
+	result, err := Parse(filepath.Join("testdata", "simple.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if len(tasks) != 1 {
-		t.Errorf("expected 1 task, got %d", len(tasks))
+	if len(result.Tasks) != 1 {
+		t.Errorf("expected 1 task, got %d", len(result.Tasks))
 	}
-	task := tasks["hello"]
+	task := result.Tasks["hello"]
 	if task == nil {
 		t.Fatal("task 'hello' not found")
 	}
@@ -37,11 +37,11 @@ func TestParseSimpleTask(t *testing.T) {
 }
 
 func TestParseMultiCommand(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "multi_command.yml"))
+	result, err := Parse(filepath.Join("testdata", "multi_command.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	task := tasks["build"]
+	task := result.Tasks["build"]
 	if task == nil {
 		t.Fatal("task 'build' not found")
 	}
@@ -64,76 +64,76 @@ func TestParseMultiCommand(t *testing.T) {
 }
 
 func TestParseDependencies(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "dependencies.yml"))
+	result, err := Parse(filepath.Join("testdata", "dependencies.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if len(tasks) != 3 {
-		t.Errorf("expected 3 tasks, got %d", len(tasks))
+	if len(result.Tasks) != 3 {
+		t.Errorf("expected 3 tasks, got %d", len(result.Tasks))
 	}
 
-	clean := tasks["clean"]
+	clean := result.Tasks["clean"]
 	if clean == nil || len(clean.Deps) != 0 {
 		t.Errorf("clean should have no dependencies")
 	}
 
-	build := tasks["build"]
+	build := result.Tasks["build"]
 	if build == nil || len(build.Deps) != 1 || build.Deps[0] != "clean" {
 		t.Errorf("build should depend on 'clean', got %v", build.Deps)
 	}
 
-	test := tasks["test"]
+	test := result.Tasks["test"]
 	if test == nil || len(test.Deps) != 1 || test.Deps[0] != "build" {
 		t.Errorf("test should depend on 'build', got %v", test.Deps)
 	}
 }
 
 func TestParseNestedTasks(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "nested.yml"))
+	result, err := Parse(filepath.Join("testdata", "nested.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if len(tasks) != 4 {
-		t.Errorf("expected 4 tasks, got %d", len(tasks))
+	if len(result.Tasks) != 4 {
+		t.Errorf("expected 4 tasks, got %d", len(result.Tasks))
 	}
 
 	expected := []string{"ci:test", "ci:lint", "ci:full", "dev:start"}
 	for _, name := range expected {
-		if tasks[name] == nil {
+		if result.Tasks[name] == nil {
 			t.Errorf("expected task %q not found", name)
 		}
 	}
 
-	full := tasks["ci:full"]
+	full := result.Tasks["ci:full"]
 	if full == nil || len(full.Deps) != 2 {
 		t.Errorf("ci:full should have 2 dependencies, got %v", full)
 	}
 }
 
 func TestParseDescriptions(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "with_description.yml"))
+	result, err := Parse(filepath.Join("testdata", "with_description.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
 
-	test := tasks["test"]
+	test := result.Tasks["test"]
 	if test == nil || test.Desc != "Run all unit tests" {
 		t.Errorf("test description wrong: %v", test)
 	}
 
-	coverage := tasks["coverage"]
+	coverage := result.Tasks["coverage"]
 	if coverage == nil || coverage.Desc != "Generate coverage report" {
 		t.Errorf("coverage description wrong: %v", coverage)
 	}
 }
 
 func TestParseEmptyTasks(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "empty.yml"))
+	result, err := Parse(filepath.Join("testdata", "empty.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if len(tasks) != 0 {
-		t.Errorf("expected 0 tasks, got %d", len(tasks))
+	if len(result.Tasks) != 0 {
+		t.Errorf("expected 0 tasks, got %d", len(result.Tasks))
 	}
 }
 
@@ -188,36 +188,36 @@ func TestParseWhitespacePath(t *testing.T) {
 }
 
 func TestParseSimpleInclude(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
+	result, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
 
-	if len(tasks) != 4 {
-		t.Errorf("expected 4 tasks, got %d: %v", len(tasks), tasks.Names())
+	if len(result.Tasks) != 4 {
+		t.Errorf("expected 4 tasks, got %d: %v", len(result.Tasks), result.Tasks.Names())
 	}
 
-	if tasks["setup"] == nil {
+	if result.Tasks["setup"] == nil {
 		t.Error("local task 'setup' not found")
 	}
-	if tasks["all"] == nil {
+	if result.Tasks["all"] == nil {
 		t.Error("local task 'all' not found")
 	}
-	if tasks["gen:build"] == nil {
+	if result.Tasks["gen:build"] == nil {
 		t.Error("included task 'gen:build' not found")
 	}
-	if tasks["gen:test"] == nil {
+	if result.Tasks["gen:test"] == nil {
 		t.Error("included task 'gen:test' not found")
 	}
 }
 
 func TestParseIncludeWithDeps(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
+	result, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
 
-	all := tasks["all"]
+	all := result.Tasks["all"]
 	if all == nil {
 		t.Fatal("task 'all' not found")
 	}
@@ -254,29 +254,29 @@ func TestParseCircularInclude(t *testing.T) {
 }
 
 func TestParseNestedTaskNames(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "includes", "nested.yml"))
+	result, err := Parse(filepath.Join("testdata", "includes", "nested.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
 
-	if tasks["docker:build"] == nil {
+	if result.Tasks["docker:build"] == nil {
 		t.Error("task 'docker:build' not found")
 	}
-	if tasks["docker:push"] == nil {
+	if result.Tasks["docker:push"] == nil {
 		t.Error("task 'docker:push' not found")
 	}
 }
 
 func TestParseTaskRun(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "task_run.yml"))
+	result, err := Parse(filepath.Join("testdata", "task_run.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
-	if len(tasks) != 3 {
-		t.Errorf("expected 3 tasks, got %d", len(tasks))
+	if len(result.Tasks) != 3 {
+		t.Errorf("expected 3 tasks, got %d", len(result.Tasks))
 	}
 
-	main := tasks["main"]
+	main := result.Tasks["main"]
 	if main == nil {
 		t.Fatal("task 'main' not found")
 	}
@@ -355,7 +355,7 @@ func TestParseTaskRunNotFound(t *testing.T) {
 }
 
 func TestParseDeepNestedInclude(t *testing.T) {
-	tasks, err := Parse(filepath.Join("testdata", "includes", "deep", "main.yml"))
+	result, err := Parse(filepath.Join("testdata", "includes", "deep", "main.yml"))
 	if err != nil {
 		t.Fatalf("Parse() error: %v", err)
 	}
@@ -367,17 +367,17 @@ func TestParseDeepNestedInclude(t *testing.T) {
 		"first:second:test",
 	}
 
-	if len(tasks) != len(expectedTasks) {
-		t.Errorf("expected %d tasks, got %d: %v", len(expectedTasks), len(tasks), tasks.Names())
+	if len(result.Tasks) != len(expectedTasks) {
+		t.Errorf("expected %d tasks, got %d: %v", len(expectedTasks), len(result.Tasks), result.Tasks.Names())
 	}
 
 	for _, name := range expectedTasks {
-		if tasks[name] == nil {
+		if result.Tasks[name] == nil {
 			t.Errorf("expected task %q not found", name)
 		}
 	}
 
-	firstBuild := tasks["first:build"]
+	firstBuild := result.Tasks["first:build"]
 	if firstBuild == nil {
 		t.Fatal("task 'first:build' not found")
 	}
@@ -394,5 +394,119 @@ func TestParseDeepNestedInclude(t *testing.T) {
 	}
 	if taskRun.Task != "first:second:test" {
 		t.Errorf("expected task ref 'first:second:test', got %q", taskRun.Task)
+	}
+}
+
+func TestParseGlobalEnv(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "env_global.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if len(result.GlobalEnv) != 3 {
+		t.Errorf("expected 3 global env vars, got %d", len(result.GlobalEnv))
+	}
+	if result.GlobalEnv["NODE_ENV"] != "production" {
+		t.Errorf("NODE_ENV = %q, want %q", result.GlobalEnv["NODE_ENV"], "production")
+	}
+	if result.GlobalEnv["PORT"] != "3000" {
+		t.Errorf("PORT = %q, want %q", result.GlobalEnv["PORT"], "3000")
+	}
+	if result.GlobalEnv["DEBUG"] != "false" {
+		t.Errorf("DEBUG = %q, want %q", result.GlobalEnv["DEBUG"], "false")
+	}
+}
+
+func TestParseTaskEnv(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "env_task.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build"]
+	if task == nil {
+		t.Fatal("task 'build' not found")
+	}
+	if len(task.Env) != 2 {
+		t.Errorf("expected 2 task env vars, got %d", len(task.Env))
+	}
+	if task.Env["BUILD_TYPE"] != "release" {
+		t.Errorf("BUILD_TYPE = %q, want %q", task.Env["BUILD_TYPE"], "release")
+	}
+	if task.Env["OPTIMIZE"] != "true" {
+		t.Errorf("OPTIMIZE = %q, want %q", task.Env["OPTIMIZE"], "true")
+	}
+}
+
+func TestParseCommandEnv(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "env_command.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build"]
+	if task == nil {
+		t.Fatal("task 'build' not found")
+	}
+	if len(task.Run) != 2 {
+		t.Fatalf("expected 2 run items, got %d", len(task.Run))
+	}
+
+	cmd1, ok := task.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for first item")
+	}
+	if len(cmd1.Env) != 2 {
+		t.Errorf("expected 2 command env vars, got %d", len(cmd1.Env))
+	}
+	if cmd1.Env["DEBUG"] != "true" {
+		t.Errorf("DEBUG = %q, want %q", cmd1.Env["DEBUG"], "true")
+	}
+	if cmd1.Env["LOG_LEVEL"] != "verbose" {
+		t.Errorf("LOG_LEVEL = %q, want %q", cmd1.Env["LOG_LEVEL"], "verbose")
+	}
+
+	cmd2, ok := task.Run[1].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for second item")
+	}
+	if len(cmd2.Env) != 0 {
+		t.Errorf("expected 0 command env vars for second command, got %d", len(cmd2.Env))
+	}
+}
+
+func TestParseEnvInheritance(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "env_inheritance.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.GlobalEnv["LEVEL"] != "global" {
+		t.Errorf("global LEVEL = %q, want %q", result.GlobalEnv["LEVEL"], "global")
+	}
+	if result.GlobalEnv["GLOBAL_ONLY"] != "global-only" {
+		t.Errorf("GLOBAL_ONLY = %q, want %q", result.GlobalEnv["GLOBAL_ONLY"], "global-only")
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+	if task.Env["LEVEL"] != "task" {
+		t.Errorf("task LEVEL = %q, want %q", task.Env["LEVEL"], "task")
+	}
+	if task.Env["TASK_ONLY"] != "task-only" {
+		t.Errorf("TASK_ONLY = %q, want %q", task.Env["TASK_ONLY"], "task-only")
+	}
+
+	cmd, ok := task.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun")
+	}
+	if cmd.Env["LEVEL"] != "command" {
+		t.Errorf("command LEVEL = %q, want %q", cmd.Env["LEVEL"], "command")
+	}
+	if cmd.Env["CMD_ONLY"] != "cmd-only" {
+		t.Errorf("CMD_ONLY = %q, want %q", cmd.Env["CMD_ONLY"], "cmd-only")
 	}
 }
