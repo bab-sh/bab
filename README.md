@@ -8,7 +8,7 @@ Custom commands for every project
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/bab-sh/bab)](https://go.dev/)
 [![Release](https://img.shields.io/github/v/release/bab-sh/bab)](https://github.com/bab-sh/bab/releases)
-[![Status](https://img.shields.io/badge/Status-Pre--Alpha-red.svg)](https://github.com/bab-sh/bab)
+[![Status](https://img.shields.io/badge/Status-Alpha-red.svg)](https://github.com/bab-sh/bab)
 [![Discord](https://img.shields.io/discord/1320389080407609344?label=Discord&color=%235865F2)](https://discord.bab.sh)
 
 [Website](https://bab.sh) • [Documentation](https://docs.bab.sh) • [Discord](https://discord.bab.sh)
