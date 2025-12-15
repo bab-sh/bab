@@ -154,6 +154,13 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 					return fmt.Errorf("task %q failed: %w", v.Task, err)
 				}
 			}
+
+		case babfile.LogRun:
+			if r.DryRun {
+				log.Info("Would log", "msg", v.Log, "level", v.Level)
+			} else {
+				executeLog(v)
+			}
 		}
 
 		executed++
@@ -188,6 +195,21 @@ func runCommand(ctx context.Context, shell, shellArg, command string, env map[st
 		return ctx.Err()
 	}
 	return err
+}
+
+func executeLog(l babfile.LogRun) {
+	switch l.Level {
+	case babfile.LogLevelDebug:
+		log.Debug(l.Log)
+	case babfile.LogLevelInfo:
+		log.Info(l.Log)
+	case babfile.LogLevelWarn:
+		log.Warn(l.Log)
+	case babfile.LogLevelError:
+		log.Error(l.Log)
+	default:
+		log.Info(l.Log)
+	}
 }
 
 func buildChainSlice(current string, tasks babfile.TaskMap, state map[string]status) []string {

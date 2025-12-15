@@ -510,3 +510,207 @@ func TestParseEnvInheritance(t *testing.T) {
 		t.Errorf("CMD_ONLY = %q, want %q", cmd.Env["CMD_ONLY"], "cmd-only")
 	}
 }
+
+func TestParseLogSimple(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "log_simple.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["deploy"]
+	if task == nil {
+		t.Fatal("task 'deploy' not found")
+	}
+	if len(task.Run) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(task.Run))
+	}
+
+	log1, ok := task.Run[0].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for first item")
+	}
+	if log1.Log != "Starting deployment..." {
+		t.Errorf("unexpected message: %q", log1.Log)
+	}
+	if log1.Level != babfile.LogLevelInfo {
+		t.Errorf("expected info level (default), got %q", log1.Level)
+	}
+
+	_, ok = task.Run[1].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for second item")
+	}
+
+	log2, ok := task.Run[2].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for third item")
+	}
+	if log2.Log != "Deployment complete!" {
+		t.Errorf("unexpected message: %q", log2.Log)
+	}
+}
+
+func TestParseLogExpanded(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "log_expanded.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build"]
+	if task == nil {
+		t.Fatal("task 'build' not found")
+	}
+	if len(task.Run) != 4 {
+		t.Fatalf("expected 4 run items, got %d", len(task.Run))
+	}
+
+	log1, ok := task.Run[0].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for first item")
+	}
+	if log1.Log != "Build started" {
+		t.Errorf("unexpected message: %q", log1.Log)
+	}
+	if log1.Level != babfile.LogLevelInfo {
+		t.Errorf("expected info level, got %q", log1.Level)
+	}
+
+	log2, ok := task.Run[2].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for third item")
+	}
+	if log2.Level != babfile.LogLevelDebug {
+		t.Errorf("expected debug level, got %q", log2.Level)
+	}
+
+	log3, ok := task.Run[3].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for fourth item")
+	}
+	if log3.Level != babfile.LogLevelWarn {
+		t.Errorf("expected warn level, got %q", log3.Level)
+	}
+}
+
+func TestParseLogPlatforms(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "log_platforms.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["setup"]
+	if task == nil {
+		t.Fatal("task 'setup' not found")
+	}
+	if len(task.Run) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(task.Run))
+	}
+
+	log1, ok := task.Run[0].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for first item")
+	}
+	if len(log1.Platforms) != 1 || log1.Platforms[0] != babfile.PlatformDarwin {
+		t.Errorf("expected darwin platform, got %v", log1.Platforms)
+	}
+
+	log2, ok := task.Run[1].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for second item")
+	}
+	if len(log2.Platforms) != 1 || log2.Platforms[0] != babfile.PlatformLinux {
+		t.Errorf("expected linux platform, got %v", log2.Platforms)
+	}
+
+	log3, ok := task.Run[2].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for third item")
+	}
+	if len(log3.Platforms) != 0 {
+		t.Errorf("expected no platforms, got %v", log3.Platforms)
+	}
+}
+
+func TestParseLogInvalidLevel(t *testing.T) {
+	yaml := `tasks:
+  test:
+    run:
+      - log: "test message"
+        level: invalid`
+
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "invalid_level.yml")
+	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Parse(path)
+	if err == nil {
+		t.Fatal("expected error for invalid log level")
+	}
+}
+
+func TestParseLogWithCmd(t *testing.T) {
+	yaml := `tasks:
+  test:
+    run:
+      - log: "message"
+        cmd: echo "hello"`
+
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "log_cmd.yml")
+	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Parse(path)
+	if err == nil {
+		t.Fatal("expected error for log with cmd")
+	}
+}
+
+func TestParseLogAllLevels(t *testing.T) {
+	levels := []struct {
+		level    string
+		expected babfile.LogLevel
+	}{
+		{"debug", babfile.LogLevelDebug},
+		{"info", babfile.LogLevelInfo},
+		{"warn", babfile.LogLevelWarn},
+		{"error", babfile.LogLevelError},
+	}
+
+	for _, tc := range levels {
+		t.Run(tc.level, func(t *testing.T) {
+			yaml := `tasks:
+  test:
+    run:
+      - log: "test"
+        level: ` + tc.level
+
+			tmpDir := t.TempDir()
+			path := filepath.Join(tmpDir, "level.yml")
+			if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Parse(path)
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			task := result.Tasks["test"]
+			if task == nil {
+				t.Fatal("task not found")
+			}
+
+			logRun, ok := task.Run[0].(babfile.LogRun)
+			if !ok {
+				t.Fatal("expected LogRun")
+			}
+			if logRun.Level != tc.expected {
+				t.Errorf("expected level %q, got %q", tc.expected, logRun.Level)
+			}
+		})
+	}
+}

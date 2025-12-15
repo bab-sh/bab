@@ -1,0 +1,6 @@
+tasks:
+  deploy:
+    run:
+      - log: "Starting deployment..."
+      - cmd: echo "deploying"
+      - log: "Deployment complete!"

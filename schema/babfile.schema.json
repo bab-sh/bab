@@ -106,6 +106,40 @@
                   "task"
                 ],
                 "description": "Task reference"
+              },
+              {
+                "properties": {
+                  "log": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Log message to display"
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "debug",
+                      "info",
+                      "warn",
+                      "error"
+                    ],
+                    "description": "Log level (debug, info, warn, error)",
+                    "default": "info"
+                  },
+                  "platforms": {
+                    "items": {
+                      "$ref": "#/$defs/Platform"
+                    },
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "Run only on specified platforms"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "log"
+                ],
+                "description": "Log message"
               }
             ]
           },

@@ -12,6 +12,19 @@ const (
 
 var ValidPlatforms = []Platform{PlatformLinux, PlatformDarwin, PlatformWindows}
 
+func (p Platform) Valid() bool {
+	for _, v := range ValidPlatforms {
+		if p == v {
+			return true
+		}
+	}
+	return false
+}
+
+func (p Platform) String() string {
+	return string(p)
+}
+
 func (Platform) JSONSchema() *jsonschema.Schema {
 	enumValues := make([]any, len(ValidPlatforms))
 	for i, p := range ValidPlatforms {

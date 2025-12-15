@@ -14,6 +14,8 @@ const (
 	keyDesc      = "desc"
 	keyEnv       = "env"
 	keyIncludes  = "includes"
+	keyLevel     = "level"
+	keyLog       = "log"
 	keyPlatforms = "platforms"
 	keyRun       = "run"
 	keyTask      = "task"
@@ -188,9 +190,10 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item must be a mapping"}
 	}
 
-	var cmd, task string
+	var cmd, task, log string
 	var env map[string]string
 	var platforms []babfile.Platform
+	var level babfile.LogLevel
 	line := node.Line
 
 	for i := 0; i < len(node.Content); i += 2 {
@@ -202,6 +205,10 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 			cmd = val.Value
 		case keyTask:
 			task = val.Value
+		case keyLog:
+			log = val.Value
+		case keyLevel:
+			level = babfile.LogLevel(val.Value)
 		case keyEnv:
 			if err := parseEnvMap(path, val, &env); err != nil {
 				return nil, err
@@ -215,16 +222,40 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 
 	hasCmd := cmd != ""
 	hasTask := task != ""
+	hasLog := log != ""
+
+	count := 0
+	if hasCmd {
+		count++
+	}
+	if hasTask {
+		count++
+	}
+	if hasLog {
+		count++
+	}
 
 	switch {
-	case hasCmd && hasTask:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "cannot have both '" + keyCmd + "' and '" + keyTask + "'"}
+	case count > 1:
+		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item can only have one of 'cmd', 'task', or 'log'"}
 	case hasCmd:
 		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Platforms: platforms}, nil
 	case hasTask:
 		return babfile.TaskRun{Line: line, Task: task, Platforms: platforms}, nil
+	case hasLog:
+		if level == "" {
+			level = babfile.LogLevelInfo
+		}
+		if !level.Valid() {
+			return nil, &ParseError{
+				Path:    path,
+				Line:    node.Line,
+				Message: fmt.Sprintf("invalid log level %q, must be one of: debug, info, warn, error", level),
+			}
+		}
+		return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, nil
 	default:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "must have either '" + keyCmd + "' or '" + keyTask + "'"}
+		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item must have 'cmd', 'task', or 'log'"}
 	}
 }
 
