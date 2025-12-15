@@ -11,8 +11,10 @@ import (
 )
 
 type ParseResult struct {
-	GlobalEnv map[string]string
-	Tasks     babfile.TaskMap
+	Path       string
+	GlobalVars babfile.VarMap
+	GlobalEnv  map[string]string
+	Tasks      babfile.TaskMap
 }
 
 func Parse(path string) (*ParseResult, error) {
@@ -94,8 +96,10 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 
 	log.Debug("Parsed babfile", "path", absPath, "tasks", len(tasks))
 	return &ParseResult{
-		GlobalEnv: bf.Env,
-		Tasks:     tasks,
+		Path:       absPath,
+		GlobalVars: bf.Vars,
+		GlobalEnv:  bf.Env,
+		Tasks:      tasks,
 	}, nil
 }
 
