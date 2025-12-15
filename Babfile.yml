@@ -2,12 +2,20 @@ tasks:
   build:
     desc: Build the bab binary
     run:
+      - log: Building bab binary...
       - cmd: go build -o bab .
+      - log: Build complete
 
   install:
     desc: Install bab to $GOPATH/bin
     run:
+      - log: Installing bab to $GOPATH/bin...
       - cmd: go install .
+
+  schema:
+    desc: generate the babfile schema json
+    run:
+      - cmd: ./scripts/schema.sh
 
   deps:
     desc: Download and tidy dependencies
@@ -22,11 +30,19 @@ tasks:
 
   check:
     desc: Run all checks that CI runs (lint, test with race)
-    deps: [lint, test:race]
+    run:
+      - log: Running CI checks...
+      - task: lint
+      - task: test:race
+      - log: All checks passed
 
   fix:
     desc: Auto-fix everything (format + lint:fix)
-    deps: [format, lint:fix]
+    run:
+      - log: Auto-fixing code issues...
+        level: warn
+      - task: format
+      - task: lint:fix
 
   dev:
     desc: Build and run bab in one command

@@ -52,8 +52,8 @@ func TestTaskSchemaHasRunWithOneOf(t *testing.T) {
 	items := runProp["items"].(map[string]any)
 	oneOf := items["oneOf"].([]any)
 
-	if len(oneOf) != 2 {
-		t.Errorf("run items should have 2 oneOf options, got %d", len(oneOf))
+	if len(oneOf) != 3 {
+		t.Errorf("run items should have 3 oneOf options, got %d", len(oneOf))
 	}
 
 	cmdOption := oneOf[0].(map[string]any)
@@ -66,6 +66,12 @@ func TestTaskSchemaHasRunWithOneOf(t *testing.T) {
 	taskProps := taskOption["properties"].(map[string]any)
 	if _, ok := taskProps["task"]; !ok {
 		t.Error("second oneOf should have 'task' property")
+	}
+
+	logOption := oneOf[2].(map[string]any)
+	logProps := logOption["properties"].(map[string]any)
+	if _, ok := logProps["log"]; !ok {
+		t.Error("third oneOf should have 'log' property")
 	}
 }
 

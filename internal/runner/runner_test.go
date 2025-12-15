@@ -285,3 +285,66 @@ func TestRunEnvPrecedence(t *testing.T) {
 		t.Errorf("RunWithTasks() error: %v", err)
 	}
 }
+
+func TestRunWithLogItem(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"deploy": &babfile.Task{
+			Name: "deploy",
+			Run: []babfile.RunItem{
+				babfile.LogRun{Log: "Starting deployment...", Level: babfile.LogLevelInfo},
+				babfile.CommandRun{Cmd: "echo deploying"},
+				babfile.LogRun{Log: "Deployment complete!", Level: babfile.LogLevelInfo},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "deploy", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithLogAllLevels(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name: "test",
+			Run: []babfile.RunItem{
+				babfile.LogRun{Log: "Debug message", Level: babfile.LogLevelDebug},
+				babfile.LogRun{Log: "Info message", Level: babfile.LogLevelInfo},
+				babfile.LogRun{Log: "Warning message", Level: babfile.LogLevelWarn},
+				babfile.LogRun{Log: "Error message", Level: babfile.LogLevelError},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunLogPlatformSkip(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name: "test",
+			Run: []babfile.RunItem{
+				babfile.LogRun{
+					Log:       "Platform-specific log",
+					Level:     babfile.LogLevelInfo,
+					Platforms: []babfile.Platform{"nonexistent"},
+				},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err == nil {
+		t.Fatal("expected error when no run items match platform")
+	}
+	if !strings.Contains(err.Error(), "no run items for platform") {
+		t.Errorf("expected 'no run items for platform' error, got: %v", err)
+	}
+}

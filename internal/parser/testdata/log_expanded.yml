@@ -1,0 +1,10 @@
+tasks:
+  build:
+    run:
+      - log: "Build started"
+        level: info
+      - cmd: go build .
+      - log: "Build completed successfully"
+        level: debug
+      - log: "Ready for testing"
+        level: warn

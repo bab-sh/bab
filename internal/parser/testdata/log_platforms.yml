@@ -1,0 +1,10 @@
+tasks:
+  setup:
+    run:
+      - log: "Setting up on macOS"
+        level: info
+        platforms: [darwin]
+      - log: "Setting up on Linux"
+        level: info
+        platforms: [linux]
+      - log: "Setup complete on all platforms"
