@@ -12,6 +12,7 @@ type Task struct {
 	Line     int               `json:"-" yaml:"-"`
 	DepsLine int               `json:"-" yaml:"-"`
 	Desc     string            `json:"desc,omitempty" yaml:"desc,omitempty"`
+	Vars     VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
 	Env      map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Deps     []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
 	Run      []RunItem         `json:"-" yaml:"-"`
@@ -39,6 +40,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 		Type:        "string",
 		Description: "Task description",
 	})
+	props.Set("vars", VarsSchema())
 	props.Set("env", EnvSchema())
 	props.Set("deps", DepsSchema())
 	props.Set("run", &jsonschema.Schema{

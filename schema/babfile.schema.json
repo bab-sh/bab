@@ -33,6 +33,17 @@
           "type": "string",
           "description": "Task description"
         },
+        "vars": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "description": "Variable name (alphanumeric and underscores, must start with letter or underscore)"
+          },
+          "type": "object",
+          "description": "Variables as key-value pairs. Values can reference other variables or environment variables using ${{ var }} or ${{ env.VAR }} syntax."
+        },
         "env": {
           "additionalProperties": {
             "type": "string"
@@ -159,6 +170,17 @@
     }
   },
   "properties": {
+    "vars": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+        "description": "Variable name (alphanumeric and underscores, must start with letter or underscore)"
+      },
+      "type": "object",
+      "description": "Variables as key-value pairs. Values can reference other variables or environment variables using ${{ var }} or ${{ env.VAR }} syntax."
+    },
     "env": {
       "additionalProperties": {
         "type": "string"

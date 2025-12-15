@@ -10,6 +10,7 @@ import (
 
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/finder"
+	"github.com/bab-sh/bab/internal/interpolate"
 	"github.com/bab-sh/bab/internal/output"
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/charmbracelet/log"
@@ -24,9 +25,11 @@ const (
 )
 
 type Runner struct {
-	DryRun    bool
-	Babfile   string
-	GlobalEnv map[string]string
+	DryRun      bool
+	Babfile     string
+	BabfilePath string
+	GlobalVars  map[string]string
+	GlobalEnv   map[string]string
 }
 
 func New(dryRun bool, babfile string) *Runner {
@@ -52,7 +55,16 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	if err != nil {
 		return err
 	}
+
+	r.BabfilePath = result.Path
+
+	resolvedVars, err := interpolate.ResolveVarsWithLocation(result.GlobalVars, nil, r.BabfilePath, 0)
+	if err != nil {
+		return fmt.Errorf("resolving global variables: %w", err)
+	}
+	r.GlobalVars = resolvedVars
 	r.GlobalEnv = result.GlobalEnv
+
 	return r.RunWithTasks(ctx, taskName, result.Tasks)
 }
 
@@ -112,9 +124,19 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	platform := runtime.GOOS
 	executed := 0
 
-	taskEnv := babfile.MergeEnvMaps(r.GlobalEnv, task.Env)
+	taskVars, err := interpolate.ResolveVarsWithLocation(task.Vars, r.GlobalVars, r.BabfilePath, task.Line)
+	if err != nil {
+		return err
+	}
 
-	log.Debug("Executing task", "name", task.Name, "runItems", len(task.Run), "dryRun", r.DryRun, "envVars", len(taskEnv))
+	taskCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, task.Line)
+
+	taskEnv, err := r.interpolateEnv(babfile.MergeEnvMaps(r.GlobalEnv, task.Env), taskCtx)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("Executing task", "name", task.Name, "runItems", len(task.Run), "dryRun", r.DryRun, "envVars", len(taskEnv), "vars", len(taskVars))
 
 	for i, item := range task.Run {
 		select {
@@ -134,13 +156,22 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
 			}
 
-			cmdEnv := babfile.MergeEnvMaps(taskEnv, v.Env)
+			cmdCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
+			interpolatedCmd, err := interpolate.Interpolate(v.Cmd, cmdCtx)
+			if err != nil {
+				return err
+			}
+
+			cmdEnv, err := r.interpolateEnv(babfile.MergeEnvMaps(taskEnv, v.Env), cmdCtx)
+			if err != nil {
+				return err
+			}
 
 			if r.DryRun {
-				log.Info("Would run", "cmd", v.Cmd, "env", len(cmdEnv))
+				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv))
 			} else {
-				output.Cmd(v.Cmd)
-				if err := runCommand(ctx, shell, shellArg, v.Cmd, cmdEnv); err != nil {
+				output.Cmd(interpolatedCmd)
+				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
 			}
@@ -156,10 +187,16 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 			}
 
 		case babfile.LogRun:
+			logCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
+			interpolatedLog, err := interpolate.Interpolate(v.Log, logCtx)
+			if err != nil {
+				return err
+			}
+
 			if r.DryRun {
-				log.Info("Would log", "msg", v.Log, "level", v.Level)
+				log.Info("Would log", "msg", interpolatedLog, "level", v.Level)
 			} else {
-				executeLog(v)
+				executeLog(babfile.LogRun{Log: interpolatedLog, Level: v.Level})
 			}
 		}
 
@@ -171,6 +208,22 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	}
 
 	return nil
+}
+
+func (r *Runner) interpolateEnv(env map[string]string, ctx *interpolate.Context) (map[string]string, error) {
+	if len(env) == 0 {
+		return env, nil
+	}
+
+	result := make(map[string]string, len(env))
+	for k, v := range env {
+		interpolated, err := interpolate.Interpolate(v, ctx)
+		if err != nil {
+			return nil, err
+		}
+		result[k] = interpolated
+	}
+	return result, nil
 }
 
 func shellCommand() (string, string) {

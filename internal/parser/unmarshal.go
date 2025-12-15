@@ -20,6 +20,7 @@ const (
 	keyRun       = "run"
 	keyTask      = "task"
 	keyTasks     = "tasks"
+	keyVars      = "vars"
 )
 
 func parseEnvMap(path string, node *yaml.Node, env *map[string]string) error {
@@ -47,6 +48,31 @@ func parseEnvMap(path string, node *yaml.Node, env *map[string]string) error {
 	return nil
 }
 
+func parseVarMap(path string, node *yaml.Node, vars *babfile.VarMap) error {
+	if node.Kind != yaml.MappingNode {
+		return &ParseError{Path: path, Line: node.Line, Message: "vars must be a mapping"}
+	}
+
+	*vars = make(babfile.VarMap, len(node.Content)/2)
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+
+		if valNode.Kind != yaml.ScalarNode {
+			return &ParseError{
+				Path:    path,
+				Line:    valNode.Line,
+				Message: fmt.Sprintf("vars value for %q must be a string", keyNode.Value),
+			}
+		}
+
+		(*vars)[keyNode.Value] = valNode.Value
+	}
+
+	return nil
+}
+
 func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
@@ -63,6 +89,7 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	}
 
 	schema := &babfile.Schema{
+		Vars:     make(babfile.VarMap),
 		Env:      make(map[string]string),
 		Tasks:    make(map[string]babfile.Task),
 		Includes: make(map[string]babfile.Include),
@@ -73,6 +100,10 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 		val := doc.Content[i+1]
 
 		switch key.Value {
+		case keyVars:
+			if err := parseVarMap(path, val, &schema.Vars); err != nil {
+				return nil, err
+			}
 		case keyEnv:
 			if err := parseEnvMap(path, val, &schema.Env); err != nil {
 				return nil, err
@@ -142,6 +173,10 @@ func parseTask(path string, node *yaml.Node) (babfile.Task, error) {
 		switch key.Value {
 		case keyDesc:
 			task.Desc = val.Value
+		case keyVars:
+			if err := parseVarMap(path, val, &task.Vars); err != nil {
+				return babfile.Task{}, err
+			}
 		case keyEnv:
 			if err := parseEnvMap(path, val, &task.Env); err != nil {
 				return babfile.Task{}, err
