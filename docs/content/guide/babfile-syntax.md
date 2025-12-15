@@ -167,6 +167,8 @@ tasks:
           MODE: command
 ```
 
+<div v-pre>
+
 ## Variables
 
 Define reusable values with `${{ }}` syntax. Variables are resolved by Bab before commands run.
@@ -257,6 +259,8 @@ tasks:
     run:
       - cmd: echo "Use $${{ var }} syntax"
 ```
+
+</div>
 
 ## Includes
 
