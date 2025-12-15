@@ -167,6 +167,97 @@ tasks:
           MODE: command
 ```
 
+## Variables
+
+Define reusable values with `${{ }}` syntax. Variables are resolved by Bab before commands run.
+
+### Global Variables
+
+```yaml
+vars:
+  app_name: myapp
+  version: "1.0.0"
+
+tasks:
+  build:
+    run:
+      - cmd: go build -o ${{ app_name }}
+```
+
+### Task Variables
+
+Override global variables within a task:
+
+```yaml
+vars:
+  mode: production
+
+tasks:
+  dev:
+    vars:
+      mode: development
+    run:
+      - cmd: echo "Running in ${{ mode }} mode"
+```
+
+### Environment Access
+
+Read OS environment variables with `${{ env.VAR }}`:
+
+```yaml
+vars:
+  home: ${{ env.HOME }}
+  target: ${{ env.GOOS }}
+
+tasks:
+  build:
+    run:
+      - cmd: echo "Building for ${{ target }}"
+```
+
+### Variable References
+
+Variables can reference other variables:
+
+```yaml
+vars:
+  base: /app
+  build_dir: ${{ base }}/build
+  output: ${{ build_dir }}/bin
+
+tasks:
+  build:
+    run:
+      - cmd: mkdir -p ${{ output }}
+```
+
+### Export to Shell
+
+Variables are not auto-exported. Use `env:` to pass to shell:
+
+```yaml
+vars:
+  app: myapp
+
+tasks:
+  run:
+    env:
+      APP_NAME: ${{ app }}
+    run:
+      - cmd: echo $APP_NAME
+```
+
+### Escaping
+
+Use `$${{` to output literal `${{`:
+
+```yaml
+tasks:
+  help:
+    run:
+      - cmd: echo "Use $${{ var }} syntax"
+```
+
 ## Includes
 
 Import tasks from other Babfiles with namespace prefixes:
