@@ -273,3 +273,36 @@ func TestCheckCached(t *testing.T) {
 		}
 	})
 }
+
+func TestForceCheck(t *testing.T) {
+	t.Run("disabled returns nil", func(t *testing.T) {
+		t.Setenv("BAB_NO_UPDATE_CHECK", "1")
+		if ForceCheck("v1.0.0") != nil {
+			t.Error("expected nil when disabled")
+		}
+	})
+
+	t.Run("dev returns nil", func(t *testing.T) {
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
+		t.Setenv("CI", "")
+		if ForceCheck("dev") != nil {
+			t.Error("expected nil for dev version")
+		}
+	})
+
+	t.Run("empty version returns nil", func(t *testing.T) {
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
+		t.Setenv("CI", "")
+		if ForceCheck("") != nil {
+			t.Error("expected nil for empty version")
+		}
+	})
+
+	t.Run("CI returns nil", func(t *testing.T) {
+		t.Setenv("BAB_NO_UPDATE_CHECK", "")
+		t.Setenv("CI", "true")
+		if ForceCheck("v1.0.0") != nil {
+			t.Error("expected nil in CI")
+		}
+	})
+}

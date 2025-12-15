@@ -6,3 +6,7 @@ var (
 	Date    = "unknown"
 	BuiltBy = "source"
 )
+
+func HasBuildInfo() bool {
+	return Commit != "none"
+}

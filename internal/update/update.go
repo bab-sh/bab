@@ -47,6 +47,33 @@ func CheckCached(currentVersion string) *Info {
 	return nil
 }
 
+func ForceCheck(currentVersion string) *Info {
+	if shouldSkip(currentVersion) {
+		return nil
+	}
+
+	latest, etag, err := fetchLatestVersion(nil)
+	if err != nil {
+		return nil
+	}
+
+	if latest != "" {
+		saveCache(&cache{
+			CheckedAt:     time.Now(),
+			LatestVersion: latest,
+			ETag:          etag,
+		})
+	}
+
+	if isNewer(latest, currentVersion) {
+		return &Info{
+			CurrentVersion: currentVersion,
+			LatestVersion:  latest,
+		}
+	}
+	return nil
+}
+
 func shouldSkip(currentVersion string) bool {
 	if os.Getenv("BAB_NO_UPDATE_CHECK") == "1" {
 		return true
