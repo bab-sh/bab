@@ -31,7 +31,13 @@ For more installation options, see the [Installation Documentation](https://docs
 
 Create a `Babfile.yml` in your project root:
 ```yaml
+vars:
+  app_name: myapp
+  version: "1.0.0"
+  build_dir: ./build
+
 env:
+  APP_NAME: ${{ app_name }}
   NODE_ENV: production
 
 tasks:
@@ -40,37 +46,55 @@ tasks:
     run:
       - cmd: npm install
 
-  dev:
-    desc: Start development server
-    deps: [setup]
-    env:
-      PORT: "3000"
+  lint:
+    desc: Run linter
     run:
-      - cmd: npm run dev
+      - cmd: npm run lint
 
-  test:
-    desc: Run test suite
+  test:unit:
+    desc: Run unit tests
+    deps: [setup]
     run:
       - cmd: npm test
 
-  deploy:
-    desc: Deploy to production
+  test:all:
+    desc: Run all tests
     run:
-      - cmd: ./scripts/deploy.sh
+      - task: test:unit
+      - log: All tests passed!
+        level: info
+
+  build:
+    desc: Build ${{ app_name }} v${{ version }}
+    deps: [lint, test:unit]
+    vars:
+      output: ${{ build_dir }}/${{ app_name }}
+    run:
+      - log: Building ${{ app_name }}...
+      - cmd: npm run build
+      - cmd: cp -r dist ${{ output }}
         platforms: [linux, darwin]
-        env:
-          DEPLOY_ENV: production
-      - cmd: powershell scripts/deploy.ps1
+      - cmd: xcopy dist ${{ output }} /E
         platforms: [windows]
+      - log: Build complete!
+        level: info
+
+  deploy:
+    desc: Deploy to ${{ env.DEPLOY_ENV }}
+    deps: [build]
+    run:
+      - log: Deploying ${{ app_name }} to ${{ env.DEPLOY_ENV }}...
+        level: warn
+      - cmd: ./scripts/deploy.sh
         env:
-          DEPLOY_ENV: production
+          VERSION: ${{ version }}
 ```
 
 Run your tasks:
 ```bash
 bab                  # Browse tasks interactively
 bab --list           # List all available tasks
-bab dev              # Start development server
+bab build            # Build the application
 ```
 
 ## Support
