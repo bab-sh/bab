@@ -1,0 +1,7 @@
+output: true
+tasks:
+  hello:
+    output: true
+    run:
+      - cmd: echo hello
+        output: true

@@ -9,6 +9,7 @@ type TaskRun struct {
 	Line      int        `json:"-" yaml:"-"`
 	Task      string     `json:"task" yaml:"task"`
 	Silent    *bool      `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output    *bool      `json:"output,omitempty" yaml:"output,omitempty"`
 	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }
 
@@ -28,6 +29,7 @@ func TaskRunSchema() *jsonschema.Schema {
 		Description: "Task reference",
 	})
 	props.Set("silent", SilentSchema())
+	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
 
 	return &jsonschema.Schema{

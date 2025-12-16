@@ -16,6 +16,7 @@ type ParseResult struct {
 	GlobalVars   babfile.VarMap
 	GlobalEnv    map[string]string
 	GlobalSilent *bool
+	GlobalOutput *bool
 	Tasks        babfile.TaskMap
 }
 
@@ -101,6 +102,7 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 		GlobalVars:   bf.Vars,
 		GlobalEnv:    bf.Env,
 		GlobalSilent: bf.Silent,
+		GlobalOutput: bf.Output,
 		Tasks:        tasks,
 	}, nil
 }

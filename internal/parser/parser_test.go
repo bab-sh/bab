@@ -788,3 +788,122 @@ func TestParseSilentFalse(t *testing.T) {
 		t.Errorf("expected command Silent = false")
 	}
 }
+
+func TestParseOutputGlobal(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "output_global.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.GlobalOutput == nil {
+		t.Fatal("expected GlobalOutput to be set")
+	}
+	if *result.GlobalOutput != false {
+		t.Errorf("expected GlobalOutput = false, got %v", *result.GlobalOutput)
+	}
+}
+
+func TestParseOutputTask(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "output_task.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["hello"]
+	if task == nil {
+		t.Fatal("task 'hello' not found")
+	}
+	if task.Output == nil {
+		t.Fatal("expected Output to be set on task")
+	}
+	if *task.Output != false {
+		t.Errorf("expected Output = false, got %v", *task.Output)
+	}
+}
+
+func TestParseOutputRunItem(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		taskName string
+		checkFn  func(t *testing.T, item babfile.RunItem)
+	}{
+		{
+			name:     "command",
+			file:     "output_command.yml",
+			taskName: "hello",
+			checkFn: func(t *testing.T, item babfile.RunItem) {
+				cmd, ok := item.(babfile.CommandRun)
+				if !ok {
+					t.Fatal("expected CommandRun")
+				}
+				if cmd.Output == nil || *cmd.Output != false {
+					t.Error("expected Output = false")
+				}
+			},
+		},
+		{
+			name:     "task_ref",
+			file:     "output_taskrun.yml",
+			taskName: "main",
+			checkFn: func(t *testing.T, item babfile.RunItem) {
+				taskRef, ok := item.(babfile.TaskRun)
+				if !ok {
+					t.Fatal("expected TaskRun")
+				}
+				if taskRef.Output == nil || *taskRef.Output != false {
+					t.Error("expected Output = false")
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tc.file))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			task := result.Tasks[tc.taskName]
+			if task == nil {
+				t.Fatalf("task %q not found", tc.taskName)
+			}
+			if len(task.Run) < 1 {
+				t.Fatal("expected at least 1 run item")
+			}
+
+			tc.checkFn(t, task.Run[0])
+		})
+	}
+}
+
+func TestParseOutputTrue(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "output_true.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.GlobalOutput == nil {
+		t.Fatal("expected GlobalOutput to be set")
+	}
+	if *result.GlobalOutput != true {
+		t.Errorf("expected GlobalOutput = true, got %v", *result.GlobalOutput)
+	}
+
+	task := result.Tasks["hello"]
+	if task == nil {
+		t.Fatal("task 'hello' not found")
+	}
+	if task.Output == nil || *task.Output != true {
+		t.Errorf("expected task Output = true")
+	}
+
+	cmd, ok := task.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun")
+	}
+	if cmd.Output == nil || *cmd.Output != true {
+		t.Errorf("expected command Output = true")
+	}
+}

@@ -15,6 +15,7 @@ type Task struct {
 	Vars     VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
 	Env      map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Silent   *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output   *bool             `json:"output,omitempty" yaml:"output,omitempty"`
 	Deps     []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
 	Run      []RunItem         `json:"-" yaml:"-"`
 }
@@ -44,6 +45,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 	props.Set("vars", VarsSchema())
 	props.Set("env", EnvSchema())
 	props.Set("silent", SilentSchema())
+	props.Set("output", OutputSchema())
 	props.Set("deps", DepsSchema())
 	props.Set("run", &jsonschema.Schema{
 		Type:        "array",

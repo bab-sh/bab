@@ -16,6 +16,7 @@ const (
 	keyIncludes  = "includes"
 	keyLevel     = "level"
 	keyLog       = "log"
+	keyOutput    = "output"
 	keyPlatforms = "platforms"
 	keyRun       = "run"
 	keySilent    = "silent"
@@ -133,6 +134,8 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 			parseEnvMap(path, val, &schema.Env, verrs)
 		case keySilent:
 			parseBool(path, val, &schema.Silent, verrs)
+		case keyOutput:
+			parseBool(path, val, &schema.Output, verrs)
 		case keyTasks:
 			parseTasks(path, val, schema, verrs)
 		case keyIncludes:
@@ -208,6 +211,10 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 			if !parseBool(path, val, &task.Silent, verrs) {
 				hasErrors = true
 			}
+		case keyOutput:
+			if !parseBool(path, val, &task.Output, verrs) {
+				hasErrors = true
+			}
 		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
@@ -258,6 +265,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	var platforms []babfile.Platform
 	var level babfile.LogLevel
 	var silent *bool
+	var output *bool
 	line := node.Line
 	hasErrors := false
 
@@ -280,6 +288,10 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 			}
 		case keySilent:
 			if !parseBool(path, val, &silent, verrs) {
+				hasErrors = true
+			}
+		case keyOutput:
+			if !parseBool(path, val, &output, verrs) {
 				hasErrors = true
 			}
 		case keyPlatforms:
@@ -315,9 +327,9 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	case hasErrors:
 		return nil, false
 	case hasCmd:
-		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Silent: silent, Platforms: platforms}, true
+		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Silent: silent, Output: output, Platforms: platforms}, true
 	case hasTask:
-		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Platforms: platforms}, true
+		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms}, true
 	case hasLog:
 		if level == "" {
 			level = babfile.LogLevelInfo

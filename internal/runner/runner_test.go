@@ -349,37 +349,48 @@ func TestRunLogPlatformSkip(t *testing.T) {
 	}
 }
 
-func TestIsSilent(t *testing.T) {
+func TestBoolInheritanceFunctions(t *testing.T) {
 	trueVal := true
 	falseVal := false
 
-	tests := []struct {
-		name     string
-		item     *bool
-		task     *bool
-		global   *bool
-		expected bool
-	}{
-		{"all nil", nil, nil, nil, false},
-		{"global true", nil, nil, &trueVal, true},
-		{"global false", nil, nil, &falseVal, false},
-		{"task true overrides global false", nil, &trueVal, &falseVal, true},
-		{"task false overrides global true", nil, &falseVal, &trueVal, false},
-		{"item true overrides task false", &trueVal, &falseVal, nil, true},
-		{"item false overrides task true", &falseVal, &trueVal, nil, false},
-		{"item true overrides all false", &trueVal, &falseVal, &falseVal, true},
-		{"item false overrides all true", &falseVal, &trueVal, &trueVal, false},
+	type boolFn func(item, task, global *bool) bool
+
+	runTests := func(t *testing.T, fn boolFn, fnName string, defaultVal bool) {
+		tests := []struct {
+			name     string
+			item     *bool
+			task     *bool
+			global   *bool
+			expected bool
+		}{
+			{"all nil defaults", nil, nil, nil, defaultVal},
+			{"global true", nil, nil, &trueVal, true},
+			{"global false", nil, nil, &falseVal, false},
+			{"task true overrides global false", nil, &trueVal, &falseVal, true},
+			{"task false overrides global true", nil, &falseVal, &trueVal, false},
+			{"item true overrides task false", &trueVal, &falseVal, nil, true},
+			{"item false overrides task true", &falseVal, &trueVal, nil, false},
+			{"item true overrides all false", &trueVal, &falseVal, &falseVal, true},
+			{"item false overrides all true", &falseVal, &trueVal, &trueVal, false},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := fn(tt.item, tt.task, tt.global)
+				if result != tt.expected {
+					t.Errorf("%s(%v, %v, %v) = %v, want %v", fnName, tt.item, tt.task, tt.global, result, tt.expected)
+				}
+			})
+		}
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isSilent(tt.item, tt.task, tt.global)
-			if result != tt.expected {
-				t.Errorf("isSilent(%v, %v, %v) = %v, want %v",
-					tt.item, tt.task, tt.global, result, tt.expected)
-			}
-		})
-	}
+	t.Run("isSilent", func(t *testing.T) {
+		runTests(t, isSilent, "isSilent", false)
+	})
+
+	t.Run("isOutput", func(t *testing.T) {
+		runTests(t, isOutput, "isOutput", true)
+	})
 }
 
 func TestRunWithGlobalSilent(t *testing.T) {
@@ -461,6 +472,77 @@ func TestSilentInheritance(t *testing.T) {
 			Silent: &trueVal,
 			Run: []babfile.RunItem{
 				babfile.CommandRun{Cmd: "echo cmd1", Silent: &falseVal},
+				babfile.CommandRun{Cmd: "echo cmd2"},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithGlobalOutput(t *testing.T) {
+	falseVal := false
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+		},
+	}
+
+	r := New(true, "")
+	r.GlobalOutput = &falseVal
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithTaskOutput(t *testing.T) {
+	falseVal := false
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name:   "hello",
+			Output: &falseVal,
+			Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithCommandOutput(t *testing.T) {
+	falseVal := false
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Output: &falseVal}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestOutputInheritance(t *testing.T) {
+	trueVal := true
+	falseVal := false
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:   "test",
+			Output: &falseVal,
+			Run: []babfile.RunItem{
+				babfile.CommandRun{Cmd: "echo cmd1", Output: &trueVal},
 				babfile.CommandRun{Cmd: "echo cmd2"},
 			},
 		},

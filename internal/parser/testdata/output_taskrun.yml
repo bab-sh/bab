@@ -1,0 +1,8 @@
+tasks:
+  main:
+    run:
+      - task: helper
+        output: false
+  helper:
+    run:
+      - cmd: echo helper

@@ -10,6 +10,7 @@ type CommandRun struct {
 	Cmd       string            `json:"cmd" yaml:"cmd"`
 	Env       map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Silent    *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output    *bool             `json:"output,omitempty" yaml:"output,omitempty"`
 	Platforms []Platform        `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 }
 
@@ -29,6 +30,7 @@ func CommandRunSchema() *jsonschema.Schema {
 	})
 	props.Set("env", EnvSchema())
 	props.Set("silent", SilentSchema())
+	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
 
 	return &jsonschema.Schema{

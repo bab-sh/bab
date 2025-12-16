@@ -55,6 +55,10 @@
           "type": "boolean",
           "description": "Suppress command execution output (e.g., '$ go mod download')"
         },
+        "output": {
+          "type": "boolean",
+          "description": "Show process output (stdout/stderr). Defaults to true."
+        },
         "deps": {
           "items": {
             "type": "string",
@@ -86,6 +90,10 @@
                     "type": "boolean",
                     "description": "Suppress command execution output (e.g., '$ go mod download')"
                   },
+                  "output": {
+                    "type": "boolean",
+                    "description": "Show process output (stdout/stderr). Defaults to true."
+                  },
                   "platforms": {
                     "items": {
                       "$ref": "#/$defs/Platform"
@@ -113,6 +121,10 @@
                   "silent": {
                     "type": "boolean",
                     "description": "Suppress command execution output (e.g., '$ go mod download')"
+                  },
+                  "output": {
+                    "type": "boolean",
+                    "description": "Show process output (stdout/stderr). Defaults to true."
                   },
                   "platforms": {
                     "items": {
@@ -203,6 +215,10 @@
     "silent": {
       "type": "boolean",
       "description": "Suppress command execution output (e.g., '$ go mod download')"
+    },
+    "output": {
+      "type": "boolean",
+      "description": "Show process output (stdout/stderr). Defaults to true."
     },
     "includes": {
       "additionalProperties": {
