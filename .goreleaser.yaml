@@ -37,10 +37,6 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/bab-sh/bab/internal/version.Version={{.Version}}
-      - -X github.com/bab-sh/bab/internal/version.Commit={{.FullCommit}}
-      - -X github.com/bab-sh/bab/internal/version.Date={{.Date}}
-      - -X github.com/bab-sh/bab/internal/version.BuiltBy=bab-sh
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 universal_binaries:
@@ -431,10 +427,9 @@ aur_sources:
 
       go build \
         -ldflags="-s -w -buildid='' -linkmode=external \
-          -X github.com/bab-sh/bab/internal/version.Version=${pkgver} \
-          -X github.com/bab-sh/bab/internal/version.Commit={{ .Commit }} \
-          -X github.com/bab-sh/bab/internal/version.Date={{ .Date }} \
-          -X github.com/bab-sh/bab/internal/version.BuiltBy=aur" \
+          -X main.version=${pkgver} \
+          -X main.commit={{ .Commit }} \
+          -X main.date={{ .Date }}" \
         -o bab .
 
       # Generate shell completions

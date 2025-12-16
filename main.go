@@ -8,8 +8,14 @@ import (
 	"syscall"
 
 	"github.com/bab-sh/bab/cmd"
-	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/errs"
 	"github.com/charmbracelet/log"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func isCancellation(err error) bool {
@@ -39,6 +45,7 @@ func run() int {
 		cancel()
 	}()
 
+	cmd.SetVersionInfo(version, commit, date)
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		if isCancellation(err) {
 			return 0
@@ -51,7 +58,7 @@ func run() int {
 }
 
 func handleError(err error) {
-	var verrs *parser.ValidationErrors
+	var verrs *errs.ValidationErrors
 	if errors.As(err, &verrs) {
 		for _, e := range verrs.Errors {
 			log.Error(e.Error())
