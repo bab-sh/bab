@@ -1,15 +1,13 @@
 package finder
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/bab-sh/bab/internal/errs"
 	"github.com/charmbracelet/log"
 )
-
-var ErrBabfileNotFound = errors.New("no Babfile found")
 
 var babfileNames = []string{
 	"Babfile",
@@ -43,5 +41,5 @@ func FindBabfile() (string, error) {
 	}
 
 	log.Debug("Babfile not found", "searched", cwd)
-	return "", fmt.Errorf("%w in current directory or any parent directories", ErrBabfileNotFound)
+	return "", fmt.Errorf("%w in current directory or any parent directories", errs.ErrBabfileNotFound)
 }

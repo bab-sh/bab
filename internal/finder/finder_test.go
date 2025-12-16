@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/errs"
 )
 
 func normalizePath(t *testing.T, path string) string {
@@ -126,7 +128,7 @@ func TestFindBabfileErrors(t *testing.T) {
 			t.Error("FindBabfile() expected error when no Babfile exists, got nil")
 		}
 
-		if !errors.Is(err, ErrBabfileNotFound) {
+		if !errors.Is(err, errs.ErrBabfileNotFound) {
 			t.Errorf("FindBabfile() expected ErrBabfileNotFound, got: %v", err)
 		}
 	})

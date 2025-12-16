@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
 	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/interpolate"
 	"github.com/bab-sh/bab/internal/output"
@@ -78,7 +79,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 	case done:
 		return nil
 	case running:
-		return &parser.CircularError{
+		return &errs.CircularDepError{
 			Type:  "dependency",
 			Chain: buildChainSlice(name, tasks, state),
 		}
@@ -86,7 +87,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	task, ok := tasks[name]
 	if !ok {
-		return &parser.NotFoundError{
+		return &errs.TaskNotFoundError{
 			TaskName:  name,
 			Available: tasks.Names(),
 		}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
 	"github.com/charmbracelet/log"
 )
 
@@ -19,12 +20,12 @@ type ParseResult struct {
 
 func Parse(path string) (*ParseResult, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, &ParseError{Path: path, Message: "path cannot be empty", Cause: ErrPathEmpty}
+		return nil, &errs.ParseError{Path: path, Message: "path cannot be empty", Cause: errs.ErrPathEmpty}
 	}
 
 	absPath, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
-		return nil, &ParseError{Path: path, Message: "invalid path", Cause: err}
+		return nil, &errs.ParseError{Path: path, Message: "invalid path", Cause: err}
 	}
 
 	visited := make(map[string]bool)
@@ -45,35 +46,34 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 
 	if visited[absPath] {
 		chain := chainFromVisited(visited, absPath)
-		return nil, &CircularError{Path: absPath, Type: "include", Chain: chain}
+		return nil, &errs.CircularDepError{Path: absPath, Type: "include", Chain: chain}
 	}
 	visited[absPath] = true
 	defer delete(visited, absPath)
 
 	data, err := os.ReadFile(absPath)
 	if err != nil {
-		return nil, &ParseError{Path: absPath, Message: "file not found", Cause: err}
+		return nil, &errs.ParseError{Path: absPath, Message: "file not found", Cause: err}
 	}
 
 	bf, err := unmarshalBabfile(absPath, data)
 	if err != nil {
-		var dupErr *DuplicateError
-		if errors.As(err, &dupErr) {
-			dupErr.Path = absPath
-			return nil, dupErr
+		var verrs *errs.ValidationErrors
+		if errors.As(err, &verrs) {
+			return nil, verrs
 		}
 
-		var parseErr *ParseError
+		var parseErr *errs.ParseError
 		if errors.As(err, &parseErr) {
 			return nil, parseErr
 		}
 
-		line := extractYAMLLocation(err)
-		cleanMsg := cleanYAMLError(err)
+		line := errs.ExtractYAMLLocation(err)
+		cleanMsg := errs.CleanYAMLError(err)
 		if cleanMsg == "" {
 			cleanMsg = err.Error()
 		}
-		return nil, &ParseError{
+		return nil, &errs.ParseError{
 			Path:    absPath,
 			Line:    line,
 			Message: "invalid YAML syntax",
@@ -90,7 +90,7 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 	baseDir := filepath.Dir(absPath)
 	for namespace, inc := range bf.Includes {
 		if err := resolveInclude(namespace, inc.Babfile, baseDir, tasks, visited); err != nil {
-			return nil, &ParseError{Path: absPath, Message: "include " + namespace + " failed", Cause: err}
+			return nil, &errs.ParseError{Path: absPath, Message: "include " + namespace + " failed", Cause: err}
 		}
 	}
 

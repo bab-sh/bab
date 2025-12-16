@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
 	"github.com/charmbracelet/log"
 )
 
@@ -24,7 +25,7 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 	for name, task := range result.Tasks {
 		prefixedName := namespace + ":" + name
 		if tasks.Has(prefixedName) {
-			return &ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
+			return &errs.ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
 		}
 		tasks[prefixedName] = &babfile.Task{
 			Name: prefixedName,

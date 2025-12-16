@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
 )
 
 func TestParseSimpleTask(t *testing.T) {
@@ -142,8 +143,8 @@ func TestParseInvalidYAML(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")
 	}
-	if !errors.Is(err, ErrInvalidYAML) {
-		t.Errorf("expected ErrInvalidYAML, got: %v", err)
+	if !errors.Is(err, errs.ErrInvalidYAML) {
+		t.Errorf("expected errs.ErrInvalidYAML, got: %v", err)
 	}
 }
 
@@ -152,8 +153,40 @@ func TestParseInvalidDependency(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid dependency")
 	}
-	if !errors.Is(err, ErrTaskNotFound) {
-		t.Errorf("expected ErrTaskNotFound, got: %v", err)
+	if !errors.Is(err, errs.ErrTaskNotFound) {
+		t.Errorf("expected errs.ErrTaskNotFound, got: %v", err)
+	}
+}
+
+func TestParseMultipleErrors(t *testing.T) {
+	content := `tasks:
+  build:
+    run:
+      - invalid: true
+      - cmd: "hi"
+        task: "also"
+  test:
+    run:
+      - bad: data
+`
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "Babfile.yml")
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	_, err := Parse(path)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T: %v", err, err)
+	}
+
+	if len(verrs.Errors) < 3 {
+		t.Errorf("expected at least 3 errors, got %d: %v", len(verrs.Errors), verrs.Errors)
 	}
 }
 
@@ -162,8 +195,8 @@ func TestParseNonexistentFile(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for nonexistent file")
 	}
-	if !errors.Is(err, ErrFileNotFound) {
-		t.Errorf("expected ErrFileNotFound, got: %v", err)
+	if !errors.Is(err, errs.ErrFileNotFound) {
+		t.Errorf("expected errs.ErrFileNotFound, got: %v", err)
 	}
 }
 
@@ -172,8 +205,8 @@ func TestParseEmptyPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for empty path")
 	}
-	if !errors.Is(err, ErrPathEmpty) {
-		t.Errorf("expected ErrPathEmpty, got: %v", err)
+	if !errors.Is(err, errs.ErrPathEmpty) {
+		t.Errorf("expected errs.ErrPathEmpty, got: %v", err)
 	}
 }
 
@@ -182,8 +215,8 @@ func TestParseWhitespacePath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for whitespace path")
 	}
-	if !errors.Is(err, ErrPathEmpty) {
-		t.Errorf("expected ErrPathEmpty, got: %v", err)
+	if !errors.Is(err, errs.ErrPathEmpty) {
+		t.Errorf("expected errs.ErrPathEmpty, got: %v", err)
 	}
 }
 
@@ -248,8 +281,8 @@ func TestParseCircularInclude(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for circular include")
 	}
-	if !errors.Is(err, ErrCircularDep) {
-		t.Errorf("expected ErrCircularDep, got: %v", err)
+	if !errors.Is(err, errs.ErrCircularDep) {
+		t.Errorf("expected errs.ErrCircularDep, got: %v", err)
 	}
 }
 
@@ -328,8 +361,8 @@ func TestParseTaskRunCycle(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for circular task run")
 	}
-	if !errors.Is(err, ErrCircularDep) {
-		t.Errorf("expected ErrCircularDep, got: %v", err)
+	if !errors.Is(err, errs.ErrCircularDep) {
+		t.Errorf("expected errs.ErrCircularDep, got: %v", err)
 	}
 }
 
@@ -349,8 +382,8 @@ func TestParseTaskRunNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing task reference")
 	}
-	if !errors.Is(err, ErrTaskNotFound) {
-		t.Errorf("expected ErrTaskNotFound, got: %v", err)
+	if !errors.Is(err, errs.ErrTaskNotFound) {
+		t.Errorf("expected errs.ErrTaskNotFound, got: %v", err)
 	}
 }
 

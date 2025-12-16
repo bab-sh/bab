@@ -1,10 +1,10 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,54 +23,62 @@ const (
 	keyVars      = "vars"
 )
 
-func parseEnvMap(path string, node *yaml.Node, env *map[string]string) error {
+func parseEnvMap(path string, node *yaml.Node, env *map[string]string, verrs *errs.ValidationErrors) bool {
 	if node.Kind != yaml.MappingNode {
-		return &ParseError{Path: path, Line: node.Line, Message: "env must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "env must be a mapping"})
+		return false
 	}
 
 	*env = make(map[string]string, len(node.Content)/2)
+	hasErrors := false
 
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valNode := node.Content[i+1]
 
 		if valNode.Kind != yaml.ScalarNode {
-			return &ParseError{
+			verrs.Add(&errs.ParseError{
 				Path:    path,
 				Line:    valNode.Line,
 				Message: fmt.Sprintf("env value for %q must be a string", keyNode.Value),
-			}
+			})
+			hasErrors = true
+			continue
 		}
 
 		(*env)[keyNode.Value] = valNode.Value
 	}
 
-	return nil
+	return !hasErrors
 }
 
-func parseVarMap(path string, node *yaml.Node, vars *babfile.VarMap) error {
+func parseVarMap(path string, node *yaml.Node, vars *babfile.VarMap, verrs *errs.ValidationErrors) bool {
 	if node.Kind != yaml.MappingNode {
-		return &ParseError{Path: path, Line: node.Line, Message: "vars must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "vars must be a mapping"})
+		return false
 	}
 
 	*vars = make(babfile.VarMap, len(node.Content)/2)
+	hasErrors := false
 
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]
 		valNode := node.Content[i+1]
 
 		if valNode.Kind != yaml.ScalarNode {
-			return &ParseError{
+			verrs.Add(&errs.ParseError{
 				Path:    path,
 				Line:    valNode.Line,
 				Message: fmt.Sprintf("vars value for %q must be a string", keyNode.Value),
-			}
+			})
+			hasErrors = true
+			continue
 		}
 
 		(*vars)[keyNode.Value] = valNode.Value
 	}
 
-	return nil
+	return !hasErrors
 }
 
 func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
@@ -80,12 +88,12 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	}
 
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
-		return nil, &ParseError{Path: path, Message: "invalid document"}
+		return nil, &errs.ParseError{Path: path, Message: "invalid document"}
 	}
 
 	doc := root.Content[0]
 	if doc.Kind != yaml.MappingNode {
-		return nil, &ParseError{Path: path, Line: doc.Line, Message: "expected mapping at root"}
+		return nil, &errs.ParseError{Path: path, Line: doc.Line, Message: "expected mapping at root"}
 	}
 
 	schema := &babfile.Schema{
@@ -95,36 +103,35 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 		Includes: make(map[string]babfile.Include),
 	}
 
+	verrs := &errs.ValidationErrors{}
+
 	for i := 0; i < len(doc.Content); i += 2 {
 		key := doc.Content[i]
 		val := doc.Content[i+1]
 
 		switch key.Value {
 		case keyVars:
-			if err := parseVarMap(path, val, &schema.Vars); err != nil {
-				return nil, err
-			}
+			parseVarMap(path, val, &schema.Vars, verrs)
 		case keyEnv:
-			if err := parseEnvMap(path, val, &schema.Env); err != nil {
-				return nil, err
-			}
+			parseEnvMap(path, val, &schema.Env, verrs)
 		case keyTasks:
-			if err := parseTasks(path, val, schema); err != nil {
-				return nil, err
-			}
+			parseTasks(path, val, schema, verrs)
 		case keyIncludes:
-			if err := parseIncludes(path, val, schema); err != nil {
-				return nil, err
-			}
+			parseIncludes(path, val, schema, verrs)
 		}
+	}
+
+	if verrs.HasErrors() {
+		return nil, verrs
 	}
 
 	return schema, nil
 }
 
-func parseTasks(path string, node *yaml.Node, schema *babfile.Schema) error {
+func parseTasks(path string, node *yaml.Node, schema *babfile.Schema, verrs *errs.ValidationErrors) {
 	if node.Kind != yaml.MappingNode {
-		return &ParseError{Path: path, Line: node.Line, Message: "tasks must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "tasks must be a mapping"})
+		return
 	}
 
 	taskLines := make(map[string]int)
@@ -135,36 +142,33 @@ func parseTasks(path string, node *yaml.Node, schema *babfile.Schema) error {
 		name := nameNode.Value
 
 		if origLine, exists := taskLines[name]; exists {
-			return &DuplicateError{
+			verrs.Add(&errs.DuplicateTaskError{
+				Path:         path,
 				Line:         nameNode.Line,
 				TaskName:     name,
 				OriginalLine: origLine,
-			}
+			})
+			continue
 		}
 		taskLines[name] = nameNode.Line
 
-		task, err := parseTask(path, taskNode)
-		if err != nil {
-			var parseErr *ParseError
-			if errors.As(err, &parseErr) {
-				parseErr.Message = fmt.Sprintf("task %q: %s", name, parseErr.Message)
-				return parseErr
-			}
-			return &ParseError{Path: path, Line: nameNode.Line, Message: fmt.Sprintf("task %q", name), Cause: err}
+		task, ok := parseTask(path, taskNode, name, verrs)
+		if !ok {
+			continue
 		}
 		task.Line = nameNode.Line
 		schema.Tasks[name] = task
 	}
-
-	return nil
 }
 
-func parseTask(path string, node *yaml.Node) (babfile.Task, error) {
+func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.ValidationErrors) (babfile.Task, bool) {
 	if node.Kind != yaml.MappingNode {
-		return babfile.Task{}, &ParseError{Path: path, Line: node.Line, Message: "task must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: task must be a mapping", taskName)})
+		return babfile.Task{}, false
 	}
 
 	task := babfile.Task{}
+	hasErrors := false
 
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i]
@@ -174,55 +178,56 @@ func parseTask(path string, node *yaml.Node) (babfile.Task, error) {
 		case keyDesc:
 			task.Desc = val.Value
 		case keyVars:
-			if err := parseVarMap(path, val, &task.Vars); err != nil {
-				return babfile.Task{}, err
+			if !parseVarMap(path, val, &task.Vars, verrs) {
+				hasErrors = true
 			}
 		case keyEnv:
-			if err := parseEnvMap(path, val, &task.Env); err != nil {
-				return babfile.Task{}, err
+			if !parseEnvMap(path, val, &task.Env, verrs) {
+				hasErrors = true
 			}
 		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
-				return babfile.Task{}, &ParseError{Path: path, Line: key.Line, Message: "invalid deps", Cause: err}
+				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: invalid deps", taskName), Cause: err})
+				hasErrors = true
 			}
 		case keyRun:
-			runItems, err := parseRunItems(path, val)
-			if err != nil {
-				return babfile.Task{}, err
+			runItems, ok := parseRunItems(path, val, taskName, verrs)
+			if !ok {
+				hasErrors = true
 			}
 			task.Run = runItems
 		}
 	}
 
-	return task, nil
+	return task, !hasErrors
 }
 
-func parseRunItems(path string, node *yaml.Node) ([]babfile.RunItem, error) {
+func parseRunItems(path string, node *yaml.Node, taskName string, verrs *errs.ValidationErrors) ([]babfile.RunItem, bool) {
 	if node.Kind != yaml.SequenceNode {
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "run must be a sequence"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run must be a sequence", taskName)})
+		return nil, false
 	}
 
 	items := make([]babfile.RunItem, 0, len(node.Content))
+	hasErrors := false
+
 	for i, itemNode := range node.Content {
-		item, err := parseRunItem(path, itemNode)
-		if err != nil {
-			var parseErr *ParseError
-			if errors.As(err, &parseErr) {
-				parseErr.Message = fmt.Sprintf("run[%d]: %s", i, parseErr.Message)
-				return nil, parseErr
-			}
-			return nil, &ParseError{Path: path, Line: itemNode.Line, Message: fmt.Sprintf("run[%d]", i), Cause: err}
+		item, ok := parseRunItem(path, itemNode, taskName, i, verrs)
+		if !ok {
+			hasErrors = true
+			continue
 		}
 		items = append(items, item)
 	}
 
-	return items, nil
+	return items, !hasErrors
 }
 
-func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
+func parseRunItem(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
 	if node.Kind != yaml.MappingNode {
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must be a mapping", taskName, index)})
+		return nil, false
 	}
 
 	var cmd, task, log string
@@ -230,6 +235,7 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 	var platforms []babfile.Platform
 	var level babfile.LogLevel
 	line := node.Line
+	hasErrors := false
 
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i]
@@ -245,12 +251,13 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 		case keyLevel:
 			level = babfile.LogLevel(val.Value)
 		case keyEnv:
-			if err := parseEnvMap(path, val, &env); err != nil {
-				return nil, err
+			if !parseEnvMap(path, val, &env, verrs) {
+				hasErrors = true
 			}
 		case keyPlatforms:
 			if err := val.Decode(&platforms); err != nil {
-				return nil, &ParseError{Path: path, Line: key.Line, Message: "invalid platforms", Cause: err}
+				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platforms", taskName, index), Cause: err})
+				hasErrors = true
 			}
 		}
 	}
@@ -272,31 +279,39 @@ func parseRunItem(path string, node *yaml.Node) (babfile.RunItem, error) {
 
 	switch {
 	case count > 1:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item can only have one of 'cmd', 'task', or 'log'"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item can only have one of 'cmd', 'task', or 'log'", taskName, index)})
+		return nil, false
+	case count == 0:
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must have 'cmd', 'task', or 'log'", taskName, index)})
+		return nil, false
+	case hasErrors:
+		return nil, false
 	case hasCmd:
-		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Platforms: platforms}, nil
+		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Platforms: platforms}, true
 	case hasTask:
-		return babfile.TaskRun{Line: line, Task: task, Platforms: platforms}, nil
+		return babfile.TaskRun{Line: line, Task: task, Platforms: platforms}, true
 	case hasLog:
 		if level == "" {
 			level = babfile.LogLevelInfo
 		}
 		if !level.Valid() {
-			return nil, &ParseError{
+			verrs.Add(&errs.ParseError{
 				Path:    path,
 				Line:    node.Line,
-				Message: fmt.Sprintf("invalid log level %q, must be one of: debug, info, warn, error", level),
-			}
+				Message: fmt.Sprintf("task %q: run[%d]: invalid log level %q, must be one of: debug, info, warn, error", taskName, index, level),
+			})
+			return nil, false
 		}
-		return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, nil
+		return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, true
 	default:
-		return nil, &ParseError{Path: path, Line: node.Line, Message: "run item must have 'cmd', 'task', or 'log'"}
+		return nil, false
 	}
 }
 
-func parseIncludes(path string, node *yaml.Node, schema *babfile.Schema) error {
+func parseIncludes(path string, node *yaml.Node, schema *babfile.Schema, verrs *errs.ValidationErrors) {
 	if node.Kind != yaml.MappingNode {
-		return &ParseError{Path: path, Line: node.Line, Message: "includes must be a mapping"}
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "includes must be a mapping"})
+		return
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
@@ -305,10 +320,9 @@ func parseIncludes(path string, node *yaml.Node, schema *babfile.Schema) error {
 
 		var inc babfile.Include
 		if err := incNode.Decode(&inc); err != nil {
-			return &ParseError{Path: path, Line: nameNode.Line, Message: fmt.Sprintf("include %q", nameNode.Value), Cause: err}
+			verrs.Add(&errs.ParseError{Path: path, Line: nameNode.Line, Message: fmt.Sprintf("include %q", nameNode.Value), Cause: err})
+			continue
 		}
 		schema.Includes[nameNode.Value] = inc
 	}
-
-	return nil
 }

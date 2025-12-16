@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/errs"
 )
 
 func TestParseError_Error(t *testing.T) {
@@ -13,27 +16,27 @@ func TestParseError_Error(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		err      *ParseError
+		err      *errs.ParseError
 		contains string
 	}{
 		{
 			name:     "with line and column",
-			err:      &ParseError{Path: filepath.Join(cwd, "test.yml"), Line: 10, Column: 5, Message: "syntax error"},
+			err:      &errs.ParseError{Path: filepath.Join(cwd, "test.yml"), Line: 10, Column: 5, Message: "syntax error"},
 			contains: "test.yml:10:5: syntax error",
 		},
 		{
 			name:     "with line only",
-			err:      &ParseError{Path: filepath.Join(cwd, "test.yml"), Line: 10, Message: "syntax error"},
+			err:      &errs.ParseError{Path: filepath.Join(cwd, "test.yml"), Line: 10, Message: "syntax error"},
 			contains: "test.yml:10: syntax error",
 		},
 		{
 			name:     "path only",
-			err:      &ParseError{Path: filepath.Join(cwd, "test.yml"), Message: "file error"},
+			err:      &errs.ParseError{Path: filepath.Join(cwd, "test.yml"), Message: "file error"},
 			contains: "test.yml: file error",
 		},
 		{
 			name:     "with cause",
-			err:      &ParseError{Path: filepath.Join(cwd, "test.yml"), Cause: fmt.Errorf("wrapped error")},
+			err:      &errs.ParseError{Path: filepath.Join(cwd, "test.yml"), Cause: fmt.Errorf("wrapped error")},
 			contains: "wrapped error",
 		},
 	}
@@ -41,7 +44,7 @@ func TestParseError_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.err.Error()
-			if got == "" || !containsString(got, tt.contains) {
+			if got == "" || !strings.Contains(got, tt.contains) {
 				t.Errorf("ParseError.Error() = %q, want to contain %q", got, tt.contains)
 			}
 		})
@@ -51,32 +54,32 @@ func TestParseError_Error(t *testing.T) {
 func TestParseError_Is(t *testing.T) {
 	tests := []struct {
 		name   string
-		err    *ParseError
+		err    *errs.ParseError
 		target error
 		want   bool
 	}{
 		{
 			name:   "invalid YAML",
-			err:    &ParseError{Message: "invalid YAML syntax"},
-			target: ErrInvalidYAML,
+			err:    &errs.ParseError{Message: "invalid YAML syntax"},
+			target: errs.ErrInvalidYAML,
 			want:   true,
 		},
 		{
 			name:   "file not found",
-			err:    &ParseError{Message: "file not found"},
-			target: ErrFileNotFound,
+			err:    &errs.ParseError{Message: "file not found"},
+			target: errs.ErrFileNotFound,
 			want:   true,
 		},
 		{
 			name:   "path empty",
-			err:    &ParseError{Message: "path cannot be empty"},
-			target: ErrPathEmpty,
+			err:    &errs.ParseError{Message: "path cannot be empty"},
+			target: errs.ErrPathEmpty,
 			want:   true,
 		},
 		{
 			name:   "no match",
-			err:    &ParseError{Message: "some other error"},
-			target: ErrInvalidYAML,
+			err:    &errs.ParseError{Message: "some other error"},
+			target: errs.ErrInvalidYAML,
 			want:   false,
 		},
 	}
@@ -92,34 +95,34 @@ func TestParseError_Is(t *testing.T) {
 
 func TestParseError_Unwrap(t *testing.T) {
 	cause := fmt.Errorf("underlying cause")
-	err := &ParseError{Cause: cause}
+	err := &errs.ParseError{Cause: cause}
 
 	if !errors.Is(err.Unwrap(), cause) {
 		t.Error("Unwrap should return the cause")
 	}
 
-	errNoCause := &ParseError{}
+	errNoCause := &errs.ParseError{}
 	if errNoCause.Unwrap() != nil {
 		t.Error("Unwrap should return nil when no cause")
 	}
 }
 
-func TestCircularError_Error(t *testing.T) {
+func TestCircularDepError_Error(t *testing.T) {
 	cwd, _ := os.Getwd()
 
 	tests := []struct {
 		name     string
-		err      *CircularError
+		err      *errs.CircularDepError
 		contains string
 	}{
 		{
 			name:     "with path",
-			err:      &CircularError{Path: filepath.Join(cwd, "test.yml"), Type: "dependency", Chain: []string{"a", "b", "a"}},
+			err:      &errs.CircularDepError{Path: filepath.Join(cwd, "test.yml"), Type: "dependency", Chain: []string{"a", "b", "a"}},
 			contains: "test.yml: circular dependency: a → b → a",
 		},
 		{
 			name:     "without path",
-			err:      &CircularError{Type: "include", Chain: []string{"x", "y", "x"}},
+			err:      &errs.CircularDepError{Type: "include", Chain: []string{"x", "y", "x"}},
 			contains: "circular include: x → y → x",
 		},
 	}
@@ -127,51 +130,51 @@ func TestCircularError_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.err.Error()
-			if !containsString(got, tt.contains) {
-				t.Errorf("CircularError.Error() = %q, want to contain %q", got, tt.contains)
+			if !strings.Contains(got, tt.contains) {
+				t.Errorf("CircularDepError.Error() = %q, want to contain %q", got, tt.contains)
 			}
 		})
 	}
 }
 
-func TestCircularError_Is(t *testing.T) {
-	err := &CircularError{Type: "dependency", Chain: []string{"a", "b"}}
+func TestCircularDepError_Is(t *testing.T) {
+	err := &errs.CircularDepError{Type: "dependency", Chain: []string{"a", "b"}}
 
-	if !errors.Is(err, ErrCircularDep) {
-		t.Error("CircularError should match ErrCircularDep")
+	if !errors.Is(err, errs.ErrCircularDep) {
+		t.Error("CircularDepError should match ErrCircularDep")
 	}
 
-	if errors.Is(err, ErrTaskNotFound) {
-		t.Error("CircularError should not match ErrTaskNotFound")
+	if errors.Is(err, errs.ErrTaskNotFound) {
+		t.Error("CircularDepError should not match ErrTaskNotFound")
 	}
 }
 
-func TestNotFoundError_Error(t *testing.T) {
+func TestTaskNotFoundError_Error(t *testing.T) {
 	cwd, _ := os.Getwd()
 
 	tests := []struct {
 		name     string
-		err      *NotFoundError
+		err      *errs.TaskNotFoundError
 		contains string
 	}{
 		{
 			name:     "with path and line",
-			err:      &NotFoundError{Path: filepath.Join(cwd, "test.yml"), Line: 5, TaskName: "build"},
+			err:      &errs.TaskNotFoundError{Path: filepath.Join(cwd, "test.yml"), Line: 5, TaskName: "build"},
 			contains: "test.yml:5: task \"build\" not found",
 		},
 		{
 			name:     "with path only",
-			err:      &NotFoundError{Path: filepath.Join(cwd, "test.yml"), TaskName: "build"},
+			err:      &errs.TaskNotFoundError{Path: filepath.Join(cwd, "test.yml"), TaskName: "build"},
 			contains: "test.yml: task \"build\" not found",
 		},
 		{
 			name:     "no path",
-			err:      &NotFoundError{TaskName: "build"},
+			err:      &errs.TaskNotFoundError{TaskName: "build"},
 			contains: "task \"build\" not found",
 		},
 		{
 			name:     "with suggestion",
-			err:      &NotFoundError{TaskName: "biuld", Available: []string{"build", "test"}},
+			err:      &errs.TaskNotFoundError{TaskName: "biuld", Available: []string{"build", "test"}},
 			contains: "did you mean \"build\"",
 		},
 	}
@@ -179,28 +182,28 @@ func TestNotFoundError_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.err.Error()
-			if !containsString(got, tt.contains) {
-				t.Errorf("NotFoundError.Error() = %q, want to contain %q", got, tt.contains)
+			if !strings.Contains(got, tt.contains) {
+				t.Errorf("TaskNotFoundError.Error() = %q, want to contain %q", got, tt.contains)
 			}
 		})
 	}
 }
 
-func TestNotFoundError_Is(t *testing.T) {
-	err := &NotFoundError{TaskName: "build"}
+func TestTaskNotFoundError_Is(t *testing.T) {
+	err := &errs.TaskNotFoundError{TaskName: "build"}
 
-	if !errors.Is(err, ErrTaskNotFound) {
-		t.Error("NotFoundError should match ErrTaskNotFound")
+	if !errors.Is(err, errs.ErrTaskNotFound) {
+		t.Error("TaskNotFoundError should match ErrTaskNotFound")
 	}
 
-	if errors.Is(err, ErrCircularDep) {
-		t.Error("NotFoundError should not match ErrCircularDep")
+	if errors.Is(err, errs.ErrCircularDep) {
+		t.Error("TaskNotFoundError should not match ErrCircularDep")
 	}
 }
 
-func TestDuplicateError_Error(t *testing.T) {
+func TestDuplicateTaskError_Error(t *testing.T) {
 	cwd, _ := os.Getwd()
-	err := &DuplicateError{
+	err := &errs.DuplicateTaskError{
 		Path:         filepath.Join(cwd, "test.yml"),
 		Line:         20,
 		TaskName:     "build",
@@ -208,104 +211,104 @@ func TestDuplicateError_Error(t *testing.T) {
 	}
 
 	got := err.Error()
-	if !containsString(got, "duplicate task \"build\"") {
+	if !strings.Contains(got, "duplicate task \"build\"") {
 		t.Errorf("expected 'duplicate task' in error, got: %s", got)
 	}
-	if !containsString(got, "line 5") {
+	if !strings.Contains(got, "line 5") {
 		t.Errorf("expected 'line 5' in error, got: %s", got)
 	}
 }
 
-func TestDuplicateError_Is(t *testing.T) {
-	err := &DuplicateError{TaskName: "build"}
+func TestDuplicateTaskError_Is(t *testing.T) {
+	err := &errs.DuplicateTaskError{TaskName: "build"}
 
-	if !errors.Is(err, ErrDuplicateTask) {
-		t.Error("DuplicateError should match ErrDuplicateTask")
+	if !errors.Is(err, errs.ErrDuplicateTask) {
+		t.Error("DuplicateTaskError should match ErrDuplicateTask")
 	}
 
-	if errors.Is(err, ErrCircularDep) {
-		t.Error("DuplicateError should not match ErrCircularDep")
+	if errors.Is(err, errs.ErrCircularDep) {
+		t.Error("DuplicateTaskError should not match ErrCircularDep")
 	}
 }
 
 func TestValidationErrors_Error(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		errs := &ValidationErrors{}
-		if errs.Error() != "" {
+		verrs := &errs.ValidationErrors{}
+		if verrs.Error() != "" {
 			t.Errorf("empty ValidationErrors should return empty string")
 		}
 	})
 
 	t.Run("single error", func(t *testing.T) {
-		errs := &ValidationErrors{}
-		errs.Add(fmt.Errorf("error one"))
+		verrs := &errs.ValidationErrors{}
+		verrs.Add(fmt.Errorf("error one"))
 
-		got := errs.Error()
+		got := verrs.Error()
 		if got != "error one" {
 			t.Errorf("got %q, want %q", got, "error one")
 		}
 	})
 
 	t.Run("multiple errors", func(t *testing.T) {
-		errs := &ValidationErrors{}
-		errs.Add(fmt.Errorf("error one"))
-		errs.Add(fmt.Errorf("error two"))
+		verrs := &errs.ValidationErrors{}
+		verrs.Add(fmt.Errorf("error one"))
+		verrs.Add(fmt.Errorf("error two"))
 
-		got := errs.Error()
-		if !containsString(got, "error one") || !containsString(got, "error two") {
+		got := verrs.Error()
+		if !strings.Contains(got, "error one") || !strings.Contains(got, "error two") {
 			t.Errorf("expected both errors in output, got: %s", got)
 		}
 	})
 }
 
 func TestValidationErrors_Add(t *testing.T) {
-	errs := &ValidationErrors{}
+	verrs := &errs.ValidationErrors{}
 
-	errs.Add(nil)
-	if len(errs.Errors) != 0 {
+	verrs.Add(nil)
+	if len(verrs.Errors) != 0 {
 		t.Error("Add(nil) should not add to errors")
 	}
 
-	errs.Add(fmt.Errorf("test error"))
-	if len(errs.Errors) != 1 {
+	verrs.Add(fmt.Errorf("test error"))
+	if len(verrs.Errors) != 1 {
 		t.Error("Add should add non-nil error")
 	}
 }
 
 func TestValidationErrors_HasErrors(t *testing.T) {
-	errs := &ValidationErrors{}
+	verrs := &errs.ValidationErrors{}
 
-	if errs.HasErrors() {
+	if verrs.HasErrors() {
 		t.Error("empty ValidationErrors should not have errors")
 	}
 
-	errs.Add(fmt.Errorf("test"))
-	if !errs.HasErrors() {
+	verrs.Add(fmt.Errorf("test"))
+	if !verrs.HasErrors() {
 		t.Error("ValidationErrors with error should have errors")
 	}
 }
 
 func TestValidationErrors_OrNil(t *testing.T) {
-	errs := &ValidationErrors{}
+	verrs := &errs.ValidationErrors{}
 
-	if errs.OrNil() != nil {
+	if verrs.OrNil() != nil {
 		t.Error("OrNil should return nil when no errors")
 	}
 
-	errs.Add(fmt.Errorf("test"))
-	if errs.OrNil() == nil {
+	verrs.Add(fmt.Errorf("test"))
+	if verrs.OrNil() == nil {
 		t.Error("OrNil should return self when has errors")
 	}
 }
 
 func TestValidationErrors_Unwrap(t *testing.T) {
-	errs := &ValidationErrors{}
+	verrs := &errs.ValidationErrors{}
 	err1 := fmt.Errorf("error 1")
 	err2 := fmt.Errorf("error 2")
-	errs.Add(err1)
-	errs.Add(err2)
+	verrs.Add(err1)
+	verrs.Add(err2)
 
-	unwrapped := errs.Unwrap()
+	unwrapped := verrs.Unwrap()
 	if len(unwrapped) != 2 {
 		t.Errorf("expected 2 unwrapped errors, got %d", len(unwrapped))
 	}
@@ -358,35 +361,9 @@ func TestFindSimilar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := findSimilar(tt.target, tt.candidates)
+			got := errs.FindSimilar(tt.target, tt.candidates)
 			if got != tt.want {
-				t.Errorf("findSimilar(%q, %v) = %q, want %q", tt.target, tt.candidates, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSimilarity(t *testing.T) {
-	tests := []struct {
-		name string
-		a    string
-		b    string
-		min  int
-	}{
-		{"exact match", "build", "build", 100},
-		{"substring", "bui", "build", 80},
-		{"reverse substring", "build", "bui", 80},
-		{"partial match", "build", "built", 50},
-		{"no match", "xyz", "abc", 0},
-		{"empty strings", "", "", 100},
-		{"one empty", "build", "", 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := similarity(tt.a, tt.b)
-			if got < tt.min {
-				t.Errorf("similarity(%q, %q) = %d, want >= %d", tt.a, tt.b, got, tt.min)
+				t.Errorf("FindSimilar(%q, %v) = %q, want %q", tt.target, tt.candidates, got, tt.want)
 			}
 		})
 	}
@@ -406,8 +383,8 @@ func TestExtractYAMLLocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := extractYAMLLocation(tt.err); got != tt.want {
-				t.Errorf("extractYAMLLocation() = %d, want %d", got, tt.want)
+			if got := errs.ExtractYAMLLocation(tt.err); got != tt.want {
+				t.Errorf("ExtractYAMLLocation() = %d, want %d", got, tt.want)
 			}
 		})
 	}
@@ -427,9 +404,9 @@ func TestCleanYAMLError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cleanYAMLError(tt.err)
-			if !containsString(got, tt.want) && tt.want != "" {
-				t.Errorf("cleanYAMLError() = %q, want to contain %q", got, tt.want)
+			got := errs.CleanYAMLError(tt.err)
+			if !strings.Contains(got, tt.want) && tt.want != "" {
+				t.Errorf("CleanYAMLError() = %q, want to contain %q", got, tt.want)
 			}
 		})
 	}
@@ -443,30 +420,17 @@ func TestRelativePath(t *testing.T) {
 
 	t.Run("within cwd", func(t *testing.T) {
 		path := filepath.Join(cwd, "test.yml")
-		got := relativePath(path)
+		got := errs.RelativePath(path)
 		if got != "test.yml" {
-			t.Errorf("relativePath() = %q, want %q", got, "test.yml")
+			t.Errorf("RelativePath() = %q, want %q", got, "test.yml")
 		}
 	})
 
 	t.Run("outside cwd", func(t *testing.T) {
 		path := "/some/absolute/path.yml"
-		got := relativePath(path)
-		if got != path && !containsString(got, "..") {
-			t.Errorf("relativePath() = %q, unexpected", got)
+		got := errs.RelativePath(path)
+		if got != path && !strings.Contains(got, "..") {
+			t.Errorf("RelativePath() = %q, unexpected", got)
 		}
 	})
-}
-
-func containsString(s, substr string) bool {
-	return len(substr) == 0 || (len(s) >= len(substr) && (s == substr || containsSubstring(s, substr)))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

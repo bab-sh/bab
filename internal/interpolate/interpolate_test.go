@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/bab-sh/bab/internal/errs"
 )
 
 func TestInterpolate_BasicVariable(t *testing.T) {
@@ -125,13 +127,13 @@ func TestInterpolate_UndefinedVar(t *testing.T) {
 		t.Error("expected error for undefined variable")
 	}
 
-	if !errors.Is(err, ErrVarNotFound) {
-		t.Errorf("expected errors.Is(err, ErrVarNotFound), got %T", err)
+	if !errors.Is(err, errs.ErrVarNotFound) {
+		t.Errorf("expected errors.Is(err, errs.ErrVarNotFound), got %T", err)
 	}
 
-	var varErr *VarNotFoundError
+	var varErr *errs.VarNotFoundError
 	if !errors.As(err, &varErr) {
-		t.Errorf("expected VarNotFoundError, got %T", err)
+		t.Errorf("expected errs.VarNotFoundError, got %T", err)
 	}
 	if varErr.Name != "undefined" {
 		t.Errorf("expected var name 'undefined', got %q", varErr.Name)
@@ -265,13 +267,13 @@ func TestResolveVars_CycleDetection(t *testing.T) {
 		t.Error("expected error for circular reference")
 	}
 
-	if !errors.Is(err, ErrVarCycle) {
-		t.Errorf("expected errors.Is(err, ErrVarCycle), got %T", err)
+	if !errors.Is(err, errs.ErrVarCycle) {
+		t.Errorf("expected errors.Is(err, errs.ErrVarCycle), got %T", err)
 	}
 
-	var cycleErr *VarCycleError
+	var cycleErr *errs.VarCycleError
 	if !errors.As(err, &cycleErr) {
-		t.Errorf("expected VarCycleError, got %T: %v", err, err)
+		t.Errorf("expected errs.VarCycleError, got %T: %v", err, err)
 	}
 
 	errMsg := err.Error()
@@ -290,8 +292,8 @@ func TestResolveVars_SelfReference(t *testing.T) {
 		t.Error("expected error for self reference")
 	}
 
-	if !errors.Is(err, ErrVarCycle) {
-		t.Errorf("expected errors.Is(err, ErrVarCycle), got %T", err)
+	if !errors.Is(err, errs.ErrVarCycle) {
+		t.Errorf("expected errors.Is(err, errs.ErrVarCycle), got %T", err)
 	}
 }
 
@@ -345,27 +347,27 @@ func TestExtractVarRefs(t *testing.T) {
 }
 
 func TestVarNotFoundError_Is(t *testing.T) {
-	err := &VarNotFoundError{Name: "test"}
-	if !errors.Is(err, ErrVarNotFound) {
+	err := &errs.VarNotFoundError{Name: "test"}
+	if !errors.Is(err, errs.ErrVarNotFound) {
 		t.Error("VarNotFoundError should match ErrVarNotFound")
 	}
-	if errors.Is(err, ErrVarCycle) {
+	if errors.Is(err, errs.ErrVarCycle) {
 		t.Error("VarNotFoundError should not match ErrVarCycle")
 	}
 }
 
 func TestVarCycleError_Is(t *testing.T) {
-	err := &VarCycleError{Name: "test", Chain: []string{"a", "b", "a"}}
-	if !errors.Is(err, ErrVarCycle) {
+	err := &errs.VarCycleError{Name: "test", Chain: []string{"a", "b", "a"}}
+	if !errors.Is(err, errs.ErrVarCycle) {
 		t.Error("VarCycleError should match ErrVarCycle")
 	}
-	if errors.Is(err, ErrVarNotFound) {
+	if errors.Is(err, errs.ErrVarNotFound) {
 		t.Error("VarCycleError should not match ErrVarNotFound")
 	}
 }
 
 func TestVarCycleError_ChainFormat(t *testing.T) {
-	err := &VarCycleError{Name: "c", Chain: []string{"a", "b", "c"}}
+	err := &errs.VarCycleError{Name: "c", Chain: []string{"a", "b", "c"}}
 	errMsg := err.Error()
 	if !strings.Contains(errMsg, "a → b → c") {
 		t.Errorf("expected chain format 'a → b → c', got: %s", errMsg)
@@ -387,9 +389,9 @@ func TestFindSimilar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.target, func(t *testing.T) {
-			result := findSimilar(tt.target, candidates)
+			result := errs.FindSimilar(tt.target, candidates)
 			if result != tt.expected {
-				t.Errorf("findSimilar(%q) = %q, expected %q", tt.target, result, tt.expected)
+				t.Errorf("FindSimilar(%q) = %q, expected %q", tt.target, result, tt.expected)
 			}
 		})
 	}

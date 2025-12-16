@@ -1,16 +1,19 @@
 package parser
 
-import "github.com/bab-sh/bab/internal/babfile"
+import (
+	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/errs"
+)
 
 func validateAll(path string, tasks babfile.TaskMap) error {
-	errs := &ValidationErrors{}
-	validateDependencies(path, tasks, errs)
-	validateRunTaskRefs(path, tasks, errs)
-	validateRunCycles(path, tasks, errs)
-	return errs.OrNil()
+	verrs := &errs.ValidationErrors{}
+	validateDependencies(path, tasks, verrs)
+	validateRunTaskRefs(path, tasks, verrs)
+	validateRunCycles(path, tasks, verrs)
+	return verrs.OrNil()
 }
 
-func validateDependencies(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
+func validateDependencies(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
 	for name, task := range tasks {
 		for _, dep := range task.Deps {
 			if !tasks.Has(dep) {
@@ -18,7 +21,7 @@ func validateDependencies(path string, tasks babfile.TaskMap, errs *ValidationEr
 				if line == 0 {
 					line = task.Line
 				}
-				errs.Add(&NotFoundError{
+				verrs.Add(&errs.TaskNotFoundError{
 					Path:         path,
 					Line:         line,
 					TaskName:     dep,
@@ -30,12 +33,12 @@ func validateDependencies(path string, tasks babfile.TaskMap, errs *ValidationEr
 	}
 }
 
-func validateRunTaskRefs(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
+func validateRunTaskRefs(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
 	for name, task := range tasks {
 		for _, item := range task.Run {
 			if tr, ok := item.(babfile.TaskRun); ok {
 				if !tasks.Has(tr.Task) {
-					errs.Add(&NotFoundError{
+					verrs.Add(&errs.TaskNotFoundError{
 						Path:         path,
 						Line:         tr.Line,
 						TaskName:     tr.Task,
@@ -48,7 +51,7 @@ func validateRunTaskRefs(path string, tasks babfile.TaskMap, errs *ValidationErr
 	}
 }
 
-func validateRunCycles(path string, tasks babfile.TaskMap, errs *ValidationErrors) {
+func validateRunCycles(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
 	visited := make(map[string]bool)
 	recStack := make(map[string]bool)
 
@@ -67,7 +70,7 @@ func validateRunCycles(path string, tasks babfile.TaskMap, errs *ValidationError
 			if tr, ok := item.(babfile.TaskRun); ok {
 				if recStack[tr.Task] {
 					chain = append(chain, tr.Task)
-					errs.Add(&CircularError{
+					verrs.Add(&errs.CircularDepError{
 						Path:  path,
 						Type:  "dependency",
 						Chain: chain,

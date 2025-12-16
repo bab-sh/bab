@@ -4,6 +4,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/bab-sh/bab/internal/errs"
 )
 
 var Pattern = regexp.MustCompile(`\$\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*\}\}`)
@@ -78,7 +80,7 @@ func resolveVar(name string, ctx *Context) (string, error) {
 		available = append(available, k)
 	}
 
-	return "", &VarNotFoundError{
+	return "", &errs.VarNotFoundError{
 		Path:      ctx.Path,
 		Line:      ctx.Line,
 		Name:      name,
@@ -130,7 +132,7 @@ func ResolveVarsWithLocation(vars map[string]string, parentVars map[string]strin
 			chain := make([]string, len(resolvingStack)+1)
 			copy(chain, resolvingStack)
 			chain[len(resolvingStack)] = name
-			return "", &VarCycleError{Path: path, Line: line, Name: name, Chain: chain}
+			return "", &errs.VarCycleError{Path: path, Line: line, Name: name, Chain: chain}
 		}
 
 		raw, exists := vars[name]
@@ -138,7 +140,7 @@ func ResolveVarsWithLocation(vars map[string]string, parentVars map[string]strin
 			if v, ok := parentVars[name]; ok {
 				return v, nil
 			}
-			return "", &VarNotFoundError{Path: path, Line: line, Name: name, Available: allVarNames()}
+			return "", &errs.VarNotFoundError{Path: path, Line: line, Name: name, Available: allVarNames()}
 		}
 
 		resolving[name] = true

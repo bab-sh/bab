@@ -6,20 +6,27 @@ import (
 
 	"github.com/bab-sh/bab/internal/runner"
 	"github.com/bab-sh/bab/internal/update"
-	"github.com/bab-sh/bab/internal/version"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
+var versionString = "dev"
+
+func SetVersionInfo(version, commit, date string) {
+	versionString = version
+	if commit != "none" {
+		versionString = fmt.Sprintf("%s\n  commit: %s\n  built:  %s", version, commit, date)
+	}
+}
+
 type CLI struct {
-	ctx         context.Context
-	verbose     bool
-	dryRun      bool
-	listTasks   bool
-	validate    bool
-	showVersion bool
-	completion  string
-	babfile     string
+	ctx        context.Context
+	verbose    bool
+	dryRun     bool
+	listTasks  bool
+	validate   bool
+	completion string
+	babfile    string
 }
 
 func ExecuteContext(ctx context.Context) error {
@@ -33,16 +40,14 @@ func newCLI() *CLI {
 func (c *CLI) execute(ctx context.Context) error {
 	c.ctx = ctx
 
-	update.StartBackgroundRefresh(version.Version)
+	update.StartBackgroundRefresh(versionString)
 
 	err := c.buildCommand().Execute()
 
-	if !c.showVersion {
-		if info := update.CheckCached(version.Version); info != nil {
-			log.Warn("A new version of bab is available",
-				"latest", info.LatestVersion,
-				"current", info.CurrentVersion)
-		}
+	if info := update.CheckCached(versionString); info != nil {
+		log.Warn("A new version of bab is available",
+			"latest", info.LatestVersion,
+			"current", info.CurrentVersion)
 	}
 
 	return err
@@ -52,6 +57,7 @@ func (c *CLI) buildCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "bab [task]",
 		Short:             "Custom commands for every project",
+		Version:           versionString,
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		ValidArgsFunction: completeTaskNames,
@@ -74,15 +80,11 @@ func (c *CLI) buildCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&c.listTasks, "list", "l", false, "List all available tasks")
 	cmd.Flags().BoolVar(&c.validate, "validate", false, "Validate the Babfile without executing tasks")
 	cmd.Flags().StringVarP(&c.completion, "completion", "c", "", "Generate completion script (bash|zsh|fish|powershell)")
-	cmd.Flags().BoolVar(&c.showVersion, "version", false, "Show the currently installed version")
 
 	return cmd
 }
 
 func (c *CLI) run(cmd *cobra.Command, args []string) error {
-	if c.showVersion {
-		return c.runVersion()
-	}
 	if c.completion != "" {
 		return c.runCompletion(cmd)
 	}
@@ -96,21 +98,6 @@ func (c *CLI) run(cmd *cobra.Command, args []string) error {
 		return c.runTask(args[0])
 	}
 	return c.runInteractive()
-}
-
-func (c *CLI) runVersion() error {
-	fmt.Printf("bab version %s\n", version.Version)
-	if version.HasBuildInfo() {
-		fmt.Printf("  commit: %s\n", version.Commit)
-		fmt.Printf("  built:  %s\n", version.Date)
-	}
-
-	if info := update.ForceCheck(version.Version); info != nil {
-		log.Warn("A new version of bab is available",
-			"latest", info.LatestVersion,
-			"current", info.CurrentVersion)
-	}
-	return nil
 }
 
 func (c *CLI) runTask(taskName string) error {
