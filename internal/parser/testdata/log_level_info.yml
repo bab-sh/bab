@@ -1,0 +1,5 @@
+tasks:
+  test:
+    run:
+      - log: "test"
+        level: info

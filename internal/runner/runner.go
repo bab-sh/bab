@@ -26,11 +26,12 @@ const (
 )
 
 type Runner struct {
-	DryRun      bool
-	Babfile     string
-	BabfilePath string
-	GlobalVars  map[string]string
-	GlobalEnv   map[string]string
+	DryRun       bool
+	Babfile      string
+	BabfilePath  string
+	GlobalVars   map[string]string
+	GlobalEnv    map[string]string
+	GlobalSilent *bool
 }
 
 func New(dryRun bool, babfile string) *Runner {
@@ -65,16 +66,30 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	}
 	r.GlobalVars = resolvedVars
 	r.GlobalEnv = result.GlobalEnv
+	r.GlobalSilent = result.GlobalSilent
 
 	return r.RunWithTasks(ctx, taskName, result.Tasks)
 }
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
 	state := make(map[string]status)
-	return r.runTask(ctx, taskName, tasks, state, true)
+	return r.runTask(ctx, taskName, tasks, state, true, nil)
 }
 
-func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state map[string]status, isMain bool) error {
+func isSilent(item, task, global *bool) bool {
+	if item != nil {
+		return *item
+	}
+	if task != nil {
+		return *task
+	}
+	if global != nil {
+		return *global
+	}
+	return false
+}
+
+func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state map[string]status, isMain bool, overrideSilent *bool) error {
 	switch state[name] {
 	case done:
 		return nil
@@ -95,7 +110,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	state[name] = running
 
-	if !r.DryRun {
+	if !r.DryRun && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
 		if isMain {
 			output.Task(name)
 		} else {
@@ -105,7 +120,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	for _, dep := range task.Deps {
 		log.Debug("Running dependency", "task", name, "dep", dep)
-		if err := r.runTask(ctx, dep, tasks, state, false); err != nil {
+		if err := r.runTask(ctx, dep, tasks, state, false, nil); err != nil {
 			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
@@ -171,7 +186,9 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 			if r.DryRun {
 				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv))
 			} else {
-				output.Cmd(interpolatedCmd)
+				if !isSilent(v.Silent, task.Silent, r.GlobalSilent) {
+					output.Cmd(interpolatedCmd)
+				}
 				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
@@ -182,7 +199,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				log.Info("Would run task", "task", v.Task)
 			} else {
 				log.Debug("Running task", "task", v.Task)
-				if err := r.runTask(ctx, v.Task, tasks, state, false); err != nil {
+				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent); err != nil {
 					return fmt.Errorf("task %q failed: %w", v.Task, err)
 				}
 			}

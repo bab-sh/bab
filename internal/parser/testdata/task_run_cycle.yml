@@ -1,0 +1,7 @@
+tasks:
+  a:
+    run:
+      - task: b
+  b:
+    run:
+      - task: a

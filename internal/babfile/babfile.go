@@ -8,6 +8,7 @@ import (
 type Schema struct {
 	Vars     VarMap             `json:"vars,omitempty" yaml:"vars,omitempty"`
 	Env      map[string]string  `json:"env,omitempty" yaml:"env,omitempty"`
+	Silent   *bool              `json:"silent,omitempty" yaml:"silent,omitempty"`
 	Includes map[string]Include `json:"includes,omitempty" yaml:"includes,omitempty"`
 	Tasks    map[string]Task    `json:"tasks" yaml:"tasks"`
 }
@@ -16,6 +17,7 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 	props := orderedmap.New[string, *jsonschema.Schema]()
 	props.Set("vars", VarsSchema())
 	props.Set("env", EnvSchema())
+	props.Set("silent", SilentSchema())
 	props.Set("includes", &jsonschema.Schema{
 		Type:        "object",
 		Description: "External babfiles to import",

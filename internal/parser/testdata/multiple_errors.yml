@@ -1,0 +1,9 @@
+tasks:
+  build:
+    run:
+      - invalid: true
+      - cmd: "hi"
+        task: "also"
+  test:
+    run:
+      - bad: data

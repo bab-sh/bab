@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -159,23 +158,7 @@ func TestParseInvalidDependency(t *testing.T) {
 }
 
 func TestParseMultipleErrors(t *testing.T) {
-	content := `tasks:
-  build:
-    run:
-      - invalid: true
-      - cmd: "hi"
-        task: "also"
-  test:
-    run:
-      - bad: data
-`
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "Babfile.yml")
-	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
-		t.Fatalf("failed to write test file: %v", err)
-	}
-
-	_, err := Parse(path)
+	_, err := Parse(filepath.Join("testdata", "multiple_errors.yml"))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -343,21 +326,7 @@ func TestParseTaskRun(t *testing.T) {
 }
 
 func TestParseTaskRunCycle(t *testing.T) {
-	yaml := `tasks:
-  a:
-    run:
-      - task: b
-  b:
-    run:
-      - task: a`
-
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "cycle.yml")
-	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := Parse(path)
+	_, err := Parse(filepath.Join("testdata", "task_run_cycle.yml"))
 	if err == nil {
 		t.Fatal("expected error for circular task run")
 	}
@@ -367,18 +336,7 @@ func TestParseTaskRunCycle(t *testing.T) {
 }
 
 func TestParseTaskRunNotFound(t *testing.T) {
-	yaml := `tasks:
-  main:
-    run:
-      - task: nonexistent`
-
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "notfound.yml")
-	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := Parse(path)
+	_, err := Parse(filepath.Join("testdata", "task_run_notfound.yml"))
 	if err == nil {
 		t.Fatal("expected error for missing task reference")
 	}
@@ -665,38 +623,14 @@ func TestParseLogPlatforms(t *testing.T) {
 }
 
 func TestParseLogInvalidLevel(t *testing.T) {
-	yaml := `tasks:
-  test:
-    run:
-      - log: "test message"
-        level: invalid`
-
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "invalid_level.yml")
-	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := Parse(path)
+	_, err := Parse(filepath.Join("testdata", "log_invalid_level.yml"))
 	if err == nil {
 		t.Fatal("expected error for invalid log level")
 	}
 }
 
 func TestParseLogWithCmd(t *testing.T) {
-	yaml := `tasks:
-  test:
-    run:
-      - log: "message"
-        cmd: echo "hello"`
-
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "log_cmd.yml")
-	if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := Parse(path)
+	_, err := Parse(filepath.Join("testdata", "log_with_cmd.yml"))
 	if err == nil {
 		t.Fatal("expected error for log with cmd")
 	}
@@ -704,30 +638,18 @@ func TestParseLogWithCmd(t *testing.T) {
 
 func TestParseLogAllLevels(t *testing.T) {
 	levels := []struct {
-		level    string
+		file     string
 		expected babfile.LogLevel
 	}{
-		{"debug", babfile.LogLevelDebug},
-		{"info", babfile.LogLevelInfo},
-		{"warn", babfile.LogLevelWarn},
-		{"error", babfile.LogLevelError},
+		{"log_level_debug.yml", babfile.LogLevelDebug},
+		{"log_level_info.yml", babfile.LogLevelInfo},
+		{"log_level_warn.yml", babfile.LogLevelWarn},
+		{"log_level_error.yml", babfile.LogLevelError},
 	}
 
 	for _, tc := range levels {
-		t.Run(tc.level, func(t *testing.T) {
-			yaml := `tasks:
-  test:
-    run:
-      - log: "test"
-        level: ` + tc.level
-
-			tmpDir := t.TempDir()
-			path := filepath.Join(tmpDir, "level.yml")
-			if err := os.WriteFile(path, []byte(yaml), 0600); err != nil {
-				t.Fatal(err)
-			}
-
-			result, err := Parse(path)
+		t.Run(tc.file, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tc.file))
 			if err != nil {
 				t.Fatalf("Parse() error: %v", err)
 			}
@@ -745,5 +667,124 @@ func TestParseLogAllLevels(t *testing.T) {
 				t.Errorf("expected level %q, got %q", tc.expected, logRun.Level)
 			}
 		})
+	}
+}
+
+func TestParseSilentGlobal(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "silent_global.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.GlobalSilent == nil {
+		t.Fatal("expected GlobalSilent to be set")
+	}
+	if *result.GlobalSilent != true {
+		t.Errorf("expected GlobalSilent = true, got %v", *result.GlobalSilent)
+	}
+}
+
+func TestParseSilentTask(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "silent_task.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["hello"]
+	if task == nil {
+		t.Fatal("task 'hello' not found")
+	}
+	if task.Silent == nil {
+		t.Fatal("expected Silent to be set on task")
+	}
+	if *task.Silent != true {
+		t.Errorf("expected Silent = true, got %v", *task.Silent)
+	}
+}
+
+func TestParseSilentRunItem(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		taskName string
+		checkFn  func(t *testing.T, item babfile.RunItem)
+	}{
+		{
+			name:     "command",
+			file:     "silent_command.yml",
+			taskName: "hello",
+			checkFn: func(t *testing.T, item babfile.RunItem) {
+				cmd, ok := item.(babfile.CommandRun)
+				if !ok {
+					t.Fatal("expected CommandRun")
+				}
+				if cmd.Silent == nil || !*cmd.Silent {
+					t.Error("expected Silent = true")
+				}
+			},
+		},
+		{
+			name:     "task_ref",
+			file:     "silent_taskrun.yml",
+			taskName: "main",
+			checkFn: func(t *testing.T, item babfile.RunItem) {
+				taskRef, ok := item.(babfile.TaskRun)
+				if !ok {
+					t.Fatal("expected TaskRun")
+				}
+				if taskRef.Silent == nil || !*taskRef.Silent {
+					t.Error("expected Silent = true")
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tc.file))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+
+			task := result.Tasks[tc.taskName]
+			if task == nil {
+				t.Fatalf("task %q not found", tc.taskName)
+			}
+			if len(task.Run) < 1 {
+				t.Fatal("expected at least 1 run item")
+			}
+
+			tc.checkFn(t, task.Run[0])
+		})
+	}
+}
+
+func TestParseSilentFalse(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "silent_false.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.GlobalSilent == nil {
+		t.Fatal("expected GlobalSilent to be set")
+	}
+	if *result.GlobalSilent != false {
+		t.Errorf("expected GlobalSilent = false, got %v", *result.GlobalSilent)
+	}
+
+	task := result.Tasks["hello"]
+	if task == nil {
+		t.Fatal("task 'hello' not found")
+	}
+	if task.Silent == nil || *task.Silent != false {
+		t.Errorf("expected task Silent = false")
+	}
+
+	cmd, ok := task.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun")
+	}
+	if cmd.Silent == nil || *cmd.Silent != false {
+		t.Errorf("expected command Silent = false")
 	}
 }

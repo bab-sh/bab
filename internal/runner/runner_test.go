@@ -348,3 +348,127 @@ func TestRunLogPlatformSkip(t *testing.T) {
 		t.Errorf("expected 'no run items for platform' error, got: %v", err)
 	}
 }
+
+func TestIsSilent(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	tests := []struct {
+		name     string
+		item     *bool
+		task     *bool
+		global   *bool
+		expected bool
+	}{
+		{"all nil", nil, nil, nil, false},
+		{"global true", nil, nil, &trueVal, true},
+		{"global false", nil, nil, &falseVal, false},
+		{"task true overrides global false", nil, &trueVal, &falseVal, true},
+		{"task false overrides global true", nil, &falseVal, &trueVal, false},
+		{"item true overrides task false", &trueVal, &falseVal, nil, true},
+		{"item false overrides task true", &falseVal, &trueVal, nil, false},
+		{"item true overrides all false", &trueVal, &falseVal, &falseVal, true},
+		{"item false overrides all true", &falseVal, &trueVal, &trueVal, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isSilent(tt.item, tt.task, tt.global)
+			if result != tt.expected {
+				t.Errorf("isSilent(%v, %v, %v) = %v, want %v",
+					tt.item, tt.task, tt.global, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRunWithGlobalSilent(t *testing.T) {
+	trueVal := true
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+		},
+	}
+
+	r := New(true, "")
+	r.GlobalSilent = &trueVal
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithTaskSilent(t *testing.T) {
+	trueVal := true
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name:   "hello",
+			Silent: &trueVal,
+			Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithCommandSilent(t *testing.T) {
+	trueVal := true
+	tasks := babfile.TaskMap{
+		"hello": &babfile.Task{
+			Name: "hello",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Silent: &trueVal}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "hello", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithTaskRefSilent(t *testing.T) {
+	trueVal := true
+	tasks := babfile.TaskMap{
+		"main": &babfile.Task{
+			Name: "main",
+			Run:  []babfile.RunItem{babfile.TaskRun{Task: "helper", Silent: &trueVal}},
+		},
+		"helper": &babfile.Task{
+			Name: "helper",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo helper"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "main", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestSilentInheritance(t *testing.T) {
+	trueVal := true
+	falseVal := false
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:   "test",
+			Silent: &trueVal,
+			Run: []babfile.RunItem{
+				babfile.CommandRun{Cmd: "echo cmd1", Silent: &falseVal},
+				babfile.CommandRun{Cmd: "echo cmd2"},
+			},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}

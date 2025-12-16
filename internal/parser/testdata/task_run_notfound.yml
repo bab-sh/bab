@@ -1,0 +1,4 @@
+tasks:
+  main:
+    run:
+      - task: nonexistent

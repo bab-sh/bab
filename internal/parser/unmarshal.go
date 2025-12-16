@@ -18,6 +18,7 @@ const (
 	keyLog       = "log"
 	keyPlatforms = "platforms"
 	keyRun       = "run"
+	keySilent    = "silent"
 	keyTask      = "task"
 	keyTasks     = "tasks"
 	keyVars      = "vars"
@@ -81,6 +82,22 @@ func parseVarMap(path string, node *yaml.Node, vars *babfile.VarMap, verrs *errs
 	return !hasErrors
 }
 
+func parseBool(path string, node *yaml.Node, target **bool, verrs *errs.ValidationErrors) bool {
+	if node.Kind != yaml.ScalarNode {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "expected boolean value"})
+		return false
+	}
+
+	var val bool
+	if err := node.Decode(&val); err != nil {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "expected boolean value", Cause: err})
+		return false
+	}
+
+	*target = &val
+	return true
+}
+
 func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
@@ -114,6 +131,8 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 			parseVarMap(path, val, &schema.Vars, verrs)
 		case keyEnv:
 			parseEnvMap(path, val, &schema.Env, verrs)
+		case keySilent:
+			parseBool(path, val, &schema.Silent, verrs)
 		case keyTasks:
 			parseTasks(path, val, schema, verrs)
 		case keyIncludes:
@@ -185,6 +204,10 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 			if !parseEnvMap(path, val, &task.Env, verrs) {
 				hasErrors = true
 			}
+		case keySilent:
+			if !parseBool(path, val, &task.Silent, verrs) {
+				hasErrors = true
+			}
 		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
@@ -234,6 +257,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	var env map[string]string
 	var platforms []babfile.Platform
 	var level babfile.LogLevel
+	var silent *bool
 	line := node.Line
 	hasErrors := false
 
@@ -252,6 +276,10 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 			level = babfile.LogLevel(val.Value)
 		case keyEnv:
 			if !parseEnvMap(path, val, &env, verrs) {
+				hasErrors = true
+			}
+		case keySilent:
+			if !parseBool(path, val, &silent, verrs) {
 				hasErrors = true
 			}
 		case keyPlatforms:
@@ -287,9 +315,9 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	case hasErrors:
 		return nil, false
 	case hasCmd:
-		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Platforms: platforms}, true
+		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Silent: silent, Platforms: platforms}, true
 	case hasTask:
-		return babfile.TaskRun{Line: line, Task: task, Platforms: platforms}, true
+		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Platforms: platforms}, true
 	case hasLog:
 		if level == "" {
 			level = babfile.LogLevelInfo

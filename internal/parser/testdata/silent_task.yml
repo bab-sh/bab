@@ -1,0 +1,5 @@
+tasks:
+  hello:
+    silent: true
+    run:
+      - cmd: echo hello
