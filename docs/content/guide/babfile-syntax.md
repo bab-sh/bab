@@ -18,7 +18,10 @@ tasks:
 Optional documentation for the task.
 
 ### `run` - Commands
-List of commands to execute. Each command uses the `cmd` key.
+List of commands or task references to execute.
+
+#### Shell Commands
+Use the `cmd` key to run shell commands:
 
 ```yaml
 tasks:
@@ -29,6 +32,23 @@ tasks:
       - cmd: npm run build
       - cmd: ./deploy.sh
 ```
+
+#### Task References
+Use the `task` key to run another task inline:
+
+```yaml
+tasks:
+  setup:
+    run:
+      - cmd: npm install
+
+  build:
+    run:
+      - task: setup
+      - cmd: npm run build
+```
+
+Task references support the same options as commands (`silent`, `output`, etc.).
 
 ### `deps` - Dependencies
 Tasks to run before this task.
@@ -98,6 +118,100 @@ tasks:
 ```
 
 Available platforms: `linux`, `darwin`, `windows`. Commands without a `platforms` array run on all platforms.
+
+## Silent Mode
+
+The `silent` option suppresses command prompt display (e.g., `$ echo hello`). Useful for reducing noise when running many commands.
+
+### Global Silent
+
+Apply to all tasks:
+
+```yaml
+silent: true
+
+tasks:
+  build:
+    run:
+      - cmd: npm run build
+```
+
+### Task Silent
+
+Apply to a specific task:
+
+```yaml
+tasks:
+  install:
+    silent: true
+    run:
+      - cmd: npm install
+```
+
+### Command Silent
+
+Apply to individual commands or task references:
+
+```yaml
+tasks:
+  build:
+    run:
+      - cmd: echo "Installing..."
+        silent: true
+      - cmd: npm install
+      - task: test
+        silent: true
+```
+
+### Silent Precedence
+
+Command-level overrides task-level, which overrides global. Default is `false` (show prompts).
+
+## Output Control
+
+The `output` option controls whether stdout/stderr from commands is displayed. Different from `silent` which only affects the command prompt line.
+
+### Global Output
+
+Apply to all tasks:
+
+```yaml
+output: false
+
+tasks:
+  install:
+    run:
+      - cmd: npm install
+```
+
+### Task Output
+
+Apply to a specific task:
+
+```yaml
+tasks:
+  install:
+    output: false
+    run:
+      - cmd: npm install
+```
+
+### Command Output
+
+Apply to individual commands or task references:
+
+```yaml
+tasks:
+  build:
+    run:
+      - cmd: npm install
+        output: false
+      - cmd: npm run build
+```
+
+### Output Precedence
+
+Command-level overrides task-level, which overrides global. Default is `true` (show output).
 
 ## Environment Variables
 
@@ -290,6 +404,8 @@ env:
 tasks:
   setup:
     desc: Install dependencies
+    silent: true
+    output: false
     run:
       - cmd: npm install
 

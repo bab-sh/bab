@@ -32,6 +32,14 @@ Current features in the latest release:
 - [x] Task descriptions
 - [x] Task dependencies
 
+### Configuration
+- [x] Platform-specific commands (`platforms` array)
+- [x] Environment variables (global, task, command levels)
+- [x] Variables with `${{ }}` syntax
+- [x] Task includes from other Babfiles
+- [x] Silent mode (`silent` option) - suppress command prompts
+- [x] Output control (`output` option) - control stdout/stderr display
+
 ## What's Coming Next
 
 High-priority features for upcoming releases:
@@ -42,9 +50,6 @@ The most requested features by the community.
 
 ### Custom File Paths
 Specify alternative Babfile locations with `--file` flag.
-
-### Platform-Specific Tasks
-Define tasks that run only on specific operating systems.
 
 ## Future Plans
 
@@ -58,8 +63,6 @@ Additional features being considered:
 
 ### Configuration
 - [ ] Babfile schema validation
-- [ ] Multi-Babfile imports
-- [ ] Environment variable management
 - [ ] Module system for reusable tasks
 
 ### Distribution
