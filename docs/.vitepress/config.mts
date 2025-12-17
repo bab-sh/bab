@@ -17,11 +17,9 @@ export default defineConfig({
     ['meta', { property: 'og:url', content: ogUrl }],
     ['meta', { property: 'og:title', content: ogTitle }],
     ['meta', { property: 'og:description', content: ogDescription }],
-    ['meta', { property: 'og:image', content: ogImage }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:title', content: ogTitle }],
     ['meta', { name: 'twitter:description', content: ogDescription }],
-    ['meta', { name: 'twitter:image', content: ogImage }],
     ['meta', { name: 'theme-color', content: '#646cff' }],
   ],
 
