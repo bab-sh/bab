@@ -337,37 +337,36 @@ chocolateys:
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
     goamd64: v1
-
-snapcrafts:
-  - name: bab
-    title: Bab
-
-    summary: Clean commands for any project.
-
-    description: Bab is a modern task runner that lets you define project commands in clean YAML.
-
-    publish: true
-    grade: stable
-    confinement: strict
-    base: core22
-
-    license: MIT
-
-    apps:
-      bab:
-        command: bab
-        plugs:
-          - home
-          - network
-          - network-bind
-          - removable-media
-
-    channel_templates:
-      - edge
-      - beta
-      - candidate
-      - stable
-
+#
+#snapcrafts:
+#  - name: bab
+#    title: Bab
+#
+#    summary: Clean commands for any project.
+#
+#    description: Bab is a modern task runner that lets you define project commands in clean YAML.
+#
+#    publish: true
+#    grade: stable
+#    confinement: strict
+#    base: core22
+#
+#    license: MIT
+#
+#    apps:
+#      bab:
+#        command: bab
+#        plugs:
+#          - home
+#          - network
+#          - network-bind
+#          - removable-media
+#
+#    channel_templates:
+#      - edge
+#      - beta
+#      - candidate
+#      - stable
 aurs:
   - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
