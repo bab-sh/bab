@@ -341,7 +341,6 @@ chocolateys:
 snapcrafts:
   - name: bab-sh
     title: Bab
-    icon: assets/icon-256.png
 
     summary: Clean commands for any project.
 
