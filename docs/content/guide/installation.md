@@ -46,7 +46,7 @@ scoop install bab
 ### Snapcraft (Linux)
 
 ```bash
-snap install bab-sh
+snap install bab
 ```
 
 ### AUR (Arch Linux)

@@ -339,7 +339,7 @@ chocolateys:
     goamd64: v1
 
 snapcrafts:
-  - name: bab-sh
+  - name: bab
     title: Bab
 
     summary: Clean commands for any project.

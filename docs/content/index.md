@@ -87,7 +87,7 @@ scoop install bab
 ```
 
 ```bash [Snap]
-snap install bab-sh
+snap install bab
 ```
 
 ```bash [yay]
