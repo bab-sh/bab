@@ -36,7 +36,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w
+      - -s -w -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 universal_binaries:
