@@ -469,10 +469,9 @@ announce:
     enabled: true
     message_template: |
       **{{ .ProjectName }} {{ .Tag }}** is out!
-
-      {{ .Changelog }}
-
-      Install: https://bab.sh
+      
+      {{ .ReleaseNotes }}
+      
       Release: {{ .ReleaseURL }}
     author: "Bab"
     color: "5793266"
