@@ -213,7 +213,8 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binary: bab
+    binaries:
+      - bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
@@ -241,7 +242,8 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binary: bab
+    binaries:
+      - bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
@@ -468,12 +470,44 @@ announce:
   discord:
     enabled: true
     message_template: |
-      **{{ .ProjectName }} {{ .Tag }}** is here!
+      **{{ .ProjectName }} {{ .Tag }}** is out!
 
-      {{ .ReleaseURL }}
+      {{ .Changelog }}
+
+      Install: https://bab.sh
+      Release: {{ .ReleaseURL }}
     author: "Bab"
     color: "5793266"
     icon_url: "https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png"
+
+changelog:
+  sort: asc
+  use: git
+  abbrev: 7
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?!?:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix(\(.+\))?!?:'
+      order: 1
+    - title: Documentation
+      regexp: '^docs(\(.+\))?!?:'
+      order: 2
+    - title: Performance
+      regexp: '^perf(\(.+\))?!?:'
+      order: 3
+    - title: Refactoring
+      regexp: '^refactor(\(.+\))?!?:'
+      order: 4
+    - title: Other
+      order: 999
+  filters:
+    exclude:
+      - '^test:'
+      - '^chore:'
+      - 'merge pull request'
+      - 'merge branch'
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
