@@ -468,10 +468,8 @@ announce:
   discord:
     enabled: true
     message_template: |
-      **{{ .ProjectName }} {{ .Tag }}** is out!
-      
+      # **{{ .Tag }}**
       {{ .ReleaseNotes }}
-      
       Release: {{ .ReleaseURL }}
     author: "Bab"
     color: "5793266"
