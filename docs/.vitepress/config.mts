@@ -1,9 +1,8 @@
 import { defineConfig } from 'vitepress'
 
 const ogUrl = 'https://docs.bab.sh'
-const ogImage = 'https://cdn.bab.sh/l/logo'
-const ogTitle = 'Bab - Custom commands for every project'
-const ogDescription = 'A modern task runner built for seamless development workflows. Zero dependencies, cross-platform, simple and powerful.'
+const ogTitle = 'Bab - Clean commands for any project.'
+const ogDescription = 'Modern task runner for defining project commands in YAML. Zero dependencies, cross-platform.'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -12,8 +11,8 @@ export default defineConfig({
   description: ogDescription,
 
   head: [
-    ['link', { rel: 'icon', type: 'image/png', href: 'https://cdn.bab.sh/l/favicon' }],
-    ['link', { rel: 'apple-touch-icon', href: 'https://cdn.bab.sh/l/icon' }],
+    ['link', { rel: 'icon', type: 'image/png', href: 'https://raw.githubusercontent.com/bab-sh/bab/main/assets/favicon-32x32.png' }],
+    ['link', { rel: 'apple-touch-icon', href: 'https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:url', content: ogUrl }],
     ['meta', { property: 'og:title', content: ogTitle }],
@@ -27,7 +26,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: 'https://cdn.bab.sh/l/icon',
+    logo: 'https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png',
 
     nav: [
       { text: 'Home', link: '/' },

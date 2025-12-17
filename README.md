@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://cdn.bab.sh/l/favicon" alt="Bab Logo" width="170"/>
+<img src="https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png" alt="Bab Logo" width="170"/>
 
 <h1>Bab</h1>
 
-Custom commands for every project
+Clean commands for any project.
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/bab-sh/bab)](https://go.dev/)
 [![Release](https://img.shields.io/github/v/release/bab-sh/bab)](https://github.com/bab-sh/bab/releases)

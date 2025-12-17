@@ -107,8 +107,10 @@ nfpms:
     vendor: bab-sh
     homepage: https://github.com/bab-sh/bab
     maintainer: Sebastian Stepper <sebastian-stepper@gmx.de>
-    description: Custom commands for every project
+    description: Task runner for defining project commands in YAML
     license: MIT
+    section: devel
+    priority: optional
 
     formats:
       - deb
@@ -183,7 +185,7 @@ brews:
       email: "[email protected]"
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project"
+    description: "Task runner for defining project commands in YAML"
     license: "MIT"
     directory: Formula
     install: |
@@ -206,7 +208,7 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project"
+    description: "Task runner for defining project commands in YAML"
     license: "MIT"
     directory: Casks
     url:
@@ -234,7 +236,7 @@ homebrew_casks:
       email: "[email protected]"
     commit_msg_template: "chore: add {{ .ProjectName }}@{{ .Major }}.{{ .Minor }} ({{ .Tag }})"
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project (version {{ .Major }}.{{ .Minor }}.x)"
+    description: "Task runner for defining project commands in YAML (v{{ .Major }}.{{ .Minor }}.x)"
     license: "MIT"
     directory: Casks
     url:
@@ -266,7 +268,7 @@ scoops:
     commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
 
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project"
+    description: "Task runner for defining project commands in YAML"
     license: MIT
 
     shortcuts:
@@ -274,7 +276,7 @@ scoops:
 #winget:
 #  - name: bab
 #    publisher: bab-sh
-#    short_description: "A Simple Task Runner"
+#    short_description: "Task runner for defining project commands in YAML"
 #    license: "MIT"
 #    homepage: "https://github.com/bab-sh/bab"
 #
@@ -311,12 +313,12 @@ chocolateys:
       - default
     owners: bab-sh
     authors: Sebastian Stepper
-    title: Bab - Custom commands for every project
+    title: Bab - Clean commands for any project.
 
     project_url: https://bab.sh
     project_source_url: https://github.com/bab-sh/bab
     package_source_url: https://github.com/bab-sh/bab
-    icon_url: https://cdn.bab.sh/l/logo
+    icon_url: https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-512.png
     license_url: https://github.com/bab-sh/bab/blob/main/LICENSE
     docs_url: https://github.com/bab-sh/bab#readme
     bug_tracker_url: https://github.com/bab-sh/bab/issues
@@ -325,10 +327,8 @@ chocolateys:
     require_license_acceptance: false
 
     tags: "cli task-runner productivity developer-tools automation build-tool yaml"
-    summary: Custom commands for every project
-    description: |
-      Bab is a simple task runner that lets you define project commands in YAML.
-      Automate repetitive tasks and streamline your development workflow.
+    summary: Clean commands for any project.
+    description: Bab is a modern task runner that lets you define project commands in clean YAML.
 
     release_notes: "https://github.com/bab-sh/bab/releases/tag/{{ .Tag }}"
 
@@ -338,10 +338,12 @@ chocolateys:
 
 snapcrafts:
   - name: bab-sh
+    title: Bab
+    icon: assets/icon-256.png
 
-    summary: Custom commands for every project
+    summary: Clean commands for any project.
 
-    description: Custom commands for every project
+    description: Bab is a modern task runner that lets you define project commands in clean YAML.
 
     publish: true
     grade: stable
@@ -368,12 +370,16 @@ snapcrafts:
 aurs:
   - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project"
+    description: "Task runner for defining project commands in YAML"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab-bin.git"
+    optdepends:
+      - "bash-completion: for bash completions"
+      - "zsh: for zsh completions"
+      - "fish: for fish completions"
 
     commit_author:
       name: goreleaserbot
@@ -397,12 +403,16 @@ aurs:
 aur_sources:
   - name: bab
     homepage: "https://github.com/bab-sh/bab"
-    description: "Custom commands for every project"
+    description: "Task runner for defining project commands in YAML"
     maintainers:
       - "Sebastian Stepper <sebastian-stepper@gmx.de>"
     license: "MIT"
     private_key: "{{ .Env.AUR_SSH_PRIVATE_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/bab.git"
+    optdepends:
+      - "bash-completion: for bash completions"
+      - "zsh: for zsh completions"
+      - "fish: for fish completions"
 
     commit_author:
       name: goreleaserbot
@@ -458,14 +468,12 @@ announce:
   discord:
     enabled: true
     message_template: |
-      🚀 **{{ .ProjectName }} {{ .Tag }}** has been released!
+      **{{ .ProjectName }} {{ .Tag }}** is here!
 
-      📋 [Release]({{ .ReleaseURL }})
-      📦 [Installation Guide](https://github.com/bab-sh/bab#installation)
-      🔄 [Update Guide](https://github.com/bab-sh/bab#update)
-    author: "Bab Releases"
-    color: "3447003"
-    icon_url: "https://avatars.githubusercontent.com/u/191529825"
+      {{ .ReleaseURL }}
+    author: "Bab"
+    color: "5793266"
+    icon_url: "https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png"
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"

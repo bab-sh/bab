@@ -56,7 +56,7 @@ func (c *CLI) execute(ctx context.Context) error {
 func (c *CLI) buildCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "bab [task]",
-		Short:             "Custom commands for every project",
+		Short:             "Clean commands for any project.",
 		Version:           versionString,
 		SilenceErrors:     true,
 		SilenceUsage:      true,

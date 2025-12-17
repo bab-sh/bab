@@ -2,14 +2,14 @@
 layout: home
 
 title: Bab
-titleTemplate: Custom commands for every project
+titleTemplate: Clean commands for any project.
 
 hero:
   name: Bab
-  text: Custom commands for every project
-  tagline: Modern task runner. Zero dependencies, cross-platform, simple.
+  text: Clean commands for any project.
+  tagline: Modern task runner. Zero dependencies. Any platform.
   image:
-    src: https://cdn.bab.sh/l/icon
+    src: https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png
     alt: Bab Logo
   actions:
     - theme: brand

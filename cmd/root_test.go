@@ -39,8 +39,8 @@ func TestCLI_buildCommand(t *testing.T) {
 		if cmd.Use != "bab [task]" {
 			t.Errorf("Use = %q, want %q", cmd.Use, "bab [task]")
 		}
-		if cmd.Short != "Custom commands for every project" {
-			t.Errorf("Short = %q, want %q", cmd.Short, "Custom commands for every project")
+		if cmd.Short != "Clean commands for any project." {
+			t.Errorf("Short = %q, want %q", cmd.Short, "Clean commands for any project.")
 		}
 		if !cmd.SilenceErrors {
 			t.Error("SilenceErrors should be true")
