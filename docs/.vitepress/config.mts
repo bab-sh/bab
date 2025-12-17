@@ -24,7 +24,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: 'https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png',
+    logo: 'https://raw.githubusercontent.com/bab-sh/bab/main/assets/svg/logo.svg',
 
     nav: [
       { text: 'Home', link: '/' },

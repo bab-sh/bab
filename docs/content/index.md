@@ -9,7 +9,7 @@ hero:
   text: Clean commands for any project.
   tagline: Modern task runner. Zero dependencies. Any platform.
   image:
-    src: https://raw.githubusercontent.com/bab-sh/bab/main/assets/icon-256.png
+    src: https://raw.githubusercontent.com/bab-sh/bab/main/assets/svg/logo.svg
     alt: Bab Logo
   actions:
     - theme: brand
