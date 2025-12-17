@@ -41,7 +41,6 @@ func run() int {
 
 	go func() {
 		<-sigChan
-		log.Info("Received interrupt signal, shutting down gracefully...")
 		cancel()
 	}()
 
