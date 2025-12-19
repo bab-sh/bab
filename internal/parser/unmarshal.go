@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/errs"
@@ -9,21 +11,48 @@ import (
 )
 
 const (
-	keyCmd       = "cmd"
-	keyDeps      = "deps"
-	keyDesc      = "desc"
-	keyEnv       = "env"
-	keyIncludes  = "includes"
-	keyLevel     = "level"
-	keyLog       = "log"
-	keyOutput    = "output"
-	keyPlatforms = "platforms"
-	keyRun       = "run"
-	keySilent    = "silent"
-	keyTask      = "task"
-	keyTasks     = "tasks"
-	keyVars      = "vars"
+	keyCmd         = "cmd"
+	keyDeps        = "deps"
+	keyDesc        = "desc"
+	keyEnv         = "env"
+	keyIncludes    = "includes"
+	keyLevel       = "level"
+	keyLog         = "log"
+	keyOutput      = "output"
+	keyPlatforms   = "platforms"
+	keyRun         = "run"
+	keySilent      = "silent"
+	keyTask        = "task"
+	keyTasks       = "tasks"
+	keyVars        = "vars"
+	keyPrompt      = "prompt"
+	keyType        = "type"
+	keyMessage     = "message"
+	keyDefault     = "default"
+	keyDefaults    = "defaults"
+	keyOptions     = "options"
+	keyPlaceholder = "placeholder"
+	keyValidate    = "validate"
+	keyMin         = "min"
+	keyMax         = "max"
+	keyConfirm     = "confirm"
 )
+
+type promptFields struct {
+	name        string
+	promptType  string
+	message     string
+	dflt        string
+	placeholder string
+	validate    string
+	options     []string
+	defaults    []string
+	min         *int
+	max         *int
+	confirm     *bool
+}
+
+var varNameRegex = regexp.MustCompile(babfile.VarNamePattern)
 
 func parseEnvMap(path string, node *yaml.Node, env *map[string]string, verrs *errs.ValidationErrors) bool {
 	if node.Kind != yaml.MappingNode {
@@ -254,6 +283,69 @@ func parseRunItems(path string, node *yaml.Node, taskName string, verrs *errs.Va
 	return items, !hasErrors
 }
 
+func parsePromptKey(key, val *yaml.Node, pf *promptFields, path, taskName string, index int, verrs *errs.ValidationErrors) bool {
+	switch key.Value {
+	case keyPrompt:
+		pf.name = val.Value
+	case keyType:
+		pf.promptType = val.Value
+	case keyMessage:
+		pf.message = val.Value
+	case keyDefault:
+		pf.dflt = val.Value
+	case keyPlaceholder:
+		pf.placeholder = val.Value
+	case keyValidate:
+		pf.validate = val.Value
+	case keyOptions:
+		if err := val.Decode(&pf.options); err != nil {
+			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid options", taskName, index), Cause: err})
+			return false
+		}
+	case keyDefaults:
+		if err := val.Decode(&pf.defaults); err != nil {
+			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid defaults", taskName, index), Cause: err})
+			return false
+		}
+	case keyMin:
+		var v int
+		if err := val.Decode(&v); err != nil {
+			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid min value", taskName, index), Cause: err})
+			return false
+		}
+		pf.min = &v
+	case keyMax:
+		var v int
+		if err := val.Decode(&v); err != nil {
+			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid max value", taskName, index), Cause: err})
+			return false
+		}
+		pf.max = &v
+	case keyConfirm:
+		if !parseBool(path, val, &pf.confirm, verrs) {
+			return false
+		}
+	}
+	return true
+}
+
+func countRunTypes(cmd, task, log, prompt string) int {
+	count := 0
+	if cmd != "" {
+		count++
+	}
+	if task != "" {
+		count++
+	}
+	if log != "" {
+		count++
+	}
+	if prompt != "" {
+		count++
+	}
+	return count
+}
+
 func parseRunItem(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
 	if node.Kind != yaml.MappingNode {
 		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must be a mapping", taskName, index)})
@@ -268,6 +360,8 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	var output *bool
 	line := node.Line
 	hasErrors := false
+
+	var pf promptFields
 
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i]
@@ -299,53 +393,216 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platforms", taskName, index), Cause: err})
 				hasErrors = true
 			}
+		default:
+			if !parsePromptKey(key, val, &pf, path, taskName, index, verrs) {
+				hasErrors = true
+			}
 		}
 	}
 
-	hasCmd := cmd != ""
-	hasTask := task != ""
-	hasLog := log != ""
-
-	count := 0
-	if hasCmd {
-		count++
-	}
-	if hasTask {
-		count++
-	}
-	if hasLog {
-		count++
-	}
+	count := countRunTypes(cmd, task, log, pf.name)
 
 	switch {
 	case count > 1:
-		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item can only have one of 'cmd', 'task', or 'log'", taskName, index)})
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item can only have one of 'cmd', 'task', 'log', or 'prompt'", taskName, index)})
 		return nil, false
 	case count == 0:
-		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must have 'cmd', 'task', or 'log'", taskName, index)})
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must have 'cmd', 'task', 'log', or 'prompt'", taskName, index)})
 		return nil, false
 	case hasErrors:
 		return nil, false
-	case hasCmd:
+	case cmd != "":
 		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Silent: silent, Output: output, Platforms: platforms}, true
-	case hasTask:
+	case task != "":
 		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms}, true
-	case hasLog:
-		if level == "" {
-			level = babfile.LogLevelInfo
-		}
-		if !level.Valid() {
-			verrs.Add(&errs.ParseError{
-				Path:    path,
-				Line:    node.Line,
-				Message: fmt.Sprintf("task %q: run[%d]: invalid log level %q, must be one of: debug, info, warn, error", taskName, index, level),
-			})
-			return nil, false
-		}
-		return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, true
+	case log != "":
+		return buildLogRun(path, line, taskName, index, log, level, platforms, verrs)
+	case pf.name != "":
+		return validatePromptRun(path, line, taskName, index, pf, platforms, verrs)
 	default:
 		return nil, false
 	}
+}
+
+func buildLogRun(path string, line int, taskName string, index int, log string, level babfile.LogLevel, platforms []babfile.Platform, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+	if level == "" {
+		level = babfile.LogLevelInfo
+	}
+	if !level.Valid() {
+		verrs.Add(&errs.ParseError{
+			Path:    path,
+			Line:    line,
+			Message: fmt.Sprintf("task %q: run[%d]: invalid log level %q, must be one of: debug, info, warn, error", taskName, index, level),
+		})
+		return nil, false
+	}
+	return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, true
+}
+
+type promptValidationContext struct {
+	path   string
+	line   int
+	prefix string
+	pf     promptFields
+	pType  babfile.PromptType
+}
+
+func (ctx *promptValidationContext) addError(verrs *errs.ValidationErrors, msg string) {
+	verrs.Add(&errs.ParseError{Path: ctx.path, Line: ctx.line, Message: msg})
+}
+
+func validatePromptBasics(ctx *promptValidationContext, verrs *errs.ValidationErrors) bool {
+	hasErrors := false
+
+	if !varNameRegex.MatchString(ctx.pf.name) {
+		ctx.addError(verrs, fmt.Sprintf("%s: invalid prompt variable name %q, must match pattern %s", ctx.prefix, ctx.pf.name, babfile.VarNamePattern))
+		hasErrors = true
+	}
+
+	if ctx.pf.promptType == "" {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'type' is required", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	} else if !ctx.pType.Valid() {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: invalid type %q, must be one of: confirm, input, select, multiselect, password, number", ctx.prefix, ctx.pf.name, ctx.pf.promptType))
+		hasErrors = true
+	}
+
+	if ctx.pf.message == "" {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'message' is required", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	}
+
+	return !hasErrors
+}
+
+func validatePromptOptions(ctx *promptValidationContext, verrs *errs.ValidationErrors) bool {
+	hasErrors := false
+
+	if ctx.pType.RequiresOptions() && len(ctx.pf.options) == 0 {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'options' is required for type %q", ctx.prefix, ctx.pf.name, ctx.pf.promptType))
+		hasErrors = true
+	}
+
+	if ctx.pType == babfile.PromptTypeSelect && ctx.pf.dflt != "" && len(ctx.pf.options) > 0 {
+		if !stringInSlice(ctx.pf.dflt, ctx.pf.options) {
+			ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: default value %q is not in options", ctx.prefix, ctx.pf.name, ctx.pf.dflt))
+			hasErrors = true
+		}
+	}
+
+	if ctx.pType == babfile.PromptTypeMultiselect && len(ctx.pf.defaults) > 0 && len(ctx.pf.options) > 0 {
+		optionSet := make(map[string]bool, len(ctx.pf.options))
+		for _, opt := range ctx.pf.options {
+			optionSet[opt] = true
+		}
+		for _, def := range ctx.pf.defaults {
+			if !optionSet[def] {
+				ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: default value %q is not in options", ctx.prefix, ctx.pf.name, def))
+				hasErrors = true
+			}
+		}
+	}
+
+	return !hasErrors
+}
+
+func validatePromptConstraints(ctx *promptValidationContext, verrs *errs.ValidationErrors) bool {
+	hasErrors := false
+
+	if ctx.pf.min != nil && ctx.pf.max != nil && *ctx.pf.min > *ctx.pf.max {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: min (%d) cannot be greater than max (%d)", ctx.prefix, ctx.pf.name, *ctx.pf.min, *ctx.pf.max))
+		hasErrors = true
+	}
+
+	if ctx.pf.validate != "" {
+		if _, err := regexp.Compile(ctx.pf.validate); err != nil {
+			ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: invalid validate regex: %v", ctx.prefix, ctx.pf.name, err))
+			hasErrors = true
+		}
+	}
+
+	return !hasErrors
+}
+
+func validatePromptTypeSpecific(ctx *promptValidationContext, verrs *errs.ValidationErrors) bool {
+	if !ctx.pType.Valid() {
+		return true
+	}
+
+	hasErrors := false
+
+	if len(ctx.pf.options) > 0 && !ctx.pType.RequiresOptions() {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'options' is only valid for select/multiselect types", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	}
+
+	if len(ctx.pf.defaults) > 0 && ctx.pType != babfile.PromptTypeMultiselect {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'defaults' is only valid for multiselect type", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	}
+
+	if ctx.pf.validate != "" && ctx.pType != babfile.PromptTypeInput {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'validate' is only valid for input type", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	}
+
+	if ctx.pf.confirm != nil && ctx.pType != babfile.PromptTypePassword {
+		ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: 'confirm' is only valid for password type", ctx.prefix, ctx.pf.name))
+		hasErrors = true
+	}
+
+	if ctx.pType == babfile.PromptTypeNumber && ctx.pf.dflt != "" {
+		if _, err := strconv.Atoi(ctx.pf.dflt); err != nil {
+			ctx.addError(verrs, fmt.Sprintf("%s: prompt %q: default value %q must be a valid integer for number type", ctx.prefix, ctx.pf.name, ctx.pf.dflt))
+			hasErrors = true
+		}
+	}
+
+	return !hasErrors
+}
+
+func stringInSlice(s string, slice []string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+func validatePromptRun(path string, line int, taskName string, index int, pf promptFields, platforms []babfile.Platform, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+	ctx := &promptValidationContext{
+		path:   path,
+		line:   line,
+		prefix: fmt.Sprintf("task %q: run[%d]", taskName, index),
+		pf:     pf,
+		pType:  babfile.PromptType(pf.promptType),
+	}
+
+	valid := validatePromptBasics(ctx, verrs)
+	valid = validatePromptOptions(ctx, verrs) && valid
+	valid = validatePromptConstraints(ctx, verrs) && valid
+	valid = validatePromptTypeSpecific(ctx, verrs) && valid
+
+	if !valid {
+		return nil, false
+	}
+
+	return babfile.PromptRun{
+		Line:        line,
+		Prompt:      pf.name,
+		Type:        ctx.pType,
+		Message:     pf.message,
+		Platforms:   platforms,
+		Default:     pf.dflt,
+		Defaults:    pf.defaults,
+		Options:     pf.options,
+		Placeholder: pf.placeholder,
+		Validate:    pf.validate,
+		Min:         pf.min,
+		Max:         pf.max,
+		Confirm:     pf.confirm,
+	}, true
 }
 
 func parseIncludes(path string, node *yaml.Node, schema *babfile.Schema, verrs *errs.ValidationErrors) {

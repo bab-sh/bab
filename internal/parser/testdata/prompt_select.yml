@@ -1,0 +1,11 @@
+tasks:
+  test:
+    run:
+      - prompt: environment
+        type: select
+        message: Select environment
+        options:
+          - dev
+          - staging
+          - prod
+        default: dev

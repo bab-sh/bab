@@ -1,0 +1,9 @@
+tasks:
+  test:
+    run:
+      - prompt: username
+        type: input
+        message: Enter username
+        options:
+          - a
+          - b

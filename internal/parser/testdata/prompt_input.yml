@@ -1,0 +1,8 @@
+tasks:
+  test:
+    run:
+      - prompt: username
+        type: input
+        message: Enter your username
+        default: guest
+        placeholder: username

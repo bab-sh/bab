@@ -907,3 +907,248 @@ func TestParseOutputTrue(t *testing.T) {
 		t.Errorf("expected command Output = true")
 	}
 }
+
+func TestParsePromptInput(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_input.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+	if len(task.Run) != 1 {
+		t.Fatalf("expected 1 run item, got %d", len(task.Run))
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Prompt != "username" {
+		t.Errorf("expected prompt 'username', got %q", prompt.Prompt)
+	}
+	if prompt.Type != babfile.PromptTypeInput {
+		t.Errorf("expected type 'input', got %q", prompt.Type)
+	}
+	if prompt.Message != "Enter your username" {
+		t.Errorf("unexpected message: %q", prompt.Message)
+	}
+	if prompt.Default != "guest" {
+		t.Errorf("expected default 'guest', got %q", prompt.Default)
+	}
+	if prompt.Placeholder != "username" {
+		t.Errorf("expected placeholder 'username', got %q", prompt.Placeholder)
+	}
+}
+
+func TestParsePromptSelect(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_select.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Type != babfile.PromptTypeSelect {
+		t.Errorf("expected type 'select', got %q", prompt.Type)
+	}
+	if len(prompt.Options) != 3 {
+		t.Errorf("expected 3 options, got %d", len(prompt.Options))
+	}
+	if prompt.Default != "dev" {
+		t.Errorf("expected default 'dev', got %q", prompt.Default)
+	}
+}
+
+func TestParsePromptMultiselect(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_multiselect.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Type != babfile.PromptTypeMultiselect {
+		t.Errorf("expected type 'multiselect', got %q", prompt.Type)
+	}
+	if len(prompt.Options) != 3 {
+		t.Errorf("expected 3 options, got %d", len(prompt.Options))
+	}
+	if len(prompt.Defaults) != 2 {
+		t.Errorf("expected 2 defaults, got %d", len(prompt.Defaults))
+	}
+	if prompt.Min == nil || *prompt.Min != 1 {
+		t.Errorf("expected min 1")
+	}
+	if prompt.Max == nil || *prompt.Max != 2 {
+		t.Errorf("expected max 2")
+	}
+}
+
+func TestParsePromptConfirm(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_confirm.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Type != babfile.PromptTypeConfirm {
+		t.Errorf("expected type 'confirm', got %q", prompt.Type)
+	}
+	if prompt.Default != "false" {
+		t.Errorf("expected default 'false', got %q", prompt.Default)
+	}
+}
+
+func TestParsePromptPassword(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_password.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Type != babfile.PromptTypePassword {
+		t.Errorf("expected type 'password', got %q", prompt.Type)
+	}
+	if prompt.Confirm == nil || *prompt.Confirm != true {
+		t.Error("expected confirm = true")
+	}
+}
+
+func TestParsePromptNumber(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "prompt_number.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+
+	prompt, ok := task.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun")
+	}
+	if prompt.Type != babfile.PromptTypeNumber {
+		t.Errorf("expected type 'number', got %q", prompt.Type)
+	}
+	if prompt.Default != "8080" {
+		t.Errorf("expected default '8080', got %q", prompt.Default)
+	}
+	if prompt.Min == nil || *prompt.Min != 1024 {
+		t.Errorf("expected min 1024")
+	}
+	if prompt.Max == nil || *prompt.Max != 65535 {
+		t.Errorf("expected max 65535")
+	}
+}
+
+func TestParsePromptMissingType(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_missing_type.yml"))
+	if err == nil {
+		t.Fatal("expected error for missing type")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptInvalidType(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_type.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid type")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptSelectMissingOptions(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_missing_options.yml"))
+	if err == nil {
+		t.Fatal("expected error for missing options")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptSelectDefaultNotInOptions(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_default_not_in_options.yml"))
+	if err == nil {
+		t.Fatal("expected error for default not in options")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptOptionsOnInput(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_options_on_input.yml"))
+	if err == nil {
+		t.Fatal("expected error for options on input type")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptConfirmOnInput(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_confirm_on_input.yml"))
+	if err == nil {
+		t.Fatal("expected error for confirm on input type")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParsePromptNumberInvalidDefault(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "prompt_invalid_number_default.yml"))
+	if err == nil {
+		t.Fatal("expected error for non-numeric default on number type")
+	}
+	var verrs *errs.ValidationErrors
+	if !errors.As(err, &verrs) {
+		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}

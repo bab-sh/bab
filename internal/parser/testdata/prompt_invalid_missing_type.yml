@@ -1,0 +1,5 @@
+tasks:
+  test:
+    run:
+      - prompt: username
+        message: Enter username

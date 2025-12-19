@@ -376,6 +376,164 @@ tasks:
 
 </div>
 
+## Interactive Prompts
+
+Collect user input during task execution with the `prompt` run item. Prompt results are stored in variables for use in subsequent commands.
+
+### Prompt Types
+
+#### Confirm (Yes/No)
+
+```yaml
+tasks:
+  deploy:
+    run:
+      - prompt: continue_deploy
+        type: confirm
+        message: "Deploy to production?"
+        default: false
+      - cmd: echo "Deploying..."
+```
+
+Result stored: `"true"` or `"false"`
+
+#### Input (Free Text)
+
+```yaml
+tasks:
+  setup:
+    run:
+      - prompt: project_name
+        type: input
+        message: "Enter project name:"
+        default: "my-app"
+        placeholder: "name"
+        validate: "^[a-z-]+$"  # optional regex
+      - cmd: echo "Creating ${{ project_name }}"
+```
+
+#### Select (Single Choice)
+
+```yaml
+tasks:
+  configure:
+    run:
+      - prompt: environment
+        type: select
+        message: "Select environment:"
+        options:
+          - dev
+          - staging
+          - prod
+        default: dev
+      - cmd: echo "Selected: ${{ environment }}"
+```
+
+#### Multiselect (Multiple Choices)
+
+```yaml
+tasks:
+  install:
+    run:
+      - prompt: features
+        type: multiselect
+        message: "Select features to install:"
+        options:
+          - auth
+          - api
+          - ui
+          - analytics
+        defaults: [auth, api]
+        min: 1
+        max: 3
+      - cmd: echo "Installing: ${{ features }}"
+```
+
+Result stored as comma-separated string: `"auth,api,ui"`
+
+#### Password (Hidden Input)
+
+```yaml
+tasks:
+  login:
+    run:
+      - prompt: api_key
+        type: password
+        message: "Enter API key:"
+        confirm: true  # require re-entry
+      - cmd: ./auth.sh
+        env:
+          API_KEY: ${{ api_key }}
+```
+
+#### Number (Numeric Input)
+
+```yaml
+tasks:
+  scale:
+    run:
+      - prompt: replicas
+        type: number
+        message: "Number of replicas:"
+        default: 3
+        min: 1
+        max: 10
+      - cmd: kubectl scale --replicas=${{ replicas }}
+```
+
+### Prompt Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `prompt` | string | Variable name to store result (required) |
+| `type` | string | Prompt type: confirm, input, select, multiselect, password, number (required) |
+| `message` | string | Message to display (required) |
+| `default` | string | Default value for confirm/input/select/number |
+| `defaults` | array | Default selections for multiselect |
+| `options` | array | Available choices for select/multiselect |
+| `placeholder` | string | Placeholder text for input |
+| `validate` | string | Regex pattern to validate input |
+| `min` | integer | Minimum value (number) or selections (multiselect) |
+| `max` | integer | Maximum value (number) or selections (multiselect) |
+| `confirm` | boolean | Require password re-entry for confirmation |
+| `platforms` | array | Run only on specified platforms |
+
+### Non-Interactive Mode (CI)
+
+When running in non-interactive environments (no TTY), prompts use default values. If no default is set, the task fails with an error. Password prompts always fail in non-interactive mode.
+
+### Complete Example
+
+```yaml
+vars:
+  app_name: myapp
+
+tasks:
+  deploy:
+    desc: Interactive deployment
+    run:
+      - prompt: confirm_deploy
+        type: confirm
+        message: "Deploy ${{ app_name }} to production?"
+        default: false
+
+      - prompt: environment
+        type: select
+        message: "Select target environment:"
+        options: [staging, production]
+        default: staging
+
+      - prompt: replica_count
+        type: number
+        message: "Number of replicas:"
+        default: 3
+        min: 1
+        max: 10
+
+      - log: "Deploying to ${{ environment }} with ${{ replica_count }} replicas"
+      - cmd: ./deploy.sh --env=${{ environment }} --replicas=${{ replica_count }}
+```
+
 ## Includes
 
 Import tasks from other Babfiles with namespace prefixes:

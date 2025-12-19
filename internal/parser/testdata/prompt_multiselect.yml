@@ -1,0 +1,15 @@
+tasks:
+  test:
+    run:
+      - prompt: features
+        type: multiselect
+        message: Select features
+        options:
+          - auth
+          - api
+          - db
+        defaults:
+          - auth
+          - api
+        min: 1
+        max: 2

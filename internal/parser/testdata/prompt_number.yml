@@ -1,0 +1,9 @@
+tasks:
+  test:
+    run:
+      - prompt: port
+        type: number
+        message: Enter port number
+        default: "8080"
+        min: 1024
+        max: 65535

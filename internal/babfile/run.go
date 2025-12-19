@@ -13,6 +13,7 @@ func RunItemSchema() *jsonschema.Schema {
 			CommandRunSchema(),
 			TaskRunSchema(),
 			LogRunSchema(),
+			PromptRunSchema(),
 		},
 	}
 }

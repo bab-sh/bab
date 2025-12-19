@@ -15,6 +15,7 @@ import (
 	"github.com/bab-sh/bab/internal/interpolate"
 	"github.com/bab-sh/bab/internal/output"
 	"github.com/bab-sh/bab/internal/parser"
+	"github.com/bab-sh/bab/internal/tui"
 	"github.com/charmbracelet/log"
 )
 
@@ -236,6 +237,24 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				log.Info("Would log", "msg", interpolatedLog, "level", v.Level)
 			} else {
 				executeLog(babfile.LogRun{Log: interpolatedLog, Level: v.Level})
+			}
+
+		case babfile.PromptRun:
+			promptCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
+			interpolatedMsg, err := interpolate.Interpolate(v.Message, promptCtx)
+			if err != nil {
+				return err
+			}
+
+			if r.DryRun {
+				log.Info("Would prompt", "var", v.Prompt, "type", v.Type, "message", interpolatedMsg)
+			} else {
+				result, err := tui.RunPrompt(v, interpolatedMsg)
+				if err != nil {
+					return fmt.Errorf("task %q: prompt %q: %w", task.Name, v.Prompt, err)
+				}
+				taskVars[v.Prompt] = result
+				log.Debug("Prompt result stored", "var", v.Prompt, "value", result)
 			}
 		}
 

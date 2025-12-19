@@ -175,6 +175,89 @@
                   "log"
                 ],
                 "description": "Log message"
+              },
+              {
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+                    "description": "Variable name to store the prompt result"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "confirm",
+                      "input",
+                      "select",
+                      "multiselect",
+                      "password",
+                      "number"
+                    ],
+                    "description": "Prompt type (confirm, input, select, multiselect, password, number)"
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Message to display to the user"
+                  },
+                  "default": {
+                    "type": "string",
+                    "description": "Default value (for confirm: 'true'/'false', for input/select/number: value)"
+                  },
+                  "defaults": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "description": "Default selections for multiselect"
+                  },
+                  "options": {
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": "array",
+                    "minItems": 1,
+                    "description": "Available options for select/multiselect"
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "description": "Placeholder text for input prompts"
+                  },
+                  "validate": {
+                    "type": "string",
+                    "description": "Regex pattern to validate input"
+                  },
+                  "min": {
+                    "type": "integer",
+                    "description": "Minimum value for number, or minimum selections for multiselect"
+                  },
+                  "max": {
+                    "type": "integer",
+                    "description": "Maximum value for number, or maximum selections for multiselect"
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "description": "Require password confirmation (re-entry)"
+                  },
+                  "platforms": {
+                    "items": {
+                      "$ref": "#/$defs/Platform"
+                    },
+                    "type": "array",
+                    "uniqueItems": true,
+                    "description": "Run only on specified platforms"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "prompt",
+                  "type",
+                  "message"
+                ],
+                "description": "Interactive user prompt"
               }
             ]
           },

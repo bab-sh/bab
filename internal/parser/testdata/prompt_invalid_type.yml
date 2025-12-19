@@ -1,0 +1,6 @@
+tasks:
+  test:
+    run:
+      - prompt: username
+        type: invalid_type
+        message: Enter username

@@ -1,0 +1,7 @@
+tasks:
+  test:
+    run:
+      - prompt: continue_deploy
+        type: confirm
+        message: Continue with deployment?
+        default: "false"

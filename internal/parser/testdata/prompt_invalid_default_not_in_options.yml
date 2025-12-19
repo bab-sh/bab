@@ -1,0 +1,11 @@
+tasks:
+  test:
+    run:
+      - prompt: choice
+        type: select
+        message: Select an option
+        options:
+          - a
+          - b
+          - c
+        default: z
