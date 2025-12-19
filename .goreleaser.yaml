@@ -88,8 +88,6 @@ checksum:
 
 source:
   enabled: true
-  name_template: "{{ .ProjectName }}-{{ .Version }}"
-  prefix_template: "{{ .ProjectName }}-{{ .Version }}/"
 
 signs:
   - id: checksum-sign
