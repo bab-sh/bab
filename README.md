@@ -64,6 +64,16 @@ tasks:
       - log: All tests passed!
         level: info
 
+  configure:
+    desc: Configure build options
+    run:
+      - prompt: environment
+        type: select
+        message: "Select environment:"
+        options: [dev, staging, prod]
+        default: dev
+      - log: Building for ${{ environment }}
+
   build:
     desc: Build ${{ app_name }} v${{ version }}
     deps: [lint, test:unit]

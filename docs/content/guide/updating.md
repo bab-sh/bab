@@ -29,7 +29,7 @@ scoop update bab
 ### Snapcraft (Linux)
 
 ```bash
-snap refresh bab
+snap refresh bab-sh
 ```
 
 ### AUR (Arch Linux)
