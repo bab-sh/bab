@@ -1,4 +1,7 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
+
+report_sizes: true
 
 project_name: bab
 
@@ -12,12 +15,13 @@ before:
     - ./scripts/completions.sh
     - ./scripts/schema.sh
 
+gomod:
+  proxy: true
+
 builds:
   - id: default
     binary: bab
     main: .
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
       - windows
@@ -28,6 +32,8 @@ builds:
       - arm
     goarm:
       - "7"
+    goamd64:
+      - v1
     ignore:
       - goos: windows
         goarch: arm
@@ -36,7 +42,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.date={{.Date}}
+      - -s -w -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.date={{.CommitDate}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 universal_binaries:
@@ -48,6 +54,9 @@ universal_binaries:
 
 archives:
   - id: default
+    builds_info:
+      mode: 0755
+      mtime: "{{ .CommitDate }}"
     formats:
       - tar.gz
     format_overrides:
@@ -79,6 +88,8 @@ checksum:
 
 source:
   enabled: true
+  name_template: "{{ .ProjectName }}-{{ .Version }}"
+  prefix_template: "{{ .ProjectName }}-{{ .Version }}/"
 
 signs:
   - id: checksum-sign
@@ -119,10 +130,6 @@ nfpms:
       - archlinux
 
     bindir: /usr/bin
-
-    dependencies: []
-    recommends: []
-    suggests: []
 
     contents:
       - src: ./LICENSE
@@ -166,6 +173,13 @@ nfpms:
         replaces:
           - bab-bin
       apk:
+        provides:
+          - bab
+        conflicts:
+          - bab-bin
+        replaces:
+          - bab-bin
+      archlinux:
         provides:
           - bab
         conflicts:
@@ -337,36 +351,32 @@ chocolateys:
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
     goamd64: v1
-#
-#snapcrafts:
-#  - name: bab
-#    title: Bab
-#
-#    summary: Clean commands for any project.
-#
-#    description: Bab is a modern task runner that lets you define project commands in clean YAML.
-#
-#    publish: true
-#    grade: stable
-#    confinement: strict
-#    base: core22
-#
-#    license: MIT
-#
-#    apps:
-#      bab:
-#        command: bab
-#        plugs:
-#          - home
-#          - network
-#          - network-bind
-#          - removable-media
-#
-#    channel_templates:
-#      - edge
-#      - beta
-#      - candidate
-#      - stable
+
+snapcrafts:
+  - name: bab-sh
+    title: Bab
+
+    summary: Clean commands for any project.
+
+    description: Bab is a modern task runner that lets you define project commands in clean YAML.
+
+    publish: true
+    grade: stable
+    confinement: strict
+    base: core22
+
+    license: MIT
+
+    apps:
+      bab:
+        command: bab
+        plugs:
+          - home
+          - network
+
+    channel_templates:
+      - stable
+
 aurs:
   - name: bab-bin
     homepage: "https://github.com/bab-sh/bab"
@@ -439,7 +449,7 @@ aur_sources:
         -ldflags="-s -w -buildid='' -linkmode=external \
           -X main.version=${pkgver} \
           -X main.commit={{ .Commit }} \
-          -X main.date={{ .Date }}" \
+          -X main.date={{ .CommitDate }}" \
         -o bab .
 
       # Generate shell completions
