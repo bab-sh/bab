@@ -58,6 +58,10 @@ func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem
 				Task:      namespace + ":" + v.Task,
 				Platforms: v.Platforms,
 			}
+		case babfile.LogRun:
+			prefixed[i] = v
+		case babfile.PromptRun:
+			prefixed[i] = v
 		}
 	}
 	return prefixed

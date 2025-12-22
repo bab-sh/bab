@@ -202,8 +202,15 @@
                     "description": "Message to display to the user"
                   },
                   "default": {
-                    "type": "string",
-                    "description": "Default value (for confirm: 'true'/'false', for input/select/number: value)"
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ],
+                    "description": "Default value for the prompt"
                   },
                   "defaults": {
                     "items": {

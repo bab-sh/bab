@@ -1,0 +1,8 @@
+includes:
+  ops:
+    babfile: ./with_log_prompt.yml
+
+tasks:
+  start:
+    run:
+      - cmd: echo start

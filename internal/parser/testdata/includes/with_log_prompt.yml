@@ -1,0 +1,14 @@
+tasks:
+  deploy:
+    run:
+      - log: Starting deployment
+      - cmd: echo deploying
+      - log: Done
+        level: warn
+
+  confirm:
+    run:
+      - prompt: proceed
+        type: confirm
+        message: Continue?
+      - cmd: echo confirmed

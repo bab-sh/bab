@@ -388,6 +388,57 @@ func TestParseDeepNestedInclude(t *testing.T) {
 	}
 }
 
+func TestParseIncludeWithLogAndPrompt(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "main_log_prompt.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	if result.Tasks["ops:deploy"] == nil {
+		t.Fatal("included task 'ops:deploy' not found")
+	}
+	if result.Tasks["ops:confirm"] == nil {
+		t.Fatal("included task 'ops:confirm' not found")
+	}
+
+	deploy := result.Tasks["ops:deploy"]
+	if len(deploy.Run) != 3 {
+		t.Fatalf("expected 3 run items in ops:deploy, got %d", len(deploy.Run))
+	}
+
+	log1, ok := deploy.Run[0].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for first item")
+	}
+	if log1.Log != "Starting deployment" {
+		t.Errorf("unexpected log message: %q", log1.Log)
+	}
+
+	log2, ok := deploy.Run[2].(babfile.LogRun)
+	if !ok {
+		t.Fatal("expected LogRun for third item")
+	}
+	if log2.Level != babfile.LogLevelWarn {
+		t.Errorf("expected warn level, got %q", log2.Level)
+	}
+
+	confirm := result.Tasks["ops:confirm"]
+	if len(confirm.Run) != 2 {
+		t.Fatalf("expected 2 run items in ops:confirm, got %d", len(confirm.Run))
+	}
+
+	prompt, ok := confirm.Run[0].(babfile.PromptRun)
+	if !ok {
+		t.Fatal("expected PromptRun for first item")
+	}
+	if prompt.Prompt != "proceed" {
+		t.Errorf("expected prompt 'proceed', got %q", prompt.Prompt)
+	}
+	if prompt.Type != babfile.PromptTypeConfirm {
+		t.Errorf("expected confirm type, got %q", prompt.Type)
+	}
+}
+
 func TestParseGlobalEnv(t *testing.T) {
 	result, err := Parse(filepath.Join("testdata", "env_global.yml"))
 	if err != nil {

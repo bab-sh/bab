@@ -94,8 +94,11 @@ func PromptRunSchema() *jsonschema.Schema {
 		Description: "Message to display to the user",
 	})
 	props.Set("default", &jsonschema.Schema{
-		Type:        "string",
-		Description: "Default value (for confirm: 'true'/'false', for input/select/number: value)",
+		OneOf: []*jsonschema.Schema{
+			{Type: "string"},
+			{Type: "boolean"},
+		},
+		Description: "Default value for the prompt",
 	})
 	props.Set("defaults", &jsonschema.Schema{
 		Type:        "array",
