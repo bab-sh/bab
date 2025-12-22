@@ -7,10 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 )
 
-const (
-	scrollMargin = 5
-	headerLines  = 4
-)
+const headerLines = 4
 
 type Model struct {
 	input   textinput.Model
@@ -62,13 +59,16 @@ func (m *Model) moveCursor(delta int) {
 
 func (m *Model) adjustScroll() {
 	visible := m.visibleLines()
-	if m.cursor < m.offset+scrollMargin {
-		m.offset = max(0, m.cursor-scrollMargin)
+	total := len(m.matches)
+	maxOffset := max(0, total-visible)
+
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	} else if m.cursor >= m.offset+visible {
+		m.offset = m.cursor - visible + 1
 	}
-	if m.cursor >= m.offset+visible-scrollMargin {
-		m.offset = m.cursor - visible + scrollMargin + 1
-	}
-	m.offset = min(m.offset, max(0, len(m.matches)-visible))
+
+	m.offset = min(m.offset, maxOffset)
 }
 
 func (m *Model) visibleLines() int {

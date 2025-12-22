@@ -34,6 +34,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.input.Width = msg.Width - 4
+		m.adjustScroll()
 		return m, nil
 	}
 
