@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -35,6 +36,7 @@ type Runner struct {
 	GlobalEnv    map[string]string
 	GlobalSilent *bool
 	GlobalOutput *bool
+	GlobalDir    string
 }
 
 func New(dryRun bool, babfile string) *Runner {
@@ -71,6 +73,7 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	r.GlobalEnv = result.GlobalEnv
 	r.GlobalSilent = result.GlobalSilent
 	r.GlobalOutput = result.GlobalOutput
+	r.GlobalDir = result.GlobalDir
 
 	return r.RunWithTasks(ctx, taskName, result.Tasks)
 }
@@ -200,8 +203,13 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				return err
 			}
 
+			cmdDir, err := r.resolveDir(task, v.Dir, cmdCtx)
+			if err != nil {
+				return fmt.Errorf("task %q: command %d: %w", task.Name, i+1, err)
+			}
+
 			if r.DryRun {
-				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv))
+				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv), "dir", cmdDir)
 			} else {
 				if !isSilent(v.Silent, task.Silent, r.GlobalSilent) {
 					output.Cmd(interpolatedCmd)
@@ -211,7 +219,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 					taskOutput = overrideOutput
 				}
 				showOutput := isOutput(v.Output, taskOutput, r.GlobalOutput)
-				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput); err != nil {
+				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput, cmdDir); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
 			}
@@ -284,6 +292,46 @@ func (r *Runner) interpolateEnv(env map[string]string, ctx *interpolate.Context)
 	return result, nil
 }
 
+func (r *Runner) resolveDir(task *babfile.Task, cmdDir string, ctx *interpolate.Context) (string, error) {
+	baseDir := filepath.Dir(task.SourcePath)
+
+	dir := cmdDir
+	if dir == "" {
+		dir = task.Dir
+	}
+	if dir == "" {
+		dir = r.GlobalDir
+	}
+
+	if dir == "" {
+		return baseDir, nil
+	}
+
+	interpolatedDir, err := interpolate.Interpolate(dir, ctx)
+	if err != nil {
+		return "", fmt.Errorf("interpolating dir: %w", err)
+	}
+
+	if !filepath.IsAbs(interpolatedDir) {
+		interpolatedDir = filepath.Join(baseDir, interpolatedDir)
+	}
+
+	interpolatedDir = filepath.Clean(interpolatedDir)
+
+	info, err := os.Stat(interpolatedDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("directory does not exist: %s", interpolatedDir)
+		}
+		return "", fmt.Errorf("accessing directory: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("path is not a directory: %s", interpolatedDir)
+	}
+
+	return interpolatedDir, nil
+}
+
 func shellCommand() (string, string) {
 	if runtime.GOOS == "windows" {
 		return "cmd", "/C"
@@ -291,7 +339,7 @@ func shellCommand() (string, string) {
 	return "sh", "-c"
 }
 
-func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string, showOutput bool) error {
+func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string, showOutput bool, dir string) error {
 	cmd := exec.CommandContext(ctx, shell, shellArg, command)
 	if showOutput {
 		cmd.Stdout = os.Stdout
@@ -304,6 +352,10 @@ func runCommand(ctx context.Context, shell, shellArg, command string, env map[st
 
 	if len(env) > 0 {
 		cmd.Env = append(os.Environ(), babfile.MergeEnv(env)...)
+	}
+
+	if dir != "" {
+		cmd.Dir = dir
 	}
 
 	err := cmd.Run()

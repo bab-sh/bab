@@ -1,0 +1,9 @@
+dir: ./subglobal
+
+tasks:
+  build:
+    dir: ./subtask
+    run:
+      - cmd: pwd
+      - cmd: pwd
+        dir: ./subcmd

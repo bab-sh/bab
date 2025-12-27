@@ -1,0 +1,9 @@
+dir: ./global
+
+tasks:
+  test:
+    dir: ./task
+    run:
+      - cmd: echo "uses task dir"
+      - cmd: echo "uses cmd dir"
+        dir: ./cmd

@@ -8,16 +8,18 @@ import (
 const TaskNamePattern = "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$"
 
 type Task struct {
-	Name     string            `json:"-" yaml:"-"`
-	Line     int               `json:"-" yaml:"-"`
-	DepsLine int               `json:"-" yaml:"-"`
-	Desc     string            `json:"desc,omitempty" yaml:"desc,omitempty"`
-	Vars     VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
-	Env      map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
-	Silent   *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
-	Output   *bool             `json:"output,omitempty" yaml:"output,omitempty"`
-	Deps     []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
-	Run      []RunItem         `json:"-" yaml:"-"`
+	Name       string            `json:"-" yaml:"-"`
+	Line       int               `json:"-" yaml:"-"`
+	DepsLine   int               `json:"-" yaml:"-"`
+	SourcePath string            `json:"-" yaml:"-"`
+	Desc       string            `json:"desc,omitempty" yaml:"desc,omitempty"`
+	Vars       VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
+	Env        map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
+	Silent     *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output     *bool             `json:"output,omitempty" yaml:"output,omitempty"`
+	Dir        string            `json:"dir,omitempty" yaml:"dir,omitempty"`
+	Deps       []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
+	Run        []RunItem         `json:"-" yaml:"-"`
 }
 
 type TaskMap map[string]*Task
@@ -46,6 +48,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 	props.Set("env", EnvSchema())
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())
+	props.Set("dir", DirSchema())
 	props.Set("deps", DepsSchema())
 	props.Set("run", &jsonschema.Schema{
 		Type:        "array",

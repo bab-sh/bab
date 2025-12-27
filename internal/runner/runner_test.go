@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/interpolate"
 )
 
 func TestRunSimpleTask(t *testing.T) {
@@ -552,5 +553,424 @@ func TestOutputInheritance(t *testing.T) {
 	err := r.RunWithTasks(context.Background(), "test", tasks)
 	if err != nil {
 		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestResolveDirDefault(t *testing.T) {
+	tmpDir := t.TempDir()
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+	if err := os.WriteFile(babfilePath, []byte("tasks:\n  test:\n    run:\n      - cmd: pwd"), 0600); err != nil {
+		t.Fatalf("failed to write babfile: %v", err)
+	}
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != tmpDir {
+		t.Errorf("expected dir %q, got %q", tmpDir, dir)
+	}
+}
+
+func TestResolveDirGlobal(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subdir: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+	r.GlobalDir = "./subdir"
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != subDir {
+		t.Errorf("expected dir %q, got %q", subDir, dir)
+	}
+}
+
+func TestResolveDirTaskOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+	taskDir := filepath.Join(tmpDir, "taskdir")
+	if err := os.Mkdir(taskDir, 0750); err != nil {
+		t.Fatalf("failed to create taskdir: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+	r.GlobalDir = "./rootdir"
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        "./taskdir",
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != taskDir {
+		t.Errorf("expected dir %q, got %q", taskDir, dir)
+	}
+}
+
+func TestResolveDirCommandOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmdDir := filepath.Join(tmpDir, "cmddir")
+	if err := os.Mkdir(cmdDir, 0750); err != nil {
+		t.Fatalf("failed to create cmddir: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+	r.GlobalDir = "./basedir"
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        "./taskdir",
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "./cmddir", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != cmdDir {
+		t.Errorf("expected dir %q, got %q", cmdDir, dir)
+	}
+}
+
+func TestResolveDirAbsolutePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	absDir := filepath.Join(tmpDir, "absolute")
+	if err := os.Mkdir(absDir, 0750); err != nil {
+		t.Fatalf("failed to create absDir: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        absDir,
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != absDir {
+		t.Errorf("expected dir %q, got %q", absDir, dir)
+	}
+}
+
+func TestResolveDirNonExistent(t *testing.T) {
+	tmpDir := t.TempDir()
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        "./nonexistent",
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	_, err := r.resolveDir(task, "", ctx)
+	if err == nil {
+		t.Fatal("expected error for non-existent directory")
+	}
+	if !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("expected 'does not exist' error, got: %v", err)
+	}
+}
+
+func TestResolveDirFileNotDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "afile")
+	if err := os.WriteFile(filePath, []byte("content"), 0600); err != nil {
+		t.Fatalf("failed to create file: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        "./afile",
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	_, err := r.resolveDir(task, "", ctx)
+	if err == nil {
+		t.Fatal("expected error for file instead of directory")
+	}
+	if !strings.Contains(err.Error(), "not a directory") {
+		t.Errorf("expected 'not a directory' error, got: %v", err)
+	}
+}
+
+func TestResolveDirIncludedTask(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "sub")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subDir: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	subBabfile := filepath.Join(subDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = mainBabfile
+
+	task := &babfile.Task{
+		Name:       "sub:build",
+		SourcePath: subBabfile,
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != subDir {
+		t.Errorf("expected dir %q (sub babfile dir), got %q", subDir, dir)
+	}
+}
+
+func TestResolveDirInterpolation(t *testing.T) {
+	tmpDir := t.TempDir()
+	targetDir := filepath.Join(tmpDir, "release")
+	if err := os.Mkdir(targetDir, 0750); err != nil {
+		t.Fatalf("failed to create targetDir: %v", err)
+	}
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = babfilePath
+
+	task := &babfile.Task{
+		Name:       "test",
+		SourcePath: babfilePath,
+		Dir:        "./${{ target }}",
+	}
+
+	ctx := &interpolate.Context{Vars: map[string]string{"target": "release"}}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != targetDir {
+		t.Errorf("expected dir %q, got %q", targetDir, dir)
+	}
+}
+
+func TestRunWithGlobalDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subdir: %v", err)
+	}
+
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:       "test",
+			SourcePath: filepath.Join(tmpDir, "Babfile.yml"),
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd"}},
+		},
+	}
+
+	r := New(true, "")
+	r.BabfilePath = filepath.Join(tmpDir, "Babfile.yml")
+	r.GlobalDir = "./subdir"
+
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithTaskDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	taskDir := filepath.Join(tmpDir, "taskdir")
+	if err := os.Mkdir(taskDir, 0750); err != nil {
+		t.Fatalf("failed to create taskdir: %v", err)
+	}
+
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:       "test",
+			SourcePath: filepath.Join(tmpDir, "Babfile.yml"),
+			Dir:        "./taskdir",
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd"}},
+		},
+	}
+
+	r := New(true, "")
+	r.BabfilePath = filepath.Join(tmpDir, "Babfile.yml")
+
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunWithCommandDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmdDir := filepath.Join(tmpDir, "cmddir")
+	if err := os.Mkdir(cmdDir, 0750); err != nil {
+		t.Fatalf("failed to create cmddir: %v", err)
+	}
+
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:       "test",
+			SourcePath: filepath.Join(tmpDir, "Babfile.yml"),
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd", Dir: "./cmddir"}},
+		},
+	}
+
+	r := New(true, "")
+	r.BabfilePath = filepath.Join(tmpDir, "Babfile.yml")
+
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunDirErrorNonExistent(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:       "test",
+			SourcePath: filepath.Join(tmpDir, "Babfile.yml"),
+			Dir:        "./nonexistent",
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd"}},
+		},
+	}
+
+	r := New(false, "")
+	r.BabfilePath = filepath.Join(tmpDir, "Babfile.yml")
+
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err == nil {
+		t.Fatal("expected error for non-existent dir")
+	}
+	if !strings.Contains(err.Error(), "does not exist") {
+		t.Errorf("expected 'does not exist' error, got: %v", err)
+	}
+}
+
+func TestRunDirCascadePrecedence(t *testing.T) {
+	tmpDir := t.TempDir()
+	globalDir := filepath.Join(tmpDir, "global")
+	taskDir := filepath.Join(tmpDir, "task")
+	cmdDir := filepath.Join(tmpDir, "cmd")
+
+	for _, d := range []string{globalDir, taskDir, cmdDir} {
+		if err := os.Mkdir(d, 0750); err != nil {
+			t.Fatalf("failed to create dir %s: %v", d, err)
+		}
+	}
+
+	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
+
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name:       "test",
+			SourcePath: babfilePath,
+			Dir:        "./task",
+			Run: []babfile.RunItem{
+				babfile.CommandRun{Cmd: "pwd"},
+				babfile.CommandRun{Cmd: "pwd", Dir: "./cmd"},
+				babfile.CommandRun{Cmd: "pwd", Dir: globalDir},
+			},
+		},
+	}
+
+	r := New(true, "")
+	r.BabfilePath = babfilePath
+	r.GlobalDir = "./global"
+
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunIncludedTaskUsesSourceDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "sub")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subDir: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	subBabfile := filepath.Join(subDir, "Babfile.yml")
+
+	tasks := babfile.TaskMap{
+		"main": &babfile.Task{
+			Name:       "main",
+			SourcePath: mainBabfile,
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd"}},
+		},
+		"sub:build": &babfile.Task{
+			Name:       "sub:build",
+			SourcePath: subBabfile,
+			Run:        []babfile.RunItem{babfile.CommandRun{Cmd: "pwd"}},
+		},
+	}
+
+	r := New(true, "")
+	r.BabfilePath = mainBabfile
+
+	err := r.RunWithTasks(context.Background(), "main", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks(main) error: %v", err)
+	}
+
+	err = r.RunWithTasks(context.Background(), "sub:build", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks(sub:build) error: %v", err)
 	}
 }

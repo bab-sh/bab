@@ -1,0 +1,5 @@
+tasks:
+  test:
+    run:
+      - cmd: pwd
+        dir: ./cmddir

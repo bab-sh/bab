@@ -28,11 +28,18 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 			return &errs.ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
 		}
 		tasks[prefixedName] = &babfile.Task{
-			Name: prefixedName,
-			Desc: task.Desc,
-			Env:  task.Env,
-			Run:  prefixTaskRuns(task.Run, namespace),
-			Deps: prefixDeps(task.Deps, namespace),
+			Name:       prefixedName,
+			Line:       task.Line,
+			DepsLine:   task.DepsLine,
+			SourcePath: task.SourcePath,
+			Desc:       task.Desc,
+			Vars:       task.Vars,
+			Env:        task.Env,
+			Silent:     task.Silent,
+			Output:     task.Output,
+			Dir:        task.Dir,
+			Deps:       prefixDeps(task.Deps, namespace),
+			Run:        prefixTaskRuns(task.Run, namespace),
 		}
 	}
 

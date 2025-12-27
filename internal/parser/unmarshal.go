@@ -14,6 +14,7 @@ const (
 	keyCmd         = "cmd"
 	keyDeps        = "deps"
 	keyDesc        = "desc"
+	keyDir         = "dir"
 	keyEnv         = "env"
 	keyIncludes    = "includes"
 	keyLevel       = "level"
@@ -165,6 +166,10 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 			parseBool(path, val, &schema.Silent, verrs)
 		case keyOutput:
 			parseBool(path, val, &schema.Output, verrs)
+		case keyDir:
+			if val.Kind == yaml.ScalarNode {
+				schema.Dir = val.Value
+			}
 		case keyTasks:
 			parseTasks(path, val, schema, verrs)
 		case keyIncludes:
@@ -244,6 +249,8 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 			if !parseBool(path, val, &task.Output, verrs) {
 				hasErrors = true
 			}
+		case keyDir:
+			task.Dir = val.Value
 		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
@@ -353,6 +360,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	}
 
 	var cmd, task, log string
+	var dir string
 	var env map[string]string
 	var platforms []babfile.Platform
 	var level babfile.LogLevel
@@ -370,6 +378,8 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 		switch key.Value {
 		case keyCmd:
 			cmd = val.Value
+		case keyDir:
+			dir = val.Value
 		case keyTask:
 			task = val.Value
 		case keyLog:
@@ -412,7 +422,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	case hasErrors:
 		return nil, false
 	case cmd != "":
-		return babfile.CommandRun{Line: line, Cmd: cmd, Env: env, Silent: silent, Output: output, Platforms: platforms}, true
+		return babfile.CommandRun{Line: line, Cmd: cmd, Dir: dir, Env: env, Silent: silent, Output: output, Platforms: platforms}, true
 	case task != "":
 		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms}, true
 	case log != "":

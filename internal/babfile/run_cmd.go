@@ -8,6 +8,7 @@ import (
 type CommandRun struct {
 	Line      int               `json:"-" yaml:"-"`
 	Cmd       string            `json:"cmd" yaml:"cmd"`
+	Dir       string            `json:"dir,omitempty" yaml:"dir,omitempty"`
 	Env       map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Silent    *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
 	Output    *bool             `json:"output,omitempty" yaml:"output,omitempty"`
@@ -28,6 +29,7 @@ func CommandRunSchema() *jsonschema.Schema {
 		MinLength:   &minLen,
 		Description: "Shell command to execute",
 	})
+	props.Set("dir", DirSchema())
 	props.Set("env", EnvSchema())
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())

@@ -3,6 +3,7 @@ package parser
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bab-sh/bab/internal/babfile"
@@ -1201,5 +1202,171 @@ func TestParsePromptNumberInvalidDefault(t *testing.T) {
 	var verrs *errs.ValidationErrors
 	if !errors.As(err, &verrs) {
 		t.Fatalf("expected ValidationErrors, got %T", err)
+	}
+}
+
+func TestParseDirGlobal(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "dir_global.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if result.GlobalDir != "./subdir" {
+		t.Errorf("expected GlobalDir './subdir', got %q", result.GlobalDir)
+	}
+}
+
+func TestParseDirTask(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "dir_task.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+	if task.Dir != "./mydir" {
+		t.Errorf("expected Dir './mydir', got %q", task.Dir)
+	}
+}
+
+func TestParseDirCommand(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "dir_command.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+	cmd, ok := task.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun")
+	}
+	if cmd.Dir != "./cmddir" {
+		t.Errorf("expected Dir './cmddir', got %q", cmd.Dir)
+	}
+}
+
+func TestParseDirCascade(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "dir_cascade.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if result.GlobalDir != "./global" {
+		t.Errorf("expected GlobalDir './global', got %q", result.GlobalDir)
+	}
+	task := result.Tasks["test"]
+	if task == nil {
+		t.Fatal("task 'test' not found")
+	}
+	if task.Dir != "./task" {
+		t.Errorf("expected task Dir './task', got %q", task.Dir)
+	}
+	if len(task.Run) < 2 {
+		t.Fatal("expected at least 2 run items")
+	}
+	cmd2, ok := task.Run[1].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for second item")
+	}
+	if cmd2.Dir != "./cmd" {
+		t.Errorf("expected cmd Dir './cmd', got %q", cmd2.Dir)
+	}
+}
+
+func TestParseTaskSourcePath(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "simple.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	task := result.Tasks["hello"]
+	if task == nil {
+		t.Fatal("task 'hello' not found")
+	}
+	if task.SourcePath == "" {
+		t.Error("expected SourcePath to be set")
+	}
+	if !filepath.IsAbs(task.SourcePath) {
+		t.Errorf("expected absolute SourcePath, got %q", task.SourcePath)
+	}
+}
+
+func TestParseIncludeSourcePath(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	local := result.Tasks["setup"]
+	if local == nil {
+		t.Fatal("task 'setup' not found")
+	}
+	if !strings.HasSuffix(local.SourcePath, "main.yml") {
+		t.Errorf("local task SourcePath should end with main.yml, got %q", local.SourcePath)
+	}
+
+	included := result.Tasks["gen:build"]
+	if included == nil {
+		t.Fatal("task 'gen:build' not found")
+	}
+	if !strings.HasSuffix(included.SourcePath, "simple.yml") {
+		t.Errorf("included task SourcePath should end with simple.yml, got %q", included.SourcePath)
+	}
+}
+
+func TestParseDeepIncludeSourcePath(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "deep", "main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	root := result.Tasks["root"]
+	if root == nil {
+		t.Fatal("task 'root' not found")
+	}
+	if !strings.HasSuffix(root.SourcePath, "main.yml") {
+		t.Errorf("root task SourcePath wrong: %q", root.SourcePath)
+	}
+
+	first := result.Tasks["first:build"]
+	if first == nil {
+		t.Fatal("task 'first:build' not found")
+	}
+	if !strings.HasSuffix(first.SourcePath, "first.yml") {
+		t.Errorf("first:build task SourcePath wrong: %q", first.SourcePath)
+	}
+
+	second := result.Tasks["first:second:compile"]
+	if second == nil {
+		t.Fatal("task 'first:second:compile' not found")
+	}
+	if !strings.HasSuffix(second.SourcePath, "second.yml") {
+		t.Errorf("first:second:compile task SourcePath wrong: %q", second.SourcePath)
+	}
+}
+
+func TestParseIncludePreservesDir(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "dir_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:build"]
+	if task == nil {
+		t.Fatal("task 'sub:build' not found")
+	}
+	if task.Dir != "./subtask" {
+		t.Errorf("expected Dir './subtask', got %q", task.Dir)
+	}
+
+	if len(task.Run) < 2 {
+		t.Fatal("expected at least 2 run items")
+	}
+	cmd, ok := task.Run[1].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for second item")
+	}
+	if cmd.Dir != "./subcmd" {
+		t.Errorf("expected cmd Dir './subcmd', got %q", cmd.Dir)
 	}
 }

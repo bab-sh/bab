@@ -17,6 +17,7 @@ type ParseResult struct {
 	GlobalEnv    map[string]string
 	GlobalSilent *bool
 	GlobalOutput *bool
+	GlobalDir    string
 	Tasks        babfile.TaskMap
 }
 
@@ -86,6 +87,7 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 	tasks := make(babfile.TaskMap, len(bf.Tasks))
 	for name, task := range bf.Tasks {
 		task.Name = name
+		task.SourcePath = absPath
 		tasks[name] = &task
 	}
 
@@ -103,6 +105,7 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 		GlobalEnv:    bf.Env,
 		GlobalSilent: bf.Silent,
 		GlobalOutput: bf.Output,
+		GlobalDir:    bf.Dir,
 		Tasks:        tasks,
 	}, nil
 }
