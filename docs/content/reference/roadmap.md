@@ -39,6 +39,7 @@ Current features in the latest release:
 - [x] Task includes from other Babfiles
 - [x] Silent mode (`silent` option) - suppress command prompts
 - [x] Output control (`output` option) - control stdout/stderr display
+- [x] Working directory (`dir` option) - set execution directory at any level
 
 ## What's Coming Next
 

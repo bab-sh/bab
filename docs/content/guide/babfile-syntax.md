@@ -213,6 +213,83 @@ tasks:
 
 Command-level overrides task-level, which overrides global. Default is `true` (show output).
 
+## Working Directory
+
+The `dir` option sets the working directory for command execution. Relative paths are resolved from the source Babfile's location.
+
+### Global Dir
+
+Set the default working directory for all tasks:
+
+```yaml
+dir: ./src
+
+tasks:
+  build:
+    run:
+      - cmd: npm run build  # runs in ./src
+```
+
+### Task Dir
+
+Override the global directory for a specific task:
+
+```yaml
+dir: ./src
+
+tasks:
+  test:
+    dir: ./tests
+    run:
+      - cmd: npm test  # runs in ./tests
+```
+
+### Command Dir
+
+Set the directory for a specific command:
+
+```yaml
+tasks:
+  deploy:
+    run:
+      - cmd: npm run build
+        dir: ./frontend
+      - cmd: go build
+        dir: ./backend
+```
+
+### Dir Precedence
+
+Command-level overrides task-level, which overrides global. The default is the Babfile's directory.
+
+```yaml
+dir: ./global
+
+tasks:
+  example:
+    dir: ./task
+    run:
+      - cmd: pwd          # runs in ./task
+      - cmd: pwd          # runs in ./cmd
+        dir: ./cmd
+```
+
+### Included Babfiles
+
+Tasks from included Babfiles run in their source Babfile's directory by default. Relative paths in included tasks are resolved from the included Babfile's location, not the main Babfile.
+
+```yaml
+# main/Babfile.yml
+includes:
+  api:
+    babfile: ./api/Babfile.yml  # api tasks run in ./api by default
+
+tasks:
+  build:
+    run:
+      - cmd: pwd  # runs in ./main
+```
+
 ## Environment Variables
 
 Define environment variables at three levels: global, task, or command. Variables cascade with lower levels overriding higher ones.
