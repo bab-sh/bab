@@ -43,7 +43,6 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 	return &jsonschema.Schema{
 		Type:                 "object",
 		Description:          "Babfile configuration",
-		Required:             []string{"tasks"},
 		AdditionalProperties: jsonschema.FalseSchema,
 		Properties:           props,
 		Definitions: jsonschema.Definitions{

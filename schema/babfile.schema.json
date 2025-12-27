@@ -334,9 +334,6 @@
   },
   "additionalProperties": false,
   "type": "object",
-  "required": [
-    "tasks"
-  ],
   "title": "Babfile Schema",
   "description": "Schema for Babfile task runner configuration (https://bab.sh)"
 }
