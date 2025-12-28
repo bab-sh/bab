@@ -1,5 +1,5 @@
 tasks:
   deploy:
-    when: ${{ confirm == 'true' }}
+    when: ${{ confirm }} == 'true'
     run:
       - cmd: deploy.sh

@@ -2,6 +2,6 @@ tasks:
   test:
     run:
       - cmd: echo "yes"
-        when: ${{ confirm == 'true' }}
+        when: ${{ confirm }} == 'true'
       - cmd: echo "no"
-        when: ${{ confirm != 'true' }}
+        when: ${{ confirm }} != 'true'

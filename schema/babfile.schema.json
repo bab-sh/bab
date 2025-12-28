@@ -65,7 +65,7 @@
         },
         "when": {
           "type": "string",
-          "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+          "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
         },
         "deps": {
           "items": {
@@ -116,7 +116,7 @@
                   },
                   "when": {
                     "type": "string",
-                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
                   }
                 },
                 "additionalProperties": false,
@@ -152,7 +152,7 @@
                   },
                   "when": {
                     "type": "string",
-                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
                   }
                 },
                 "additionalProperties": false,
@@ -190,7 +190,7 @@
                   },
                   "when": {
                     "type": "string",
-                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
                   }
                 },
                 "additionalProperties": false,
@@ -282,7 +282,7 @@
                   },
                   "when": {
                     "type": "string",
-                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
                   }
                 },
                 "additionalProperties": false,

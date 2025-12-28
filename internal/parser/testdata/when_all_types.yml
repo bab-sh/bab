@@ -3,15 +3,15 @@ tasks:
     when: ${{ enabled }}
     run:
       - cmd: echo "command"
-        when: ${{ run_cmd == 'true' }}
+        when: ${{ run_cmd }} == 'true'
       - task: helper
-        when: ${{ run_task == 'true' }}
+        when: ${{ run_task }} == 'true'
       - log: "logging"
-        when: ${{ run_log == 'true' }}
+        when: ${{ run_log }} == 'true'
       - prompt: user_input
         type: input
         message: Enter value
-        when: ${{ run_prompt == 'true' }}
+        when: ${{ run_prompt }} == 'true'
   helper:
     run:
       - cmd: echo "helper"
