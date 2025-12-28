@@ -47,12 +47,17 @@ type LogRun struct {
 	Log       string     `json:"log" yaml:"log"`
 	Level     LogLevel   `json:"level,omitempty" yaml:"level,omitempty"`
 	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	When      string     `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (LogRun) isRunItem() {}
 
 func (l LogRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(l.Platforms, platform)
+}
+
+func (l LogRun) GetWhen() string {
+	return l.When
 }
 
 func LogRunSchema() *jsonschema.Schema {
@@ -65,6 +70,7 @@ func LogRunSchema() *jsonschema.Schema {
 	})
 	props.Set("level", LogLevelSchema())
 	props.Set("platforms", PlatformsArraySchema())
+	props.Set("when", WhenSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",

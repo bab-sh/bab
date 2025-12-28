@@ -68,12 +68,17 @@ type PromptRun struct {
 	Min         *int       `json:"min,omitempty" yaml:"min,omitempty"`
 	Max         *int       `json:"max,omitempty" yaml:"max,omitempty"`
 	Confirm     *bool      `json:"confirm,omitempty" yaml:"confirm,omitempty"`
+	When        string     `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (PromptRun) isRunItem() {}
 
 func (p PromptRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(p.Platforms, platform)
+}
+
+func (p PromptRun) GetWhen() string {
+	return p.When
 }
 
 func PromptRunSchema() *jsonschema.Schema {
@@ -132,6 +137,7 @@ func PromptRunSchema() *jsonschema.Schema {
 		Description: "Require password confirmation (re-entry)",
 	})
 	props.Set("platforms", PlatformsArraySchema())
+	props.Set("when", WhenSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",

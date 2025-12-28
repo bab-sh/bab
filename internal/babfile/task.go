@@ -18,6 +18,7 @@ type Task struct {
 	Silent     *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
 	Output     *bool             `json:"output,omitempty" yaml:"output,omitempty"`
 	Dir        string            `json:"dir,omitempty" yaml:"dir,omitempty"`
+	When       string            `json:"when,omitempty" yaml:"when,omitempty"`
 	Deps       []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
 	Run        []RunItem         `json:"-" yaml:"-"`
 }
@@ -49,6 +50,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())
 	props.Set("dir", DirSchema())
+	props.Set("when", WhenSchema())
 	props.Set("deps", DepsSchema())
 	props.Set("run", &jsonschema.Schema{
 		Type:        "array",

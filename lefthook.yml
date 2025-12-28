@@ -1,5 +1,8 @@
 min_version: 1.9.0
 
+rc: |
+  export PATH="$HOME/go/bin:$PATH"
+
 output:
   - meta
   - success

@@ -11,12 +11,17 @@ type TaskRun struct {
 	Silent    *bool      `json:"silent,omitempty" yaml:"silent,omitempty"`
 	Output    *bool      `json:"output,omitempty" yaml:"output,omitempty"`
 	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	When      string     `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (TaskRun) isRunItem() {}
 
 func (t TaskRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(t.Platforms, platform)
+}
+
+func (t TaskRun) GetWhen() string {
+	return t.When
 }
 
 func TaskRunSchema() *jsonschema.Schema {
@@ -31,6 +36,7 @@ func TaskRunSchema() *jsonschema.Schema {
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
+	props.Set("when", WhenSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",
