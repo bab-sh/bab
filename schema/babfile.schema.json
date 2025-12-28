@@ -63,6 +63,10 @@
           "type": "string",
           "description": "Working directory for command execution. Relative paths are resolved from the Babfile location."
         },
+        "when": {
+          "type": "string",
+          "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
+        },
         "deps": {
           "items": {
             "type": "string",
@@ -109,6 +113,10 @@
                     "type": "array",
                     "uniqueItems": true,
                     "description": "Run only on specified platforms"
+                  },
+                  "when": {
+                    "type": "string",
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
                   }
                 },
                 "additionalProperties": false,
@@ -141,6 +149,10 @@
                     "type": "array",
                     "uniqueItems": true,
                     "description": "Run only on specified platforms"
+                  },
+                  "when": {
+                    "type": "string",
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
                   }
                 },
                 "additionalProperties": false,
@@ -175,6 +187,10 @@
                     "type": "array",
                     "uniqueItems": true,
                     "description": "Run only on specified platforms"
+                  },
+                  "when": {
+                    "type": "string",
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
                   }
                 },
                 "additionalProperties": false,
@@ -263,6 +279,10 @@
                     "type": "array",
                     "uniqueItems": true,
                     "description": "Run only on specified platforms"
+                  },
+                  "when": {
+                    "type": "string",
+                    "description": "Condition expression. Supports: ${{ var }}, ${{ var == 'value' }}, ${{ var != 'value' }}"
                   }
                 },
                 "additionalProperties": false,

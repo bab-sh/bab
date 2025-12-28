@@ -119,6 +119,116 @@ tasks:
 
 Available platforms: `linux`, `darwin`, `windows`. Commands without a `platforms` array run on all platforms.
 
+<div v-pre>
+
+## Conditional Execution
+
+Skip tasks or run items based on conditions using the `when` key. Conditions support variable interpolation and comparison operators.
+
+### Task-Level Conditions
+
+Skip an entire task if the condition is false:
+
+```yaml
+tasks:
+  deploy-prod:
+    desc: Deploy to production
+    when: ${{ environment }} == 'prod'
+    run:
+      - cmd: ./deploy.sh --env=prod
+```
+
+### Run Item Conditions
+
+Skip individual commands, task references, logs, or prompts:
+
+```yaml
+tasks:
+  build:
+    run:
+      - prompt: skip_tests
+        type: confirm
+        message: "Skip tests?"
+        default: false
+      - cmd: npm test
+        when: ${{ skip_tests }} == 'false'
+      - cmd: npm run build
+```
+
+### Condition Syntax
+
+| Syntax | Description |
+|--------|-------------|
+| `${{ var }}` | Truthy check - runs if variable is non-empty and not "false" |
+| `${{ var }} == 'value'` | Equality - runs if variable equals value |
+| `${{ var }} != 'value'` | Inequality - runs if variable does not equal value |
+
+Both single quotes (`'value'`) and double quotes (`"value"`) are supported.
+
+### Truthy Values
+
+Values are evaluated as follows:
+- Empty string (`""`) → falsy (skip)
+- `"false"` (case-insensitive) → falsy (skip)
+- Whitespace-only → falsy (skip)
+- Undefined variables → falsy (skip)
+- Any other value → truthy (run)
+
+### Using with Prompts
+
+Conditions work with prompt results for dynamic workflows:
+
+```yaml
+tasks:
+  deploy:
+    run:
+      - prompt: confirm
+        type: confirm
+        message: "Deploy to production?"
+        default: false
+      - cmd: ./deploy.sh
+        when: ${{ confirm }}
+      - log: "Deployment skipped"
+        when: ${{ confirm }} == 'false'
+```
+
+### Complete Example
+
+```yaml
+tasks:
+  release:
+    desc: Build and optionally deploy
+    run:
+      - prompt: environment
+        type: select
+        message: "Select environment:"
+        options: [dev, staging, prod]
+        default: dev
+
+      - prompt: run_tests
+        type: confirm
+        message: "Run tests first?"
+        default: true
+
+      - cmd: npm test
+        when: ${{ run_tests }}
+
+      - cmd: npm run build
+
+      - cmd: ./deploy.sh --env=dev
+        when: ${{ environment }} == 'dev'
+
+      - cmd: ./deploy.sh --env=staging
+        when: ${{ environment }} == 'staging'
+
+      - cmd: ./deploy.sh --env=prod
+        when: ${{ environment }} == 'prod'
+
+      - log: "Deployed to ${{ environment }}"
+```
+
+</div>
+
 ## Silent Mode
 
 The `silent` option suppresses command prompt display (e.g., `$ echo hello`). Useful for reducing noise when running many commands.
@@ -574,6 +684,7 @@ tasks:
 | `max` | integer | Maximum value (number) or selections (multiselect) |
 | `confirm` | boolean | Require password re-entry for confirmation |
 | `platforms` | array | Run only on specified platforms |
+| `when` | string | Condition to evaluate before running |
 
 ### Non-Interactive Mode (CI)
 

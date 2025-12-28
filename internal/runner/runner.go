@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/bab-sh/bab/internal/babfile"
+	"github.com/bab-sh/bab/internal/condition"
 	"github.com/bab-sh/bab/internal/errs"
 	"github.com/bab-sh/bab/internal/finder"
 	"github.com/bab-sh/bab/internal/interpolate"
@@ -128,6 +129,19 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 		}
 	}
 
+	if task.When != "" {
+		whenCtx := interpolate.NewContextWithLocation(r.GlobalVars, r.BabfilePath, task.Line)
+		result, err := condition.Evaluate(task.When, whenCtx)
+		if err != nil {
+			return fmt.Errorf("task %q: evaluating when condition: %w", name, err)
+		}
+		if !result.ShouldRun {
+			log.Debug("Skipping task", "task", name, "reason", "when condition", "detail", result.Reason)
+			state[name] = done
+			return nil
+		}
+	}
+
 	state[name] = running
 
 	if !r.DryRun && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
@@ -159,6 +173,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
+	skippedByCondition := 0
 
 	taskVars, err := interpolate.ResolveVarsWithLocation(task.Vars, r.GlobalVars, r.BabfilePath, task.Line)
 	if err != nil {
@@ -183,6 +198,13 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 
 		if !item.ShouldRunOnPlatform(platform) {
 			log.Debug("Skipping run item", "task", task.Name, "index", i+1, "reason", "platform")
+			continue
+		}
+
+		if shouldSkip, err := r.shouldSkipRunItem(item, taskVars, task.Name, i+1); err != nil {
+			return err
+		} else if shouldSkip {
+			skippedByCondition++
 			continue
 		}
 
@@ -270,10 +292,49 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	}
 
 	if executed == 0 {
-		return fmt.Errorf("task %q has no run items for platform %q", task.Name, platform)
+		if skippedByCondition > 0 {
+			log.Debug("All run items skipped by condition", "task", task.Name, "skipped", skippedByCondition)
+		} else {
+			return fmt.Errorf("task %q has no run items for platform %q", task.Name, platform)
+		}
 	}
 
 	return nil
+}
+
+func getItemLine(item babfile.RunItem) int {
+	switch v := item.(type) {
+	case babfile.CommandRun:
+		return v.Line
+	case babfile.TaskRun:
+		return v.Line
+	case babfile.LogRun:
+		return v.Line
+	case babfile.PromptRun:
+		return v.Line
+	default:
+		return 0
+	}
+}
+
+func (r *Runner) shouldSkipRunItem(item babfile.RunItem, taskVars map[string]string, taskName string, index int) (bool, error) {
+	whenCond := item.GetWhen()
+	if whenCond == "" {
+		return false, nil
+	}
+
+	itemCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, getItemLine(item))
+	result, err := condition.Evaluate(whenCond, itemCtx)
+	if err != nil {
+		return false, fmt.Errorf("task %q: run[%d]: evaluating when condition: %w", taskName, index, err)
+	}
+
+	if !result.ShouldRun {
+		log.Debug("Skipping run item", "task", taskName, "index", index, "reason", "when condition", "detail", result.Reason)
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (r *Runner) interpolateEnv(env map[string]string, ctx *interpolate.Context) (map[string]string, error) {

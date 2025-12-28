@@ -26,6 +26,7 @@ const (
 	keyTask        = "task"
 	keyTasks       = "tasks"
 	keyVars        = "vars"
+	keyWhen        = "when"
 	keyPrompt      = "prompt"
 	keyType        = "type"
 	keyMessage     = "message"
@@ -251,6 +252,8 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 			}
 		case keyDir:
 			task.Dir = val.Value
+		case keyWhen:
+			task.When = val.Value
 		case keyDeps:
 			task.DepsLine = key.Line
 			if err := val.Decode(&task.Deps); err != nil {
@@ -361,6 +364,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 
 	var cmd, task, log string
 	var dir string
+	var when string
 	var env map[string]string
 	var platforms []babfile.Platform
 	var level babfile.LogLevel
@@ -380,6 +384,8 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 			cmd = val.Value
 		case keyDir:
 			dir = val.Value
+		case keyWhen:
+			when = val.Value
 		case keyTask:
 			task = val.Value
 		case keyLog:
@@ -422,19 +428,19 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	case hasErrors:
 		return nil, false
 	case cmd != "":
-		return babfile.CommandRun{Line: line, Cmd: cmd, Dir: dir, Env: env, Silent: silent, Output: output, Platforms: platforms}, true
+		return babfile.CommandRun{Line: line, Cmd: cmd, Dir: dir, Env: env, Silent: silent, Output: output, Platforms: platforms, When: when}, true
 	case task != "":
-		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms}, true
+		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms, When: when}, true
 	case log != "":
-		return buildLogRun(path, line, taskName, index, log, level, platforms, verrs)
+		return buildLogRun(path, line, taskName, index, log, level, platforms, when, verrs)
 	case pf.name != "":
-		return validatePromptRun(path, line, taskName, index, pf, platforms, verrs)
+		return validatePromptRun(path, line, taskName, index, pf, platforms, when, verrs)
 	default:
 		return nil, false
 	}
 }
 
-func buildLogRun(path string, line int, taskName string, index int, log string, level babfile.LogLevel, platforms []babfile.Platform, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+func buildLogRun(path string, line int, taskName string, index int, log string, level babfile.LogLevel, platforms []babfile.Platform, when string, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
 	if level == "" {
 		level = babfile.LogLevelInfo
 	}
@@ -446,7 +452,7 @@ func buildLogRun(path string, line int, taskName string, index int, log string, 
 		})
 		return nil, false
 	}
-	return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms}, true
+	return babfile.LogRun{Line: line, Log: log, Level: level, Platforms: platforms, When: when}, true
 }
 
 type promptValidationContext struct {
@@ -580,7 +586,7 @@ func stringInSlice(s string, slice []string) bool {
 	return false
 }
 
-func validatePromptRun(path string, line int, taskName string, index int, pf promptFields, platforms []babfile.Platform, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+func validatePromptRun(path string, line int, taskName string, index int, pf promptFields, platforms []babfile.Platform, when string, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
 	ctx := &promptValidationContext{
 		path:   path,
 		line:   line,
@@ -612,6 +618,7 @@ func validatePromptRun(path string, line int, taskName string, index int, pf pro
 		Min:         pf.min,
 		Max:         pf.max,
 		Confirm:     pf.confirm,
+		When:        when,
 	}, true
 }
 

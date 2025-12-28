@@ -5,6 +5,7 @@ import "github.com/invopop/jsonschema"
 type RunItem interface {
 	isRunItem()
 	ShouldRunOnPlatform(platform string) bool
+	GetWhen() string
 }
 
 func RunItemSchema() *jsonschema.Schema {

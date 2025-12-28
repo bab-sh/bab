@@ -13,12 +13,17 @@ type CommandRun struct {
 	Silent    *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
 	Output    *bool             `json:"output,omitempty" yaml:"output,omitempty"`
 	Platforms []Platform        `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	When      string            `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (CommandRun) isRunItem() {}
 
 func (c CommandRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(c.Platforms, platform)
+}
+
+func (c CommandRun) GetWhen() string {
+	return c.When
 }
 
 func CommandRunSchema() *jsonschema.Schema {
@@ -34,6 +39,7 @@ func CommandRunSchema() *jsonschema.Schema {
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
+	props.Set("when", WhenSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",
