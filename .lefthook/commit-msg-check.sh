@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 # Conventional commit message validator
+# Aligned with changelog generation in .goreleaser.yaml
+#
 # Format: type(scope): description
 #
-# Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+# Categories:
+#   🚨 Breaking Changes - any type with ! (e.g., feat!:)
+#   ✨ Features         - feat
+#   🐛 Bug Fixes        - fix
+#   ⚡ Performance       - perf
+#   ♻️ Refactoring      - refactor
+#   📚 Documentation    - docs
+#   🧪 Tests            - test
+#   🔧 Build & CI       - build, ci
+#   📦 Other Changes    - style, revert
+#   ❌ Excluded         - chore (ignored in changelog)
 
 set -e
 
@@ -13,7 +25,7 @@ if [[ "$COMMIT_MSG" =~ ^Merge|^fixup!|^squash! ]]; then
     exit 0
 fi
 
-CONVENTIONAL_REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?(!)?: .{1,}"
+CONVENTIONAL_REGEX="^(feat|fix|perf|refactor|docs|test|build|ci|style|revert|chore)(\([a-zA-Z0-9_-]+\))?!?: .{1,}"
 
 if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$CONVENTIONAL_REGEX"; then
     echo ""
@@ -23,18 +35,18 @@ if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$CONVENTIONAL_REGEX"; then
     echo ""
     echo "Expected format: type(scope): description"
     echo ""
-    echo "Valid types:"
-    echo "  feat     - A new feature"
-    echo "  fix      - A bug fix"
-    echo "  docs     - Documentation only changes"
-    echo "  style    - Formatting, whitespace, etc"
-    echo "  refactor - Code change that neither fixes a bug nor adds a feature"
-    echo "  perf     - Performance improvement"
-    echo "  test     - Adding or fixing tests"
-    echo "  build    - Changes to build system or dependencies"
-    echo "  ci       - Changes to CI configuration"
-    echo "  chore    - Other changes that don't modify src or test files"
-    echo "  revert   - Reverts a previous commit"
+    echo "Valid types (aligned with changelog categories):"
+    echo "  feat     - ✨ Features"
+    echo "  fix      - 🐛 Bug Fixes"
+    echo "  perf     - ⚡ Performance"
+    echo "  refactor - ♻️ Refactoring"
+    echo "  docs     - 📚 Documentation"
+    echo "  test     - 🧪 Tests"
+    echo "  build    - 🔧 Build & CI"
+    echo "  ci       - 🔧 Build & CI"
+    echo "  style    - 📦 Other Changes"
+    echo "  revert   - 📦 Other Changes"
+    echo "  chore    - ❌ Excluded from changelog"
     echo ""
     echo "Examples:"
     echo "  feat: add new parser for YAML files"
