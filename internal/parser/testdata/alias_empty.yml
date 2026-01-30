@@ -1,0 +1,6 @@
+tasks:
+  lint:
+    desc: Run linter
+    aliases: ["", "l", ""]
+    run:
+      - cmd: echo linting

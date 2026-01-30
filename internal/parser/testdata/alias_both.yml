@@ -1,0 +1,7 @@
+tasks:
+  deploy:
+    desc: Deploy app
+    alias: d
+    aliases: [dep, ship]
+    run:
+      - cmd: echo deploying

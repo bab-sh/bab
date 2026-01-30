@@ -1,0 +1,6 @@
+tasks:
+  greet:
+    desc: Say hello
+    alias: g
+    run:
+      - cmd: echo hello

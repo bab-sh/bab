@@ -1,0 +1,10 @@
+tasks:
+  test:
+    desc: Run tests
+    alias: build
+    run:
+      - cmd: go test ./...
+  build:
+    desc: Build the project
+    run:
+      - cmd: go build .

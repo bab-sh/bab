@@ -1,0 +1,10 @@
+includes:
+  gen:
+    babfile: alias_sub.yml
+
+tasks:
+  run:
+    desc: Run app
+    alias: r
+    run:
+      - cmd: echo running

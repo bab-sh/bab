@@ -1,0 +1,7 @@
+tasks:
+  build:
+    desc: Build the sub-project
+    alias: b
+    aliases: [bld]
+    run:
+      - cmd: go build .

@@ -78,14 +78,14 @@ func TestParseDependencies(t *testing.T) {
 		t.Errorf("clean should have no dependencies")
 	}
 
-	build := result.Tasks["build"]
-	if build == nil || len(build.Deps) != 1 || build.Deps[0] != "clean" {
-		t.Errorf("build should depend on 'clean', got %v", build.Deps)
+	buildTask := result.Tasks["build"]
+	if buildTask == nil || len(buildTask.Deps) != 1 || buildTask.Deps[0] != "clean" {
+		t.Errorf("build should depend on 'clean', got %v", buildTask.Deps)
 	}
 
-	test := result.Tasks["test"]
-	if test == nil || len(test.Deps) != 1 || test.Deps[0] != "build" {
-		t.Errorf("test should depend on 'build', got %v", test.Deps)
+	testTask := result.Tasks["test"]
+	if testTask == nil || len(testTask.Deps) != 1 || testTask.Deps[0] != buildTask.Name {
+		t.Errorf("test should depend on 'build', got %v", testTask.Deps)
 	}
 }
 
@@ -1368,5 +1368,125 @@ func TestParseIncludePreservesDir(t *testing.T) {
 	}
 	if cmd.Dir != "./subcmd" {
 		t.Errorf("expected cmd Dir './subcmd', got %q", cmd.Dir)
+	}
+}
+
+func TestParseSingleAlias(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "alias_single.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["greet"]
+	if task == nil {
+		t.Fatal("task 'greet' not found")
+	}
+	if task.Alias != "g" {
+		t.Errorf("expected alias 'g', got %q", task.Alias)
+	}
+	if result.Aliases["g"] != "greet" {
+		t.Errorf("expected Aliases['g'] = 'greet', got %q", result.Aliases["g"])
+	}
+}
+
+func TestParseMultipleAliases(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "alias_multiple.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build"]
+	if task == nil {
+		t.Fatal("task 'build' not found")
+	}
+	if len(task.Aliases) != 2 {
+		t.Errorf("expected 2 aliases, got %d", len(task.Aliases))
+	}
+	if task.Aliases[0] != "b" || task.Aliases[1] != "bld" {
+		t.Errorf("expected aliases [b, bld], got %v", task.Aliases)
+	}
+	if result.Aliases["b"] != "build" {
+		t.Errorf("expected Aliases['b'] = 'build', got %q", result.Aliases["b"])
+	}
+	if result.Aliases["bld"] != "build" {
+		t.Errorf("expected Aliases['bld'] = 'build', got %q", result.Aliases["bld"])
+	}
+}
+
+func TestParseBothAliasAndAliases(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "alias_both.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["deploy"]
+	if task == nil {
+		t.Fatal("task 'deploy' not found")
+	}
+
+	allAliases := task.GetAllAliases()
+	if len(allAliases) != 3 {
+		t.Errorf("expected 3 total aliases, got %d: %v", len(allAliases), allAliases)
+	}
+	for _, alias := range []string{"d", "dep", "ship"} {
+		if result.Aliases[alias] != "deploy" {
+			t.Errorf("expected Aliases[%q] = 'deploy', got %q", alias, result.Aliases[alias])
+		}
+	}
+}
+
+func TestParseAliasConflictsWithTaskName(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "alias_conflict.yml"))
+	if err == nil {
+		t.Fatal("expected error for alias conflicting with task name")
+	}
+	if !errors.Is(err, errs.ErrAliasConflict) {
+		t.Errorf("expected ErrAliasConflict, got %v", err)
+	}
+}
+
+func TestParseDuplicateAlias(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "alias_duplicate.yml"))
+	if err == nil {
+		t.Fatal("expected error for duplicate alias")
+	}
+	if !errors.Is(err, errs.ErrDuplicateAlias) {
+		t.Errorf("expected ErrDuplicateAlias, got %v", err)
+	}
+}
+
+func TestParseIncludeWithAliases(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "alias_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if result.Aliases["r"] != "run" {
+		t.Errorf("expected Aliases['r'] = 'run', got %q", result.Aliases["r"])
+	}
+	if result.Aliases["gen:b"] != "gen:build" {
+		t.Errorf("expected Aliases['gen:b'] = 'gen:build', got %q", result.Aliases["gen:b"])
+	}
+	if result.Aliases["gen:bld"] != "gen:build" {
+		t.Errorf("expected Aliases['gen:bld'] = 'gen:build', got %q", result.Aliases["gen:bld"])
+	}
+	genBuild := result.Tasks["gen:build"]
+	if genBuild == nil {
+		t.Fatal("task 'gen:build' not found")
+	}
+	if genBuild.Alias != "gen:b" {
+		t.Errorf("expected task alias 'gen:b', got %q", genBuild.Alias)
+	}
+}
+
+func TestParseEmptyAliasesIgnored(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "alias_empty.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if len(result.Aliases) != 1 {
+		t.Errorf("expected 1 alias, got %d: %v", len(result.Aliases), result.Aliases)
+	}
+	if result.Aliases["l"] != "lint" {
+		t.Errorf("expected Aliases['l'] = 'lint', got %q", result.Aliases["l"])
 	}
 }
