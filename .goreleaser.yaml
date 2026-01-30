@@ -487,7 +487,7 @@ changelog:
   sort: asc
   use: github
   abbrev: 7
-  format: "* `{{ .SHA }}` {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
+  format: "* {{ .SHA }} {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
   groups:
     - title: "🚨 Breaking Changes"
       regexp: '^.*!:'
