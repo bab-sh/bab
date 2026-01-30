@@ -16,4 +16,6 @@ var (
 	matchStyle            = lipgloss.NewStyle().Foreground(theme.Pink).Bold(true)
 	descStyle             = lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
 	noResultsStyle        = lipgloss.NewStyle().Foreground(theme.Gray).Italic(true)
+	aliasStyle            = lipgloss.NewStyle().Foreground(theme.Cyan)
+	aliasMatchStyle       = lipgloss.NewStyle().Foreground(theme.Cyan).Bold(true)
 )

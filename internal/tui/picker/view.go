@@ -54,7 +54,17 @@ func (m Model) renderLine(i int) string {
 	if selected {
 		style = taskNameSelectedStyle
 	}
-	b.WriteString(highlight(match.Task.Name, match.Indexes, style, matchStyle))
+	b.WriteString(highlight(match.Task.Name, match.NameIndexes, style, matchStyle))
+
+	aliases := match.Task.GetAllAliases()
+	if len(aliases) > 0 {
+		aliasText := " (" + strings.Join(aliases, ", ") + ")"
+		if match.MatchedAlias != "" {
+			b.WriteString(highlightAlias(aliasText, match.MatchedAlias, match.AliasIndexes, aliases))
+		} else {
+			b.WriteString(aliasStyle.Render(aliasText))
+		}
+	}
 
 	if match.Task.Desc != "" {
 		b.WriteString("  " + descStyle.Render(match.Task.Desc))
