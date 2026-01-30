@@ -102,3 +102,38 @@ func (e *DuplicateTaskError) Error() string {
 func (e *DuplicateTaskError) Is(target error) bool {
 	return target == ErrDuplicateTask
 }
+
+type AliasConflictError struct {
+	Path     string
+	Line     int
+	Alias    string
+	TaskName string
+}
+
+func (e *AliasConflictError) Error() string {
+	path := RelativePath(e.Path)
+	return fmt.Sprintf("%s:%d: alias %q for task %q conflicts with existing task name", path, e.Line, e.Alias, e.TaskName)
+}
+
+func (e *AliasConflictError) Is(target error) bool {
+	return target == ErrAliasConflict
+}
+
+type DuplicateAliasError struct {
+	Path         string
+	Line         int
+	Alias        string
+	TaskName     string
+	OriginalTask string
+	OriginalLine int
+}
+
+func (e *DuplicateAliasError) Error() string {
+	path := RelativePath(e.Path)
+	return fmt.Sprintf("%s:%d: alias %q for task %q already defined by task %q at line %d",
+		path, e.Line, e.Alias, e.TaskName, e.OriginalTask, e.OriginalLine)
+}
+
+func (e *DuplicateAliasError) Is(target error) bool {
+	return target == ErrDuplicateAlias
+}

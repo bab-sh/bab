@@ -19,6 +19,9 @@ var (
 	ErrBabfileNotFound = errors.New("no Babfile found")
 
 	ErrNoTasks = errors.New("no tasks available")
+
+	ErrAliasConflict  = errors.New("alias conflicts with task name")
+	ErrDuplicateAlias = errors.New("duplicate alias")
 )
 
 type ValidationErrors struct {

@@ -10,7 +10,48 @@ func validateAll(path string, tasks babfile.TaskMap) error {
 	validateDependencies(path, tasks, verrs)
 	validateRunTaskRefs(path, tasks, verrs)
 	validateRunCycles(path, tasks, verrs)
+	validateAliases(path, tasks, verrs)
 	return verrs.OrNil()
+}
+
+func validateAliases(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
+	type aliasInfo struct {
+		taskName string
+		line     int
+	}
+	aliasToTask := make(map[string]aliasInfo)
+
+	for name, task := range tasks {
+		for _, alias := range task.GetAllAliases() {
+			if alias == "" {
+				continue
+			}
+
+			if tasks.Has(alias) {
+				verrs.Add(&errs.AliasConflictError{
+					Path:     path,
+					Line:     task.Line,
+					Alias:    alias,
+					TaskName: name,
+				})
+				continue
+			}
+
+			if existing, exists := aliasToTask[alias]; exists {
+				verrs.Add(&errs.DuplicateAliasError{
+					Path:         path,
+					Line:         task.Line,
+					Alias:        alias,
+					TaskName:     name,
+					OriginalTask: existing.taskName,
+					OriginalLine: existing.line,
+				})
+				continue
+			}
+
+			aliasToTask[alias] = aliasInfo{taskName: name, line: task.Line}
+		}
+	}
 }
 
 func validateDependencies(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {

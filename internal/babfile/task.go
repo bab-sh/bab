@@ -13,6 +13,8 @@ type Task struct {
 	DepsLine   int               `json:"-" yaml:"-"`
 	SourcePath string            `json:"-" yaml:"-"`
 	Desc       string            `json:"desc,omitempty" yaml:"desc,omitempty"`
+	Alias      string            `json:"alias,omitempty" yaml:"alias,omitempty"`
+	Aliases    []string          `json:"aliases,omitempty" yaml:"aliases,omitempty"`
 	Vars       VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
 	Env        map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Silent     *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
@@ -21,6 +23,17 @@ type Task struct {
 	When       string            `json:"when,omitempty" yaml:"when,omitempty"`
 	Deps       []string          `json:"deps,omitempty" yaml:"deps,omitempty"`
 	Run        []RunItem         `json:"-" yaml:"-"`
+}
+
+func (t *Task) GetAllAliases() []string {
+	if t == nil {
+		return nil
+	}
+	aliases := make([]string, 0, len(t.Aliases)+1)
+	if t.Alias != "" {
+		aliases = append(aliases, t.Alias)
+	}
+	return append(aliases, t.Aliases...)
 }
 
 type TaskMap map[string]*Task
@@ -44,6 +57,20 @@ func (Task) JSONSchema() *jsonschema.Schema {
 	props.Set("desc", &jsonschema.Schema{
 		Type:        "string",
 		Description: "Task description",
+	})
+	props.Set("alias", &jsonschema.Schema{
+		Type:        "string",
+		Pattern:     TaskNamePattern,
+		Description: "Short alias for the task",
+	})
+	props.Set("aliases", &jsonschema.Schema{
+		Type:        "array",
+		Description: "Short aliases for the task",
+		Items: &jsonschema.Schema{
+			Type:    "string",
+			Pattern: TaskNamePattern,
+		},
+		UniqueItems: true,
 	})
 	props.Set("vars", VarsSchema())
 	props.Set("env", EnvSchema())

@@ -32,6 +32,18 @@ func completeTaskNames(cmd *cobra.Command, args []string, toComplete string) ([]
 		}
 	}
 
+	for alias, taskName := range result.Aliases {
+		if !strings.HasPrefix(alias, toComplete) {
+			continue
+		}
+		task := result.Tasks[taskName]
+		if task != nil && task.Desc != "" {
+			completions = append(completions, alias+"\t"+task.Desc+" (alias)")
+		} else {
+			completions = append(completions, alias+"\talias for "+taskName)
+		}
+	}
+
 	sort.Strings(completions)
 	return completions, cobra.ShellCompDirectiveNoFileComp
 }

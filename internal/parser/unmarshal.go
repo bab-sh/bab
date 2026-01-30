@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	keyAlias       = "alias"
+	keyAliases     = "aliases"
 	keyCmd         = "cmd"
 	keyDeps        = "deps"
 	keyDesc        = "desc"
@@ -234,6 +236,13 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 		switch key.Value {
 		case keyDesc:
 			task.Desc = val.Value
+		case keyAlias:
+			task.Alias = val.Value
+		case keyAliases:
+			if err := val.Decode(&task.Aliases); err != nil {
+				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: invalid aliases", taskName), Cause: err})
+				hasErrors = true
+			}
 		case keyVars:
 			if !parseVarMap(path, val, &task.Vars, verrs) {
 				hasErrors = true

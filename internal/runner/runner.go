@@ -38,6 +38,7 @@ type Runner struct {
 	GlobalSilent *bool
 	GlobalOutput *bool
 	GlobalDir    string
+	Aliases      map[string]string
 }
 
 func New(dryRun bool, babfile string) *Runner {
@@ -65,6 +66,7 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	}
 
 	r.BabfilePath = result.Path
+	r.Aliases = result.Aliases
 
 	resolvedVars, err := interpolate.ResolveVarsWithLocation(result.GlobalVars, nil, r.BabfilePath, 0)
 	if err != nil {
@@ -76,7 +78,19 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	r.GlobalOutput = result.GlobalOutput
 	r.GlobalDir = result.GlobalDir
 
-	return r.RunWithTasks(ctx, taskName, result.Tasks)
+	resolvedName := r.resolveTaskName(taskName)
+
+	return r.RunWithTasks(ctx, resolvedName, result.Tasks)
+}
+
+func (r *Runner) resolveTaskName(name string) string {
+	if r.Aliases == nil {
+		return name
+	}
+	if actual, isAlias := r.Aliases[name]; isAlias {
+		return actual
+	}
+	return name
 }
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
@@ -123,9 +137,13 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	task, ok := tasks[name]
 	if !ok {
+		available := tasks.Names()
+		for alias := range r.Aliases {
+			available = append(available, alias)
+		}
 		return &errs.TaskNotFoundError{
 			TaskName:  name,
-			Available: tasks.Names(),
+			Available: available,
 		}
 	}
 

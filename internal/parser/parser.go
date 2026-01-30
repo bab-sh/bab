@@ -19,6 +19,7 @@ type ParseResult struct {
 	GlobalOutput *bool
 	GlobalDir    string
 	Tasks        babfile.TaskMap
+	Aliases      map[string]string
 }
 
 func Parse(path string) (*ParseResult, error) {
@@ -107,7 +108,20 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 		GlobalOutput: bf.Output,
 		GlobalDir:    bf.Dir,
 		Tasks:        tasks,
+		Aliases:      buildAliasMap(tasks),
 	}, nil
+}
+
+func buildAliasMap(tasks babfile.TaskMap) map[string]string {
+	aliases := make(map[string]string)
+	for name, task := range tasks {
+		for _, alias := range task.GetAllAliases() {
+			if alias != "" {
+				aliases[alias] = name
+			}
+		}
+	}
+	return aliases
 }
 
 func chainFromVisited(visited map[string]bool, current string) []string {

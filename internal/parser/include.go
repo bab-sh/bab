@@ -33,6 +33,8 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 			DepsLine:   task.DepsLine,
 			SourcePath: task.SourcePath,
 			Desc:       task.Desc,
+			Alias:      prefixAlias(task.Alias, namespace),
+			Aliases:    prefixAliases(task.Aliases, namespace),
 			Vars:       task.Vars,
 			Env:        task.Env,
 			Silent:     task.Silent,
@@ -44,6 +46,24 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 	}
 
 	return nil
+}
+
+func prefixAlias(alias, namespace string) string {
+	if alias == "" {
+		return ""
+	}
+	return namespace + ":" + alias
+}
+
+func prefixAliases(aliases []string, namespace string) []string {
+	if len(aliases) == 0 {
+		return nil
+	}
+	prefixed := make([]string, len(aliases))
+	for i, alias := range aliases {
+		prefixed[i] = namespace + ":" + alias
+	}
+	return prefixed
 }
 
 func prefixDeps(deps []string, namespace string) []string {

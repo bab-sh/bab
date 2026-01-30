@@ -14,6 +14,7 @@ import (
 
 type node struct {
 	desc     string
+	aliases  []string
 	children map[string]*node
 }
 
@@ -39,6 +40,7 @@ func (c *CLI) runList() error {
 			current = current.children[part]
 			if i == len(parts)-1 {
 				current.desc = task.Desc
+				current.aliases = task.GetAllAliases()
 			}
 		}
 	}
@@ -46,10 +48,14 @@ func (c *CLI) runList() error {
 	enumStyle := lipgloss.NewStyle().Foreground(theme.Gray).PaddingRight(1)
 	itemStyle := lipgloss.NewStyle().Foreground(theme.Purple).Bold(true)
 	descStyle := lipgloss.NewStyle().Foreground(theme.Muted).Italic(true)
+	aliasStyle := lipgloss.NewStyle().Foreground(theme.Cyan).Italic(true)
 
 	var buildTree func(*node, string) *tree.Tree
 	buildTree = func(n *node, name string) *tree.Tree {
 		label := name
+		if len(n.aliases) > 0 {
+			label += " " + aliasStyle.Render("("+strings.Join(n.aliases, ", ")+")")
+		}
 		if n.desc != "" {
 			label += " " + descStyle.Render(n.desc)
 		}
