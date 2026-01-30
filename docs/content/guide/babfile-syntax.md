@@ -17,6 +17,38 @@ tasks:
 ### `desc` - Description
 Optional documentation for the task.
 
+### `alias` / `aliases` - Short Names
+
+Define short aliases for tasks. Run `bab t` instead of `bab test`:
+
+```yaml
+tasks:
+  test:
+    desc: Run tests
+    alias: t
+    run:
+      - cmd: go test ./...
+
+  build:
+    desc: Build the application
+    aliases: [b, bld]
+    run:
+      - cmd: go build -o app
+```
+
+Use `alias` for a single shortcut or `aliases` for multiple. Both can be combined:
+
+```yaml
+tasks:
+  deploy:
+    alias: d
+    aliases: [dep, ship]
+    run:
+      - cmd: ./deploy.sh
+```
+
+Aliases appear in `bab --list` and work with tab completion.
+
 ### `run` - Commands
 List of commands or task references to execute.
 

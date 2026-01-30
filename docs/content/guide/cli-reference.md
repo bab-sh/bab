@@ -18,11 +18,12 @@ Type to search for tasks, use arrow keys or `Ctrl+P`/`Ctrl+N` to navigate, and p
 - `Esc` or `Ctrl+C` - Exit without executing
 
 ### `bab <task>`
-Execute a task.
+Execute a task by name or alias.
 
 ```bash
 bab build
 bab dev:start
+bab b              # Run 'build' task using its alias
 ```
 
 Tasks with dependencies run them first automatically.
@@ -30,11 +31,18 @@ Tasks with dependencies run them first automatically.
 ## Flags
 
 ### `-l, --list`
-List all available tasks.
+List all available tasks with their aliases shown in parentheses.
 
 ```bash
 bab --list
 bab -l
+```
+
+Output example:
+```
+build (b) Build the application
+test (t) Run tests
+deploy Deploy to production
 ```
 
 ### `-c, --completion <shell>`

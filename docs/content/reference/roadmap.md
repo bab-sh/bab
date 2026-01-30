@@ -31,6 +31,7 @@ Current features in the latest release:
 - [x] Clear error messages
 - [x] Task descriptions
 - [x] Task dependencies
+- [x] Task aliases (`alias` / `aliases`)
 
 ### Configuration
 - [x] Platform-specific commands (`platforms` array)

@@ -53,6 +53,7 @@ tasks:
 
   test:unit:
     desc: Run unit tests
+    alias: t
     deps: [setup]
     run:
       - cmd: npm test
@@ -76,6 +77,7 @@ tasks:
 
   build:
     desc: Build ${{ app_name }} v${{ version }}
+    alias: b
     deps: [lint, test:unit]
     vars:
       output: ${{ build_dir }}/${{ app_name }}
@@ -105,6 +107,8 @@ Run your tasks:
 bab                  # Browse tasks interactively
 bab --list           # List all available tasks
 bab build            # Build the application
+bab b                # Same as above (using alias)
+bab t                # Run tests (using alias)
 ```
 
 ## Support
