@@ -485,32 +485,42 @@ announce:
 
 changelog:
   sort: asc
-  use: git
+  use: github
   abbrev: 7
+  format: "* `{{ .SHA }}` {{ .Message }}{{ if .Logins }} ({{ .Logins | englishJoin }}){{ end }}"
   groups:
-    - title: Features
-      regexp: '^feat(\(.+\))?!?:'
+    - title: "🚨 Breaking Changes"
+      regexp: '^.*!:'
       order: 0
-    - title: Bug Fixes
-      regexp: '^fix(\(.+\))?!?:'
+    - title: "✨ Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+'
       order: 1
-    - title: Documentation
-      regexp: '^docs(\(.+\))?!?:'
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+'
       order: 2
-    - title: Performance
-      regexp: '^perf(\(.+\))?!?:'
+    - title: "⚡ Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+'
       order: 3
-    - title: Refactoring
-      regexp: '^refactor(\(.+\))?!?:'
+    - title: "♻️ Refactoring"
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+'
       order: 4
-    - title: Other
+    - title: "📚 Documentation"
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+'
+      order: 5
+    - title: "🧪 Tests"
+      regexp: '^.*?test(\([[:word:]]+\))??!?:.+'
+      order: 6
+    - title: "🔧 Build & CI"
+      regexp: '^.*?(build|ci)(\([[:word:]]+\))??!?:.+'
+      order: 7
+    - title: "📦 Other Changes"
+      regexp: '^.*?(style|revert)(\([[:word:]]+\))??!?:.+'
       order: 999
   filters:
     exclude:
-      - '^test:'
-      - '^chore:'
-      - 'merge pull request'
-      - 'merge branch'
+      - '^.*?chore(\([[:word:]]+\))??!?:.+'
+      - '^Merge'
+      - '^merge'
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
