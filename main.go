@@ -10,12 +10,14 @@ import (
 	"github.com/bab-sh/bab/cmd"
 	"github.com/bab-sh/bab/internal/errs"
 	"github.com/charmbracelet/log"
+	"github.com/joho/godotenv"
 )
 
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	version      = "dev"
+	commit       = "none"
+	date         = "unknown"
+	telemetryKey = ""
 )
 
 func isCancellation(err error) bool {
@@ -44,7 +46,14 @@ func run() int {
 		cancel()
 	}()
 
+	_ = godotenv.Load()
+
+	if env := os.Getenv("POSTHOG_API_KEY"); env != "" {
+		telemetryKey = env
+	}
+
 	cmd.SetVersionInfo(version, commit, date)
+	cmd.SetTelemetryKey(telemetryKey)
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		if isCancellation(err) {
 			return 0

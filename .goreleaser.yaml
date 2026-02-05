@@ -42,7 +42,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.date={{.CommitDate}}
+      - -s -w -X main.version={{.Version}} -X main.commit={{.FullCommit}} -X main.date={{.CommitDate}} -X main.telemetryKey={{.Env.POSTHOG_API_KEY}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 universal_binaries:
@@ -447,7 +447,8 @@ aur_sources:
         -ldflags="-s -w -buildid='' -linkmode=external \
           -X main.version=${pkgver} \
           -X main.commit={{ .Commit }} \
-          -X main.date={{ .CommitDate }}" \
+          -X main.date={{ .CommitDate }} \
+          -X main.telemetryKey=${POSTHOG_API_KEY}" \
         -o bab .
 
       # Generate shell completions

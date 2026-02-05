@@ -5,12 +5,20 @@ import (
 	"fmt"
 
 	"github.com/bab-sh/bab/internal/runner"
+	"github.com/bab-sh/bab/internal/telemetry"
 	"github.com/bab-sh/bab/internal/update"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
 
-var versionString = "dev"
+var (
+	versionString = "dev"
+	telemetryKey  string
+)
+
+func SetTelemetryKey(key string) {
+	telemetryKey = key
+}
 
 func SetVersionInfo(version, commit, date string) {
 	versionString = version
@@ -41,6 +49,8 @@ func (c *CLI) execute(ctx context.Context) error {
 	c.ctx = ctx
 
 	update.StartBackgroundRefresh(versionString)
+	telemetry.Track(telemetryKey, versionString)
+	defer telemetry.Close()
 
 	err := c.buildCommand().Execute()
 

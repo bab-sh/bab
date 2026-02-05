@@ -16,20 +16,18 @@ type Config struct {
 }
 
 type TelemetryConfig struct {
-	Consent *bool `yaml:"consent,omitempty"`
+	Consent *bool  `yaml:"consent,omitempty"`
+	ID      string `yaml:"id,omitempty"`
 }
 
 func Load() (*Config, error) {
-	path, err := paths.ConfigFile(configFileName)
+	path, err := paths.SearchConfigFile(configFileName)
 	if err != nil {
 		return &Config{}, nil
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return &Config{}, nil
-		}
 		return nil, err
 	}
 
@@ -101,13 +99,4 @@ func Update(fn func(*Config) error) error {
 		return err
 	}
 	return Save(cfg)
-}
-
-func Path() string {
-	path, _ := paths.ConfigFile(configFileName)
-	return path
-}
-
-func BoolPtr(v bool) *bool {
-	return &v
 }

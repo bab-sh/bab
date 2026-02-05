@@ -23,7 +23,7 @@ type cache struct {
 }
 
 func loadCache() *cache {
-	path, _ := paths.CacheFile(cacheFileName)
+	path, _ := paths.SearchCacheFile(cacheFileName)
 	if path == "" {
 		return nil
 	}
