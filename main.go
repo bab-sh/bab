@@ -33,16 +33,8 @@ func run() int {
 		Level:           log.InfoLevel,
 	}))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-sigChan
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	cmd.SetVersionInfo(version, commit, date)
 	if err := cmd.ExecuteContext(ctx); err != nil {

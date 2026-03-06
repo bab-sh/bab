@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/condition"
@@ -420,6 +421,12 @@ func shellCommand() (string, string) {
 
 func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string, showOutput bool, dir string) error {
 	cmd := exec.CommandContext(ctx, shell, shellArg, command)
+	cmd.SysProcAttr = sysProcAttr()
+	cmd.Cancel = func() error {
+		return signalProcessGroup(cmd)
+	}
+	cmd.WaitDelay = 3 * time.Second
+
 	if showOutput {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
