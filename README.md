@@ -78,13 +78,25 @@ tasks:
       - cmd: npm test
 
   test:all:
-    desc: Run all checks
+    desc: Run all checks in parallel
     run:
-      - task: test:unit
-        silent: true
-        output: false
-      - log: All tests passed!
-        level: info
+      - parallel:
+          - task: lint
+          - task: test:unit
+        mode: interleaved
+
+  ci:
+    desc: Full CI pipeline
+    run:
+      - parallel:
+          - task: lint
+            label: lint
+          - task: test:unit
+            label: tests
+          - cmd: npm run build
+            label: build
+        mode: grouped
+        limit: 2
 
   configure:
     desc: Interactive project configuration
