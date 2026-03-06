@@ -290,15 +290,16 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 
 		case babfile.PromptRun:
 			promptCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
-			interpolatedMsg, err := interpolate.Interpolate(v.Message, promptCtx)
+
+			interpolated, err := interpolatePrompt(v, promptCtx)
 			if err != nil {
 				return err
 			}
 
 			if r.DryRun {
-				log.Info("Would prompt", "var", v.Prompt, "type", v.Type, "message", interpolatedMsg)
+				log.Info("Would prompt", "var", interpolated.Prompt, "type", interpolated.Type, "message", interpolated.Message)
 			} else {
-				result, err := tui.RunPrompt(v, interpolatedMsg)
+				result, err := tui.RunPrompt(interpolated, interpolated.Message)
 				if err != nil {
 					return fmt.Errorf("task %q: prompt %q: %w", task.Name, v.Prompt, err)
 				}
@@ -354,6 +355,52 @@ func (r *Runner) shouldSkipRunItem(item babfile.RunItem, taskVars map[string]str
 	}
 
 	return false, nil
+}
+
+func interpolatePrompt(p babfile.PromptRun, ctx *interpolate.Context) (babfile.PromptRun, error) {
+	msg, err := interpolate.Interpolate(p.Message, ctx)
+	if err != nil {
+		return p, err
+	}
+	p.Message = msg
+
+	if p.Default != "" {
+		p.Default, err = interpolate.Interpolate(p.Default, ctx)
+		if err != nil {
+			return p, err
+		}
+	}
+
+	if p.Placeholder != "" {
+		p.Placeholder, err = interpolate.Interpolate(p.Placeholder, ctx)
+		if err != nil {
+			return p, err
+		}
+	}
+
+	if len(p.Options) > 0 {
+		options := make([]string, len(p.Options))
+		for i, opt := range p.Options {
+			options[i], err = interpolate.Interpolate(opt, ctx)
+			if err != nil {
+				return p, err
+			}
+		}
+		p.Options = options
+	}
+
+	if len(p.Defaults) > 0 {
+		defaults := make([]string, len(p.Defaults))
+		for i, d := range p.Defaults {
+			defaults[i], err = interpolate.Interpolate(d, ctx)
+			if err != nil {
+				return p, err
+			}
+		}
+		p.Defaults = defaults
+	}
+
+	return p, nil
 }
 
 func (r *Runner) interpolateEnv(env map[string]string, ctx *interpolate.Context) (map[string]string, error) {

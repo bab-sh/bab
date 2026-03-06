@@ -974,3 +974,50 @@ func TestRunIncludedTaskUsesSourceDir(t *testing.T) {
 		t.Errorf("RunWithTasks(sub:build) error: %v", err)
 	}
 }
+
+func TestInterpolatePromptFields(t *testing.T) {
+	ctx := &interpolate.Context{
+		Vars: map[string]string{
+			"name":    "Alice",
+			"env_val": "production",
+		},
+	}
+
+	original := babfile.PromptRun{
+		Prompt:      "result",
+		Type:        babfile.PromptTypeSelect,
+		Message:     "Hello ${{ name }}",
+		Default:     "${{ env_val }}",
+		Placeholder: "Enter ${{ name }}'s value",
+		Options:     []string{"${{ env_val }}", "staging", "dev"},
+		Defaults:    []string{"${{ env_val }}"},
+	}
+
+	result, err := interpolatePrompt(original, ctx)
+	if err != nil {
+		t.Fatalf("interpolatePrompt() error: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"Message", result.Message, "Hello Alice"},
+		{"Default", result.Default, "production"},
+		{"Placeholder", result.Placeholder, "Enter Alice's value"},
+		{"Options[0]", result.Options[0], "production"},
+		{"Options[1]", result.Options[1], "staging"},
+		{"Defaults[0]", result.Defaults[0], "production"},
+	}
+
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %q, want %q", tt.name, tt.got, tt.want)
+		}
+	}
+
+	if original.Options[0] != "${{ env_val }}" {
+		t.Error("original Options slice was mutated")
+	}
+}
