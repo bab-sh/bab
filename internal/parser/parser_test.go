@@ -1638,3 +1638,117 @@ func TestParseInvalidDirGlobal(t *testing.T) {
 		t.Errorf("expected error about dir type, got: %v", err)
 	}
 }
+
+func TestParseParallelBasic(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "parallel_basic.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build:all"]
+	if task == nil {
+		t.Fatal("task 'build:all' not found")
+	}
+	if len(task.Run) != 1 {
+		t.Fatalf("expected 1 run item, got %d", len(task.Run))
+	}
+
+	pr, ok := task.Run[0].(babfile.ParallelRun)
+	if !ok {
+		t.Fatal("expected ParallelRun")
+	}
+	if len(pr.Items) != 3 {
+		t.Fatalf("expected 3 parallel items, got %d", len(pr.Items))
+	}
+	if pr.Mode != babfile.ParallelInterleaved {
+		t.Errorf("expected mode 'interleaved', got %q", pr.Mode)
+	}
+	if pr.Limit != 2 {
+		t.Errorf("expected limit 2, got %d", pr.Limit)
+	}
+
+	if _, ok := pr.Items[0].(babfile.TaskRun); !ok {
+		t.Error("expected first item to be TaskRun")
+	}
+	if _, ok := pr.Items[1].(babfile.TaskRun); !ok {
+		t.Error("expected second item to be TaskRun")
+	}
+	if _, ok := pr.Items[2].(babfile.CommandRun); !ok {
+		t.Error("expected third item to be CommandRun")
+	}
+
+	if pr.Labels[2] != "libs" {
+		t.Errorf("expected label 'libs', got %q", pr.Labels[2])
+	}
+}
+
+func TestParseParallelGrouped(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "parallel_grouped.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["test:all"]
+	if task == nil {
+		t.Fatal("task 'test:all' not found")
+	}
+
+	pr, ok := task.Run[0].(babfile.ParallelRun)
+	if !ok {
+		t.Fatal("expected ParallelRun")
+	}
+	if pr.Mode != babfile.ParallelGrouped {
+		t.Errorf("expected mode 'grouped', got %q", pr.Mode)
+	}
+	if len(pr.Items) != 2 {
+		t.Errorf("expected 2 parallel items, got %d", len(pr.Items))
+	}
+}
+
+func TestParseParallelRejectsPrompt(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "parallel_prompt.yml"))
+	if err == nil {
+		t.Fatal("expected error for prompt inside parallel")
+	}
+	if !strings.Contains(err.Error(), "prompt items cannot be used inside parallel blocks") {
+		t.Errorf("expected prompt rejection error, got: %v", err)
+	}
+}
+
+func TestParseParallelRejectsNested(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "parallel_nested.yml"))
+	if err == nil {
+		t.Fatal("expected error for nested parallel")
+	}
+	if !strings.Contains(err.Error(), "parallel items cannot be nested") {
+		t.Errorf("expected nesting rejection error, got: %v", err)
+	}
+}
+
+func TestParseParallelInvalidMode(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "parallel_invalid_mode.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid mode")
+	}
+	if !strings.Contains(err.Error(), "invalid mode") {
+		t.Errorf("expected invalid mode error, got: %v", err)
+	}
+}
+
+func TestParseParallelItemLabel(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "parallel_basic.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["build:all"]
+	pr := task.Run[0].(babfile.ParallelRun)
+
+	if label := pr.ItemLabel(0); label != "build:frontend" {
+		t.Errorf("expected label 'build:frontend', got %q", label)
+	}
+
+	if label := pr.ItemLabel(2); label != "libs" {
+		t.Errorf("expected label 'libs', got %q", label)
+	}
+}

@@ -75,17 +75,27 @@ func TestSchemaUsesDraft07(t *testing.T) {
 func TestTaskSchemaHasRunWithOneOf(t *testing.T) {
 	parsed := parseSchema(t)
 	defs := getMap(t, parsed, "$defs")
+
 	taskDef := getMap(t, defs, "Task")
 	props := getMap(t, taskDef, "properties")
 	runProp := getMap(t, props, "run")
 	items := getMap(t, runProp, "items")
-	oneOf := getSlice(t, items, "oneOf")
-
-	if len(oneOf) != 4 {
-		t.Fatalf("run items should have 4 oneOf options, got %d", len(oneOf))
+	ref, ok := items["$ref"]
+	if !ok {
+		t.Fatal("run items should have a $ref")
+	}
+	if ref != "#/$defs/RunItem" {
+		t.Fatalf("run items $ref should be '#/$defs/RunItem', got %v", ref)
 	}
 
-	expected := []string{"cmd", "task", "log", "prompt"}
+	runItemDef := getMap(t, defs, "RunItem")
+	oneOf := getSlice(t, runItemDef, "oneOf")
+
+	if len(oneOf) != 5 {
+		t.Fatalf("RunItem should have 5 oneOf options (cmd, task, log, prompt, parallel), got %d", len(oneOf))
+	}
+
+	expected := []string{"cmd", "task", "log", "prompt", "parallel"}
 	for i, key := range expected {
 		option, ok := oneOf[i].(map[string]any)
 		if !ok {

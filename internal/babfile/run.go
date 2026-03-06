@@ -15,6 +15,7 @@ func RunItemSchema() *jsonschema.Schema {
 			TaskRunSchema(),
 			LogRunSchema(),
 			PromptRunSchema(),
+			ParallelRunSchema(),
 		},
 	}
 }

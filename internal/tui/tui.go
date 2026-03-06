@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/bab-sh/bab/internal/babfile"
@@ -9,13 +11,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func PickTask(tasks babfile.TaskMap) (*babfile.Task, error) {
+func PickTask(ctx context.Context, tasks babfile.TaskMap) (*babfile.Task, error) {
 	if len(tasks) == 0 {
 		return nil, errs.ErrNoTasks
 	}
 
-	result, err := tea.NewProgram(picker.New(tasks), tea.WithAltScreen()).Run()
+	result, err := tea.NewProgram(picker.New(tasks), tea.WithAltScreen(), tea.WithContext(ctx)).Run()
 	if err != nil {
+		if errors.Is(err, tea.ErrProgramKilled) {
+			return nil, context.Canceled
+		}
 		return nil, err
 	}
 

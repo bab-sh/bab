@@ -1,0 +1,19 @@
+tasks:
+  build:frontend:
+    run:
+      - cmd: echo "frontend"
+
+  build:backend:
+    run:
+      - cmd: echo "backend"
+
+  build:all:
+    desc: Build everything
+    run:
+      - parallel:
+          - task: build:frontend
+          - task: build:backend
+          - cmd: echo "libs"
+            label: libs
+        mode: interleaved
+        limit: 2

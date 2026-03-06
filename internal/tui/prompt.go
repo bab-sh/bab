@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -23,24 +24,24 @@ const (
 	boolFalse = "false"
 )
 
-func RunPrompt(p babfile.PromptRun, message string) (string, error) {
+func RunPrompt(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return handleNonInteractive(p)
 	}
 
 	switch p.Type {
 	case babfile.PromptTypeConfirm:
-		return runConfirm(p, message)
+		return runConfirm(ctx, p, message)
 	case babfile.PromptTypeInput:
-		return runInput(p, message)
+		return runInput(ctx, p, message)
 	case babfile.PromptTypeSelect:
-		return runSelect(p, message)
+		return runSelect(ctx, p, message)
 	case babfile.PromptTypeMultiselect:
-		return runMultiselect(p, message)
+		return runMultiselect(ctx, p, message)
 	case babfile.PromptTypePassword:
-		return runPassword(p, message)
+		return runPassword(ctx, p, message)
 	case babfile.PromptTypeNumber:
-		return runNumber(p, message)
+		return runNumber(ctx, p, message)
 	default:
 		return "", fmt.Errorf("unknown prompt type: %s", p.Type)
 	}
@@ -80,7 +81,7 @@ func normalizeConfirmDefault(s string) string {
 	}
 }
 
-func runConfirm(p babfile.PromptRun, message string) (string, error) {
+func runConfirm(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result bool
 
 	if p.Default != "" {
@@ -92,7 +93,7 @@ func runConfirm(p babfile.PromptRun, message string) (string, error) {
 		Value(&result)
 
 	form := huh.NewForm(huh.NewGroup(confirm))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}
@@ -102,7 +103,7 @@ func runConfirm(p babfile.PromptRun, message string) (string, error) {
 	return strconv.FormatBool(result), nil
 }
 
-func runInput(p babfile.PromptRun, message string) (string, error) {
+func runInput(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result string
 	if p.Default != "" {
 		result = p.Default
@@ -127,7 +128,7 @@ func runInput(p babfile.PromptRun, message string) (string, error) {
 	}
 
 	form := huh.NewForm(huh.NewGroup(input))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}
@@ -137,7 +138,7 @@ func runInput(p babfile.PromptRun, message string) (string, error) {
 	return result, nil
 }
 
-func runSelect(p babfile.PromptRun, message string) (string, error) {
+func runSelect(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result string
 	if p.Default != "" {
 		result = p.Default
@@ -154,7 +155,7 @@ func runSelect(p babfile.PromptRun, message string) (string, error) {
 		Value(&result)
 
 	form := huh.NewForm(huh.NewGroup(sel))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}
@@ -164,7 +165,7 @@ func runSelect(p babfile.PromptRun, message string) (string, error) {
 	return result, nil
 }
 
-func runMultiselect(p babfile.PromptRun, message string) (string, error) {
+func runMultiselect(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result []string
 	if len(p.Defaults) > 0 {
 		result = make([]string, len(p.Defaults))
@@ -194,7 +195,7 @@ func runMultiselect(p babfile.PromptRun, message string) (string, error) {
 	}
 
 	form := huh.NewForm(huh.NewGroup(multi))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}
@@ -204,7 +205,7 @@ func runMultiselect(p babfile.PromptRun, message string) (string, error) {
 	return strings.Join(result, ","), nil
 }
 
-func runPassword(p babfile.PromptRun, message string) (string, error) {
+func runPassword(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result string
 
 	pw := huh.NewInput().
@@ -213,7 +214,7 @@ func runPassword(p babfile.PromptRun, message string) (string, error) {
 		Value(&result)
 
 	form := huh.NewForm(huh.NewGroup(pw))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}
@@ -234,7 +235,7 @@ func runPassword(p babfile.PromptRun, message string) (string, error) {
 			})
 
 		confirmForm := huh.NewForm(huh.NewGroup(confirmPw))
-		if err := confirmForm.Run(); err != nil {
+		if err := confirmForm.RunWithContext(ctx); err != nil {
 			if errors.Is(err, huh.ErrUserAborted) {
 				return "", ErrPromptCancelled
 			}
@@ -245,7 +246,7 @@ func runPassword(p babfile.PromptRun, message string) (string, error) {
 	return result, nil
 }
 
-func runNumber(p babfile.PromptRun, message string) (string, error) {
+func runNumber(ctx context.Context, p babfile.PromptRun, message string) (string, error) {
 	var result string
 	if p.Default != "" {
 		result = p.Default
@@ -276,7 +277,7 @@ func runNumber(p babfile.PromptRun, message string) (string, error) {
 	}
 
 	form := huh.NewForm(huh.NewGroup(input))
-	if err := form.Run(); err != nil {
+	if err := form.RunWithContext(ctx); err != nil {
 		if errors.Is(err, huh.ErrUserAborted) {
 			return "", ErrPromptCancelled
 		}

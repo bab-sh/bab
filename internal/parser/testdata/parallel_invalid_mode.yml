@@ -1,0 +1,6 @@
+tasks:
+  bad:
+    run:
+      - parallel:
+          - cmd: echo "hello"
+        mode: invalid

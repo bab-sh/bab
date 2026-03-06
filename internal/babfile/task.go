@@ -83,7 +83,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 		Type:        "array",
 		Description: "Commands or tasks to execute",
 		MinItems:    &minRunItems,
-		Items:       RunItemSchema(),
+		Items:       &jsonschema.Schema{Ref: "#/$defs/RunItem"},
 	})
 
 	return &jsonschema.Schema{
