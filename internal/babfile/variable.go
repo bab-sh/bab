@@ -6,8 +6,6 @@ const VarNamePattern = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
 type VarMap map[string]string
 
-type Vars map[string]string
-
 func MergeVarMaps(varMaps ...VarMap) VarMap {
 	merged := make(VarMap)
 	for _, vm := range varMaps {

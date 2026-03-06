@@ -87,6 +87,9 @@ func prefixAliases(aliases []string, namespace string) []string {
 }
 
 func prefixDeps(deps []string, namespace string) []string {
+	if len(deps) == 0 {
+		return nil
+	}
 	prefixed := make([]string, len(deps))
 	for i, dep := range deps {
 		prefixed[i] = namespace + ":" + dep

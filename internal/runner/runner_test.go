@@ -354,7 +354,7 @@ func TestBoolInheritanceFunctions(t *testing.T) {
 	trueVal := true
 	falseVal := false
 
-	type boolFn func(item, task, global *bool) bool
+	type boolFn func(vals ...*bool) bool
 
 	runTests := func(t *testing.T, fn boolFn, fnName string, defaultVal bool) {
 		tests := []struct {
@@ -391,6 +391,21 @@ func TestBoolInheritanceFunctions(t *testing.T) {
 
 	t.Run("isOutput", func(t *testing.T) {
 		runTests(t, isOutput, "isOutput", true)
+	})
+
+	t.Run("4-arg override priority", func(t *testing.T) {
+		if !isSilent(&trueVal, &falseVal, &falseVal, &falseVal) {
+			t.Error("item-level true should override all others")
+		}
+		if isSilent(nil, &falseVal, &trueVal, &trueVal) {
+			t.Error("override false should beat task and global true")
+		}
+		if !isOutput(&trueVal, &falseVal, &falseVal, &falseVal) {
+			t.Error("item-level true should override all others")
+		}
+		if isOutput(nil, &falseVal, &trueVal, &trueVal) {
+			t.Error("override false should beat task and global true")
+		}
 	})
 }
 

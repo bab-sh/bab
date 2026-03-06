@@ -1,0 +1,7 @@
+dir:
+  nested: value
+
+tasks:
+  build:
+    run:
+      - cmd: echo hello

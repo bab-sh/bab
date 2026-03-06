@@ -1618,3 +1618,23 @@ func TestParseIncludePreservesTaskRunFields(t *testing.T) {
 		t.Errorf("expected When preserved on TaskRun, got %q", tr.When)
 	}
 }
+
+func TestParseInvalidPlatform(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "invalid_platform.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid platform")
+	}
+	if !strings.Contains(err.Error(), "invalid platform") {
+		t.Errorf("expected error about invalid platform, got: %v", err)
+	}
+}
+
+func TestParseInvalidDirGlobal(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "invalid_dir_global.yml"))
+	if err == nil {
+		t.Fatal("expected error for non-scalar global dir")
+	}
+	if !strings.Contains(err.Error(), "dir must be a string") {
+		t.Errorf("expected error about dir type, got: %v", err)
+	}
+}

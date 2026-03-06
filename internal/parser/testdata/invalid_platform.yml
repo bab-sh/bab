@@ -1,0 +1,6 @@
+tasks:
+  build:
+    run:
+      - cmd: echo hello
+        platforms:
+          - macos

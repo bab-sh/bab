@@ -170,7 +170,9 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 		case keyOutput:
 			parseBool(path, val, &schema.Output, verrs)
 		case keyDir:
-			if val.Kind == yaml.ScalarNode {
+			if val.Kind != yaml.ScalarNode {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: "dir must be a string"})
+			} else {
 				schema.Dir = val.Value
 			}
 		case keyTasks:
@@ -260,7 +262,12 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 				hasErrors = true
 			}
 		case keyDir:
-			task.Dir = val.Value
+			if val.Kind != yaml.ScalarNode {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("task %q: dir must be a string", taskName)})
+				hasErrors = true
+			} else {
+				task.Dir = val.Value
+			}
 		case keyWhen:
 			task.When = val.Value
 		case keyDeps:
@@ -392,7 +399,12 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 		case keyCmd:
 			cmd = val.Value
 		case keyDir:
-			dir = val.Value
+			if val.Kind != yaml.ScalarNode {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("task %q: run[%d]: dir must be a string", taskName, index)})
+				hasErrors = true
+			} else {
+				dir = val.Value
+			}
 		case keyWhen:
 			when = val.Value
 		case keyTask:
@@ -417,6 +429,13 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 			if err := val.Decode(&platforms); err != nil {
 				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platforms", taskName, index), Cause: err})
 				hasErrors = true
+			} else {
+				for _, p := range platforms {
+					if !p.Valid() {
+						verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platform %q, must be one of: linux, darwin, windows", taskName, index, p)})
+						hasErrors = true
+					}
+				}
 			}
 		default:
 			if !parsePromptKey(key, val, &pf, path, taskName, index, verrs) {

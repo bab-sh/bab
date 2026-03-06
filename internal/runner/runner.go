@@ -99,28 +99,20 @@ func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfil
 	return r.runTask(ctx, taskName, tasks, state, true, nil, nil)
 }
 
-func isSilent(item, task, global *bool) bool {
-	if item != nil {
-		return *item
-	}
-	if task != nil {
-		return *task
-	}
-	if global != nil {
-		return *global
+func isSilent(vals ...*bool) bool {
+	for _, v := range vals {
+		if v != nil {
+			return *v
+		}
 	}
 	return false
 }
 
-func isOutput(item, task, global *bool) bool {
-	if item != nil {
-		return *item
-	}
-	if task != nil {
-		return *task
-	}
-	if global != nil {
-		return *global
+func isOutput(vals ...*bool) bool {
+	for _, v := range vals {
+		if v != nil {
+			return *v
+		}
 	}
 	return true
 }
@@ -179,7 +171,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 	}
 
 	if len(task.Run) > 0 {
-		if err := r.executeTask(ctx, task, tasks, state, overrideOutput); err != nil {
+		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput); err != nil {
 			return err
 		}
 	}
@@ -188,7 +180,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 	return nil
 }
 
-func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state map[string]status, overrideOutput *bool) error {
+func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state map[string]status, overrideSilent, overrideOutput *bool) error {
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
@@ -252,14 +244,10 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 			if r.DryRun {
 				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv), "dir", cmdDir)
 			} else {
-				if !isSilent(v.Silent, task.Silent, r.GlobalSilent) {
+				if !isSilent(v.Silent, overrideSilent, task.Silent, r.GlobalSilent) {
 					output.Cmd(interpolatedCmd)
 				}
-				taskOutput := task.Output
-				if overrideOutput != nil {
-					taskOutput = overrideOutput
-				}
-				showOutput := isOutput(v.Output, taskOutput, r.GlobalOutput)
+				showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
 				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput, cmdDir); err != nil {
 					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
 				}
