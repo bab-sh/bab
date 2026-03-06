@@ -1,0 +1,6 @@
+tasks:
+  bad:
+    run:
+      - parallel:
+          - parallel:
+              - cmd: echo "nested"

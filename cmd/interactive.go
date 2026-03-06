@@ -12,7 +12,7 @@ func (c *CLI) runInteractive() error {
 		return err
 	}
 
-	selected, err := tui.PickTask(result.Tasks)
+	selected, err := tui.PickTask(c.ctx, result.Tasks)
 	if err != nil {
 		return err
 	}

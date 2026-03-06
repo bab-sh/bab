@@ -1,6 +1,7 @@
 package update
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -23,13 +24,13 @@ type Info struct {
 	LatestVersion  string
 }
 
-func StartBackgroundRefresh(currentVersion string) {
+func StartBackgroundRefresh(ctx context.Context, currentVersion string) {
 	if shouldSkip(currentVersion) {
 		return
 	}
 	cached := loadCache()
 	if cached == nil || !cached.isValid() {
-		go refreshCache(cached)
+		go refreshCache(ctx, cached)
 	}
 }
 
@@ -52,7 +53,7 @@ func ForceCheck(currentVersion string) *Info {
 		return nil
 	}
 
-	latest, etag, err := fetchLatestVersion(nil)
+	latest, etag, err := fetchLatestVersion(context.Background(), nil)
 	if err != nil {
 		return nil
 	}
@@ -90,8 +91,8 @@ func shouldSkip(currentVersion string) bool {
 	return false
 }
 
-func refreshCache(cached *cache) {
-	latest, etag, err := fetchLatestVersion(cached)
+func refreshCache(ctx context.Context, cached *cache) {
+	latest, etag, err := fetchLatestVersion(ctx, cached)
 	if err != nil {
 		return
 	}
@@ -107,7 +108,7 @@ func refreshCache(cached *cache) {
 	})
 }
 
-func fetchLatestVersion(cached *cache) (version, etag string, err error) {
+func fetchLatestVersion(ctx context.Context, cached *cache) (version, etag string, err error) {
 	client := &http.Client{
 		Timeout: timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -115,7 +116,7 @@ func fetchLatestVersion(cached *cache) (version, etag string, err error) {
 		},
 	}
 
-	req, err := http.NewRequest(http.MethodGet, releaseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releaseURL, nil)
 	if err != nil {
 		return "", "", err
 	}

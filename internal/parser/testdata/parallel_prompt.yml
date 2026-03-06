@@ -1,0 +1,7 @@
+tasks:
+  bad:
+    run:
+      - parallel:
+          - prompt: name
+            type: input
+            message: "Name?"

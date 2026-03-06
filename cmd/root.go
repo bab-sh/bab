@@ -40,7 +40,7 @@ func newCLI() *CLI {
 func (c *CLI) execute(ctx context.Context) error {
 	c.ctx = ctx
 
-	update.StartBackgroundRefresh(versionString)
+	update.StartBackgroundRefresh(ctx, versionString)
 
 	err := c.buildCommand().Execute()
 

@@ -40,6 +40,10 @@ const (
 	keyMin         = "min"
 	keyMax         = "max"
 	keyConfirm     = "confirm"
+	keyParallel    = "parallel"
+	keyMode        = "mode"
+	keyLimit       = "limit"
+	keyLabel       = "label"
 )
 
 type promptFields struct {
@@ -378,18 +382,51 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 		return nil, false
 	}
 
-	var cmd, task, log string
-	var dir string
-	var when string
-	var env map[string]string
-	var platforms []babfile.Platform
-	var level babfile.LogLevel
-	var silent *bool
-	var output *bool
-	line := node.Line
-	hasErrors := false
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == keyParallel {
+			return parseParallelRun(path, node, taskName, index, verrs)
+		}
+	}
 
-	var pf promptFields
+	rf := parseRunFields(path, node, taskName, index, verrs)
+
+	count := countRunTypes(rf.cmd, rf.task, rf.log, rf.pf.name)
+
+	switch {
+	case count > 1:
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item can only have one of 'cmd', 'task', 'log', or 'prompt'", taskName, index)})
+		return nil, false
+	case count == 0:
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must have 'cmd', 'task', 'log', 'prompt', or 'parallel'", taskName, index)})
+		return nil, false
+	case rf.hasErrors:
+		return nil, false
+	case rf.cmd != "":
+		return babfile.CommandRun{Line: rf.line, Cmd: rf.cmd, Dir: rf.dir, Env: rf.env, Silent: rf.silent, Output: rf.output, Platforms: rf.platforms, When: rf.when}, true
+	case rf.task != "":
+		return babfile.TaskRun{Line: rf.line, Task: rf.task, Silent: rf.silent, Output: rf.output, Platforms: rf.platforms, When: rf.when}, true
+	case rf.log != "":
+		return buildLogRun(path, rf.line, taskName, index, rf.log, rf.level, rf.platforms, rf.when, verrs)
+	case rf.pf.name != "":
+		return validatePromptRun(path, rf.line, taskName, index, rf.pf, rf.platforms, rf.when, verrs)
+	default:
+		return nil, false
+	}
+}
+
+type runFields struct {
+	cmd, task, log, dir, when string
+	env                       map[string]string
+	platforms                 []babfile.Platform
+	level                     babfile.LogLevel
+	silent, output            *bool
+	line                      int
+	hasErrors                 bool
+	pf                        promptFields
+}
+
+func parseRunFields(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) runFields {
+	rf := runFields{line: node.Line}
 
 	for i := 0; i < len(node.Content); i += 2 {
 		key := node.Content[i]
@@ -397,75 +434,180 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 
 		switch key.Value {
 		case keyCmd:
-			cmd = val.Value
+			rf.cmd = val.Value
 		case keyDir:
 			if val.Kind != yaml.ScalarNode {
 				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("task %q: run[%d]: dir must be a string", taskName, index)})
-				hasErrors = true
+				rf.hasErrors = true
 			} else {
-				dir = val.Value
+				rf.dir = val.Value
 			}
 		case keyWhen:
-			when = val.Value
+			rf.when = val.Value
 		case keyTask:
-			task = val.Value
+			rf.task = val.Value
 		case keyLog:
-			log = val.Value
+			rf.log = val.Value
 		case keyLevel:
-			level = babfile.LogLevel(val.Value)
+			rf.level = babfile.LogLevel(val.Value)
 		case keyEnv:
-			if !parseEnvMap(path, val, &env, verrs) {
-				hasErrors = true
+			if !parseEnvMap(path, val, &rf.env, verrs) {
+				rf.hasErrors = true
 			}
 		case keySilent:
-			if !parseBool(path, val, &silent, verrs) {
-				hasErrors = true
+			if !parseBool(path, val, &rf.silent, verrs) {
+				rf.hasErrors = true
 			}
 		case keyOutput:
-			if !parseBool(path, val, &output, verrs) {
-				hasErrors = true
+			if !parseBool(path, val, &rf.output, verrs) {
+				rf.hasErrors = true
 			}
 		case keyPlatforms:
-			if err := val.Decode(&platforms); err != nil {
+			if err := val.Decode(&rf.platforms); err != nil {
 				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platforms", taskName, index), Cause: err})
-				hasErrors = true
+				rf.hasErrors = true
 			} else {
-				for _, p := range platforms {
+				for _, p := range rf.platforms {
 					if !p.Valid() {
 						verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platform %q, must be one of: linux, darwin, windows", taskName, index, p)})
-						hasErrors = true
+						rf.hasErrors = true
 					}
 				}
 			}
+		case keyLabel:
 		default:
-			if !parsePromptKey(key, val, &pf, path, taskName, index, verrs) {
-				hasErrors = true
+			if !parsePromptKey(key, val, &rf.pf, path, taskName, index, verrs) {
+				rf.hasErrors = true
 			}
 		}
 	}
 
-	count := countRunTypes(cmd, task, log, pf.name)
+	return rf
+}
 
-	switch {
-	case count > 1:
-		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item can only have one of 'cmd', 'task', 'log', or 'prompt'", taskName, index)})
-		return nil, false
-	case count == 0:
-		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: run item must have 'cmd', 'task', 'log', or 'prompt'", taskName, index)})
-		return nil, false
-	case hasErrors:
-		return nil, false
-	case cmd != "":
-		return babfile.CommandRun{Line: line, Cmd: cmd, Dir: dir, Env: env, Silent: silent, Output: output, Platforms: platforms, When: when}, true
-	case task != "":
-		return babfile.TaskRun{Line: line, Task: task, Silent: silent, Output: output, Platforms: platforms, When: when}, true
-	case log != "":
-		return buildLogRun(path, line, taskName, index, log, level, platforms, when, verrs)
-	case pf.name != "":
-		return validatePromptRun(path, line, taskName, index, pf, platforms, when, verrs)
-	default:
+func parseParallelRun(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+	prefix := fmt.Sprintf("task %q: run[%d]", taskName, index)
+	line := node.Line
+	hasErrors := false
+
+	var itemsNode *yaml.Node
+	var mode babfile.ParallelMode
+	var limit int
+	var platforms []babfile.Platform
+	var when string
+	var labels []string
+
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i]
+		val := node.Content[i+1]
+
+		switch key.Value {
+		case keyParallel:
+			if val.Kind != yaml.SequenceNode {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: parallel must be a sequence", prefix)})
+				hasErrors = true
+			} else {
+				itemsNode = val
+			}
+		case keyMode:
+			if val.Kind != yaml.ScalarNode {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: mode must be a string", prefix)})
+				hasErrors = true
+			} else {
+				mode = babfile.ParallelMode(val.Value)
+				if !mode.Valid() {
+					verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid mode %q, must be one of: interleaved, grouped", prefix, val.Value)})
+					hasErrors = true
+				}
+			}
+		case keyLimit:
+			var v int
+			if err := val.Decode(&v); err != nil {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid limit value", prefix), Cause: err})
+				hasErrors = true
+			} else if v < 0 {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: limit must be >= 0", prefix)})
+				hasErrors = true
+			} else {
+				limit = v
+			}
+		case keyPlatforms:
+			if err := val.Decode(&platforms); err != nil {
+				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: invalid platforms", prefix), Cause: err})
+				hasErrors = true
+			} else {
+				for _, p := range platforms {
+					if !p.Valid() {
+						verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: invalid platform %q, must be one of: linux, darwin, windows", prefix, p)})
+						hasErrors = true
+					}
+				}
+			}
+		case keyWhen:
+			when = val.Value
+		default:
+			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: unknown key %q in parallel block", prefix, key.Value)})
+			hasErrors = true
+		}
+	}
+
+	if hasErrors || itemsNode == nil {
 		return nil, false
 	}
+
+	if len(itemsNode.Content) == 0 {
+		verrs.Add(&errs.ParseError{Path: path, Line: itemsNode.Line, Message: fmt.Sprintf("%s: parallel must have at least one item", prefix)})
+		return nil, false
+	}
+
+	items, ok := parseRunItems(path, itemsNode, taskName, verrs)
+	if !ok {
+		return nil, false
+	}
+
+	labels = make([]string, len(items))
+	for j, item := range items {
+		switch item.(type) {
+		case babfile.PromptRun:
+			verrs.Add(&errs.ParseError{Path: path, Line: itemsNode.Content[j].Line, Message: fmt.Sprintf("%s: prompt items cannot be used inside parallel blocks", prefix)})
+			hasErrors = true
+		case babfile.ParallelRun:
+			verrs.Add(&errs.ParseError{Path: path, Line: itemsNode.Content[j].Line, Message: fmt.Sprintf("%s: parallel items cannot be nested", prefix)})
+			hasErrors = true
+		}
+	}
+
+	if hasErrors {
+		return nil, false
+	}
+
+	for j, itemNode := range itemsNode.Content {
+		if j >= len(items) {
+			break
+		}
+		if itemNode.Kind == yaml.MappingNode {
+			for k := 0; k < len(itemNode.Content); k += 2 {
+				if itemNode.Content[k].Value == keyLabel {
+					labels[j] = itemNode.Content[k+1].Value
+					break
+				}
+			}
+		}
+	}
+
+	if mode == "" {
+		mode = babfile.ParallelInterleaved
+	}
+
+	return babfile.ParallelRun{
+		Line:      line,
+		Items:     items,
+		Labels:    labels,
+		Mode:      mode,
+		Limit:     limit,
+		Platforms: platforms,
+		When:      when,
+	}, true
 }
 
 func buildLogRun(path string, line int, taskName string, index int, log string, level babfile.LogLevel, platforms []babfile.Platform, when string, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {

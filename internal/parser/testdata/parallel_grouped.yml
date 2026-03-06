@@ -1,0 +1,7 @@
+tasks:
+  test:all:
+    run:
+      - parallel:
+          - cmd: echo "test frontend"
+          - cmd: echo "test backend"
+        mode: grouped

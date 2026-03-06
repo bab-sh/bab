@@ -95,8 +95,8 @@ func (r *Runner) resolveTaskName(name string) string {
 }
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
-	state := make(map[string]status)
-	return r.runTask(ctx, taskName, tasks, state, true, nil, nil)
+	state := &syncState{state: make(map[string]status)}
+	return r.runTask(ctx, taskName, tasks, state, true, nil, nil, nil, nil)
 }
 
 func isSilent(vals ...*bool) bool {
@@ -117,14 +117,14 @@ func isOutput(vals ...*bool) bool {
 	return true
 }
 
-func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state map[string]status, isMain bool, overrideSilent, overrideOutput *bool) error {
-	switch state[name] {
+func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+	switch state.get(name) {
 	case done:
 		return nil
 	case running:
 		return &errs.CircularDepError{
 			Type:  "dependency",
-			Chain: buildChainSlice(name, tasks, state),
+			Chain: buildChainSlice(name, tasks, state.snapshot()),
 		}
 	}
 
@@ -148,39 +148,47 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 		}
 		if !result.ShouldRun {
 			log.Debug("Skipping task", "task", name, "reason", "when condition", "detail", result.Reason)
-			state[name] = done
+			state.set(name, done)
 			return nil
 		}
 	}
 
-	state[name] = running
+	state.set(name, running)
 
 	if !r.DryRun && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
-		if isMain {
-			output.Task(name)
+		if stderr != nil {
+			if isMain {
+				_, _ = fmt.Fprintln(stderr, output.RenderTask(name))
+			} else {
+				_, _ = fmt.Fprintln(stderr, output.RenderDep(name))
+			}
 		} else {
-			output.Dep(name)
+			if isMain {
+				output.Task(name)
+			} else {
+				output.Dep(name)
+			}
 		}
 	}
 
 	for _, dep := range task.Deps {
 		log.Debug("Running dependency", "task", name, "dep", dep)
-		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil); err != nil {
+		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil, stdout, stderr); err != nil {
 			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
 
 	if len(task.Run) > 0 {
-		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput); err != nil {
+		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput, stdout, stderr); err != nil {
 			return err
 		}
 	}
 
-	state[name] = done
+	state.set(name, done)
 	return nil
 }
 
-func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state map[string]status, overrideSilent, overrideOutput *bool) error {
+func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
@@ -221,36 +229,8 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 
 		switch v := item.(type) {
 		case babfile.CommandRun:
-			if strings.TrimSpace(v.Cmd) == "" {
-				return fmt.Errorf("task %q command %d is empty", task.Name, i+1)
-			}
-
-			cmdCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
-			interpolatedCmd, err := interpolate.Interpolate(v.Cmd, cmdCtx)
-			if err != nil {
+			if err := r.executeCommand(ctx, v, task, i+1, shell, shellArg, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr); err != nil {
 				return err
-			}
-
-			cmdEnv, err := r.interpolateEnv(babfile.MergeEnvMaps(taskEnv, v.Env), cmdCtx)
-			if err != nil {
-				return err
-			}
-
-			cmdDir, err := r.resolveDir(task, v.Dir, cmdCtx)
-			if err != nil {
-				return fmt.Errorf("task %q: command %d: %w", task.Name, i+1, err)
-			}
-
-			if r.DryRun {
-				log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv), "dir", cmdDir)
-			} else {
-				if !isSilent(v.Silent, overrideSilent, task.Silent, r.GlobalSilent) {
-					output.Cmd(interpolatedCmd)
-				}
-				showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
-				if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput, cmdDir); err != nil {
-					return fmt.Errorf("task %q: command %d failed: %w", task.Name, i+1, err)
-				}
 			}
 
 		case babfile.TaskRun:
@@ -258,8 +238,17 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				log.Info("Would run task", "task", v.Task)
 			} else {
 				log.Debug("Running task", "task", v.Task)
-				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output); err != nil {
+				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr); err != nil {
 					return fmt.Errorf("task %q failed: %w", v.Task, err)
+				}
+			}
+
+		case babfile.ParallelRun:
+			if r.DryRun {
+				log.Info("Would run parallel", "items", len(v.Items), "mode", v.Mode)
+			} else {
+				if err := r.executeParallel(ctx, v, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput); err != nil {
+					return err
 				}
 			}
 
@@ -287,7 +276,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 			if r.DryRun {
 				log.Info("Would prompt", "var", interpolated.Prompt, "type", interpolated.Type, "message", interpolated.Message)
 			} else {
-				result, err := tui.RunPrompt(interpolated, interpolated.Message)
+				result, err := tui.RunPrompt(ctx, interpolated, interpolated.Message)
 				if err != nil {
 					return fmt.Errorf("task %q: prompt %q: %w", task.Name, v.Prompt, err)
 				}
@@ -307,6 +296,52 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 		}
 	}
 
+	return nil
+}
+
+func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task *babfile.Task, cmdIndex int, shell, shellArg string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+	if strings.TrimSpace(v.Cmd) == "" {
+		return fmt.Errorf("task %q command %d is empty", task.Name, cmdIndex)
+	}
+
+	cmdCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
+	interpolatedCmd, err := interpolate.Interpolate(v.Cmd, cmdCtx)
+	if err != nil {
+		return err
+	}
+
+	cmdEnv, err := r.interpolateEnv(babfile.MergeEnvMaps(taskEnv, v.Env), cmdCtx)
+	if err != nil {
+		return err
+	}
+
+	cmdDir, err := r.resolveDir(task, v.Dir, cmdCtx)
+	if err != nil {
+		return fmt.Errorf("task %q: command %d: %w", task.Name, cmdIndex, err)
+	}
+
+	if r.DryRun {
+		log.Info("Would run", "cmd", interpolatedCmd, "env", len(cmdEnv), "dir", cmdDir)
+		return nil
+	}
+
+	if !isSilent(v.Silent, overrideSilent, task.Silent, r.GlobalSilent) {
+		if stderr != nil {
+			_, _ = fmt.Fprintln(stderr, output.RenderCmd(interpolatedCmd))
+		} else {
+			output.Cmd(interpolatedCmd)
+		}
+	}
+	showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
+	if stdout != nil && showOutput {
+		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, stdout, stderr, false, cmdDir); err != nil {
+			return fmt.Errorf("task %q: command %d failed: %w", task.Name, cmdIndex, err)
+		}
+	} else {
+		if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput, cmdDir); err != nil {
+			return fmt.Errorf("task %q: command %d failed: %w", task.Name, cmdIndex, err)
+		}
+	}
 	return nil
 }
 
@@ -455,6 +490,15 @@ func shellCommand() (string, string) {
 }
 
 func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string, showOutput bool, dir string) error {
+	var stdout, stderr io.Writer
+	if showOutput {
+		stdout = os.Stdout
+		stderr = os.Stderr
+	}
+	return runCommandWithWriters(ctx, shell, shellArg, command, env, stdout, stderr, showOutput, dir)
+}
+
+func runCommandWithWriters(ctx context.Context, shell, shellArg, command string, env map[string]string, stdout, stderr io.Writer, connectStdin bool, dir string) error {
 	cmd := exec.CommandContext(ctx, shell, shellArg, command)
 	cmd.SysProcAttr = sysProcAttr()
 	cmd.Cancel = func() error {
@@ -462,13 +506,18 @@ func runCommand(ctx context.Context, shell, shellArg, command string, env map[st
 	}
 	cmd.WaitDelay = 3 * time.Second
 
-	if showOutput {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
+	if stdout != nil {
+		cmd.Stdout = stdout
 	} else {
 		cmd.Stdout = io.Discard
+	}
+	if stderr != nil {
+		cmd.Stderr = stderr
+	} else {
 		cmd.Stderr = io.Discard
+	}
+	if connectStdin {
+		cmd.Stdin = os.Stdin
 	}
 
 	if len(env) > 0 {

@@ -52,6 +52,7 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 			"TaskName": TaskNameSchema(),
 			"Include":  Include{}.JSONSchema(),
 			"Platform": Platform("").JSONSchema(),
+			"RunItem":  RunItemSchema(),
 		},
 	}
 }

@@ -76,18 +76,25 @@ func validateDependencies(path string, tasks babfile.TaskMap, verrs *errs.Valida
 
 func validateRunTaskRefs(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
 	for name, task := range tasks {
-		for _, item := range task.Run {
-			if tr, ok := item.(babfile.TaskRun); ok {
-				if !tasks.Has(tr.Task) {
-					verrs.Add(&errs.TaskNotFoundError{
-						Path:         path,
-						Line:         tr.Line,
-						TaskName:     tr.Task,
-						ReferencedBy: name,
-						Available:    tasks.Names(),
-					})
-				}
+		validateRunItemTaskRefs(path, name, task.Run, tasks, verrs)
+	}
+}
+
+func validateRunItemTaskRefs(path, referencedBy string, items []babfile.RunItem, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
+	for _, item := range items {
+		switch v := item.(type) {
+		case babfile.TaskRun:
+			if !tasks.Has(v.Task) {
+				verrs.Add(&errs.TaskNotFoundError{
+					Path:         path,
+					Line:         v.Line,
+					TaskName:     v.Task,
+					ReferencedBy: referencedBy,
+					Available:    tasks.Names(),
+				})
 			}
+		case babfile.ParallelRun:
+			validateRunItemTaskRefs(path, referencedBy, v.Items, tasks, verrs)
 		}
 	}
 }
@@ -97,6 +104,30 @@ func validateRunCycles(path string, tasks babfile.TaskMap, verrs *errs.Validatio
 	recStack := make(map[string]bool)
 
 	var dfs func(name string, chain []string)
+	var checkItems func(items []babfile.RunItem, chain []string)
+
+	checkItems = func(items []babfile.RunItem, chain []string) {
+		for _, item := range items {
+			switch v := item.(type) {
+			case babfile.TaskRun:
+				if recStack[v.Task] {
+					chain = append(chain, v.Task)
+					verrs.Add(&errs.CircularDepError{
+						Path:  path,
+						Type:  "dependency",
+						Chain: chain,
+					})
+					return
+				}
+				if !visited[v.Task] && tasks.Has(v.Task) {
+					dfs(v.Task, chain)
+				}
+			case babfile.ParallelRun:
+				checkItems(v.Items, chain)
+			}
+		}
+	}
+
 	dfs = func(name string, chain []string) {
 		visited[name] = true
 		recStack[name] = true
@@ -107,23 +138,7 @@ func validateRunCycles(path string, tasks babfile.TaskMap, verrs *errs.Validatio
 			recStack[name] = false
 			return
 		}
-		for _, item := range task.Run {
-			if tr, ok := item.(babfile.TaskRun); ok {
-				if recStack[tr.Task] {
-					chain = append(chain, tr.Task)
-					verrs.Add(&errs.CircularDepError{
-						Path:  path,
-						Type:  "dependency",
-						Chain: chain,
-					})
-					return
-				}
-				if !visited[tr.Task] && tasks.Has(tr.Task) {
-					dfs(tr.Task, chain)
-				}
-			}
-		}
-
+		checkItems(task.Run, chain)
 		recStack[name] = false
 	}
 
