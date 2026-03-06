@@ -15,6 +15,10 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -31,6 +35,10 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "npm"
     directory: "/docs"
@@ -47,3 +55,7 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"

@@ -1,25 +1,22 @@
-name: CI
+name: Test
 
 on:
-  push:
-  pull_request:
+  workflow_call:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   format:
     name: Format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
@@ -37,33 +34,39 @@ jobs:
   vet:
     name: Vet
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
 
-      - name: Run go vet
+      - name: Run vet
         run: go vet ./...
 
   tidy:
     name: Tidy
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
 
-      - name: Check go.mod is tidy
+      - name: Check go.mod tidiness
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
@@ -71,11 +74,14 @@ jobs:
   schema:
     name: Schema
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
@@ -92,17 +98,20 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
 
-      - name: Run golangci-lint
+      - name: Run lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.5
@@ -111,11 +120,14 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: "1.25"

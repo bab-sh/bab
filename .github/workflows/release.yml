@@ -1,52 +1,39 @@
-name: Build and Upload Release Assets
+name: Release
 
 on:
   release:
-    types: [created]
+    types: [published]
 
-permissions:
-  contents: write
-  id-token: write
+permissions: {}
 
 concurrency:
-  group: release-builds
+  group: release
   cancel-in-progress: false
 
 jobs:
-  schema:
-    name: Schema Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: stable
-          cache: true
-
-      - name: Check schema is current
-        run: |
-          ./scripts/schema.sh
-          git diff --exit-code schema/babfile.schema.json || {
-            echo "Schema is out of date. Run: ./scripts/schema.sh"
-            exit 1
-          }
+  test:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test.yml
 
   build:
-    needs: schema
+    name: Build
+    needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Fetch all tags
+      - name: Fetch tags
         run: git fetch --force --tags
 
-      - name: Set up Go environment
+      - name: Setup Go
         uses: actions/setup-go@v6
         with:
           go-version: stable
@@ -72,7 +59,7 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: Build and release with GoReleaser
+      - name: Release
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
@@ -87,21 +74,10 @@ jobs:
           DISCORD_WEBHOOK_ID: ${{ secrets.DISCORD_WEBHOOK_ID }}
           DISCORD_WEBHOOK_TOKEN: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
 
-      - name: Generate release summary
+      - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Release Tag:** \`${{ github.event.release.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Release URL:** ${{ github.event.release.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** \`${{ github.event.release.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ github.event.release.html_url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Pre-release:** ${{ github.event.release.prerelease }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Success notification
-        if: success()
-        run: |
-          echo "::notice title=Release Complete::Successfully built and published release ${{ github.event.release.tag_name }}"
-
-      - name: Failure notification
-        if: failure()
-        run: |
-          echo "::error title=Release Failed::Failed to complete release process for ${{ github.event.release.tag_name }}"
