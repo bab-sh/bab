@@ -1490,3 +1490,131 @@ func TestParseEmptyAliasesIgnored(t *testing.T) {
 		t.Errorf("expected Aliases['l'] = 'lint', got %q", result.Aliases["l"])
 	}
 }
+
+func TestParseIncludeInheritsGlobalDir(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "globals_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:no-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:no-overrides' not found")
+	}
+	if task.Dir != "./subglobal" {
+		t.Errorf("expected Dir './subglobal' from included root, got %q", task.Dir)
+	}
+
+	task = result.Tasks["sub:with-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:with-overrides' not found")
+	}
+	if task.Dir != "./subtask" {
+		t.Errorf("expected Dir './subtask' (task-level override), got %q", task.Dir)
+	}
+}
+
+func TestParseIncludeInheritsGlobalVars(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "globals_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:no-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:no-overrides' not found")
+	}
+	if task.Vars["sub_version"] != "2.0" {
+		t.Errorf("expected var sub_version='2.0' from included root, got %q", task.Vars["sub_version"])
+	}
+
+	task = result.Tasks["sub:with-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:with-overrides' not found")
+	}
+	if task.Vars["sub_version"] != "3.0" {
+		t.Errorf("expected var sub_version='3.0' (task-level override), got %q", task.Vars["sub_version"])
+	}
+}
+
+func TestParseIncludeInheritsGlobalEnv(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "globals_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:no-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:no-overrides' not found")
+	}
+	if task.Env["SUB_ENV"] != "from-sub" {
+		t.Errorf("expected env SUB_ENV='from-sub' from included root, got %q", task.Env["SUB_ENV"])
+	}
+
+	task = result.Tasks["sub:with-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:with-overrides' not found")
+	}
+	if task.Env["SUB_ENV"] != "from-task" {
+		t.Errorf("expected env SUB_ENV='from-task' (task-level override), got %q", task.Env["SUB_ENV"])
+	}
+}
+
+func TestParseIncludeInheritsGlobalSilentOutput(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "globals_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:no-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:no-overrides' not found")
+	}
+	if task.Silent == nil || !*task.Silent {
+		t.Error("expected Silent=true from included root")
+	}
+	if task.Output == nil || *task.Output {
+		t.Error("expected Output=false from included root")
+	}
+
+	task = result.Tasks["sub:with-overrides"]
+	if task == nil {
+		t.Fatal("task 'sub:with-overrides' not found")
+	}
+	if task.Silent == nil || *task.Silent {
+		t.Error("expected Silent=false (task-level override)")
+	}
+	if task.Output == nil || !*task.Output {
+		t.Error("expected Output=true (task-level override)")
+	}
+}
+
+func TestParseIncludePreservesTaskRunFields(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "includes", "globals_main.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["sub:with-taskref"]
+	if task == nil {
+		t.Fatal("task 'sub:with-taskref' not found")
+	}
+
+	if len(task.Run) != 1 {
+		t.Fatalf("expected 1 run item, got %d", len(task.Run))
+	}
+
+	tr, ok := task.Run[0].(babfile.TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun")
+	}
+	if tr.Task != "sub:no-overrides" {
+		t.Errorf("expected task ref 'sub:no-overrides', got %q", tr.Task)
+	}
+	if tr.Silent == nil || !*tr.Silent {
+		t.Error("expected Silent=true preserved on TaskRun")
+	}
+	if tr.When != "${{ sub_version }}" {
+		t.Errorf("expected When preserved on TaskRun, got %q", tr.When)
+	}
+}

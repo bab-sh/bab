@@ -27,6 +27,25 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 		if tasks.Has(prefixedName) {
 			return &errs.ParseError{Path: incPath, Message: "task name collision: " + prefixedName}
 		}
+
+		taskVars := babfile.MergeVarMaps(result.GlobalVars, task.Vars)
+		taskEnv := babfile.MergeEnvMaps(result.GlobalEnv, task.Env)
+
+		taskDir := task.Dir
+		if taskDir == "" {
+			taskDir = result.GlobalDir
+		}
+
+		taskSilent := task.Silent
+		if taskSilent == nil {
+			taskSilent = result.GlobalSilent
+		}
+
+		taskOutput := task.Output
+		if taskOutput == nil {
+			taskOutput = result.GlobalOutput
+		}
+
 		tasks[prefixedName] = &babfile.Task{
 			Name:       prefixedName,
 			Line:       task.Line,
@@ -35,11 +54,12 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 			Desc:       task.Desc,
 			Alias:      prefixAlias(task.Alias, namespace),
 			Aliases:    prefixAliases(task.Aliases, namespace),
-			Vars:       task.Vars,
-			Env:        task.Env,
-			Silent:     task.Silent,
-			Output:     task.Output,
-			Dir:        task.Dir,
+			Vars:       taskVars,
+			Env:        taskEnv,
+			Silent:     taskSilent,
+			Output:     taskOutput,
+			Dir:        taskDir,
+			When:       task.When,
 			Deps:       prefixDeps(task.Deps, namespace),
 			Run:        prefixTaskRuns(task.Run, namespace),
 		}
@@ -82,8 +102,12 @@ func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem
 			prefixed[i] = v
 		case babfile.TaskRun:
 			prefixed[i] = babfile.TaskRun{
+				Line:      v.Line,
 				Task:      namespace + ":" + v.Task,
+				Silent:    v.Silent,
+				Output:    v.Output,
 				Platforms: v.Platforms,
+				When:      v.When,
 			}
 		case babfile.LogRun:
 			prefixed[i] = v

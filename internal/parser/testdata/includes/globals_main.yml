@@ -1,0 +1,8 @@
+includes:
+  sub:
+    babfile: ./globals_sub.yml
+
+tasks:
+  main:
+    run:
+      - cmd: echo main
