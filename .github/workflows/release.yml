@@ -60,7 +60,7 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
