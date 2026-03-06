@@ -66,6 +66,10 @@
             "when": {
               "type": "string",
               "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
+            },
+            "label": {
+              "type": "string",
+              "description": "Display label for this item when running inside a parallel block"
             }
           },
           "additionalProperties": false,
@@ -102,6 +106,10 @@
             "when": {
               "type": "string",
               "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
+            },
+            "label": {
+              "type": "string",
+              "description": "Display label for this item when running inside a parallel block"
             }
           },
           "additionalProperties": false,
@@ -140,6 +148,10 @@
             "when": {
               "type": "string",
               "description": "Condition expression. Supports: ${{ var }}, ${{ var }} == 'value', ${{ var }} != 'value'"
+            },
+            "label": {
+              "type": "string",
+              "description": "Display label for this item when running inside a parallel block"
             }
           },
           "additionalProperties": false,

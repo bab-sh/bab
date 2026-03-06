@@ -71,6 +71,7 @@ func LogRunSchema() *jsonschema.Schema {
 	props.Set("level", LogLevelSchema())
 	props.Set("platforms", PlatformsArraySchema())
 	props.Set("when", WhenSchema())
+	props.Set("label", LabelSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",

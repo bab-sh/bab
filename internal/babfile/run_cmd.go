@@ -40,6 +40,7 @@ func CommandRunSchema() *jsonschema.Schema {
 	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
 	props.Set("when", WhenSchema())
+	props.Set("label", LabelSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",

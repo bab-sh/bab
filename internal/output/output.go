@@ -66,6 +66,9 @@ func RenderDep(name string) string {
 }
 
 func ParallelDone(labels []string, errs []error) {
+	if len(errs) < len(labels) {
+		return
+	}
 	var parts []string
 	for i, label := range labels {
 		if errs[i] != nil {

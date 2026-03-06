@@ -32,6 +32,16 @@ func (s *syncState) set(name string, st status) {
 	s.state[name] = st
 }
 
+func (s *syncState) claim(name string) status {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current := s.state[name]
+	if current == 0 {
+		s.state[name] = running
+	}
+	return current
+}
+
 func (s *syncState) snapshot() map[string]status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -89,7 +99,11 @@ func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.Para
 			defer wg.Done()
 
 			if sem != nil {
-				sem <- struct{}{}
+				select {
+				case sem <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
 				defer func() { <-sem }()
 			}
 
@@ -144,7 +158,11 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 			defer wg.Done()
 
 			if sem != nil {
-				sem <- struct{}{}
+				select {
+				case sem <- struct{}{}:
+				case <-ctx.Done():
+					return
+				}
 				defer func() { <-sem }()
 			}
 
@@ -172,7 +190,7 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 	}
 	program.Wait()
 
-	if !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
+	if ctx.Err() == nil && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
 		output.ParallelDone(labels, itemErrs)
 	}
 

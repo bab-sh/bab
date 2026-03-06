@@ -56,20 +56,20 @@ func (p ParallelRun) ItemLabel(index int) string {
 	case TaskRun:
 		return v.Task
 	case CommandRun:
-		cmd := v.Cmd
-		if len(cmd) > 20 {
-			cmd = cmd[:20]
-		}
-		return cmd
+		return truncateRunes(v.Cmd, 20)
 	case LogRun:
-		msg := v.Log
-		if len(msg) > 20 {
-			msg = msg[:20]
-		}
-		return msg
+		return truncateRunes(v.Log, 20)
 	default:
 		return ""
 	}
+}
+
+func truncateRunes(s string, max int) string {
+	r := []rune(s)
+	if len(r) > max {
+		return string(r[:max])
+	}
+	return s
 }
 
 func ParallelRunSchema() *jsonschema.Schema {

@@ -118,7 +118,7 @@ func isOutput(vals ...*bool) bool {
 }
 
 func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
-	switch state.get(name) {
+	switch state.claim(name) {
 	case done:
 		return nil
 	case running:
@@ -152,8 +152,6 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 			return nil
 		}
 	}
-
-	state.set(name, running)
 
 	if !r.DryRun && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
 		if stderr != nil {
@@ -333,8 +331,12 @@ func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task 
 		}
 	}
 	showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
-	if stdout != nil && showOutput {
-		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, stdout, stderr, false, cmdDir); err != nil {
+	if stdout != nil {
+		var outW, errW io.Writer
+		if showOutput {
+			outW, errW = stdout, stderr
+		}
+		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, outW, errW, false, cmdDir); err != nil {
 			return fmt.Errorf("task %q: command %d failed: %w", task.Name, cmdIndex, err)
 		}
 	} else {
