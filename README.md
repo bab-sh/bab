@@ -31,23 +31,40 @@ For more installation options, see the [Installation Documentation](https://docs
 
 Create a `Babfile.yml` in your project root:
 ```yaml
+# Global variables — supports references and env access
 vars:
   app_name: myapp
   version: "1.0.0"
-  build_dir: ./build
+  base_dir: ./src
+  build_dir: ${{ base_dir }}/build
+  home: ${{ env.HOME }}
 
+# Global environment variables — passed to all commands
 env:
   APP_NAME: ${{ app_name }}
   NODE_ENV: production
 
+# Global defaults
+silent: false
+output: true
+dir: ./project
+
+# Import tasks from other Babfiles (namespaced)
+includes:
+  utils:
+    babfile: ./tools/Babfile.yml
+
 tasks:
   setup:
     desc: Install dependencies
+    silent: true
+    output: false
     run:
       - cmd: npm install
 
   lint:
     desc: Run linter
+    dir: ./frontend
     run:
       - cmd: npm run lint
 
@@ -55,44 +72,103 @@ tasks:
     desc: Run unit tests
     alias: t
     deps: [setup]
+    env:
+      CI: "true"
     run:
       - cmd: npm test
 
   test:all:
-    desc: Run all tests
+    desc: Run all checks
     run:
       - task: test:unit
+        silent: true
+        output: false
       - log: All tests passed!
         level: info
 
   configure:
-    desc: Configure build options
+    desc: Interactive project configuration
     run:
+      # Confirm prompt
+      - prompt: proceed
+        type: confirm
+        message: "Configure the project?"
+        default: true
+
+      # Input prompt with validation
+      - prompt: project_name
+        type: input
+        message: "Project name:"
+        default: myapp
+        placeholder: "my-project"
+        validate: "^[a-z][a-z0-9-]+$"
+        when: ${{ proceed }}
+
+      # Select prompt
       - prompt: environment
         type: select
         message: "Select environment:"
         options: [dev, staging, prod]
         default: dev
-      - log: Building for ${{ environment }}
+        when: ${{ proceed }}
+
+      # Multiselect prompt with min/max
+      - prompt: features
+        type: multiselect
+        message: "Select features:"
+        options: [auth, api, ui, analytics]
+        defaults: [auth, api]
+        min: 1
+        max: 3
+        when: ${{ proceed }}
+
+      # Number prompt with range
+      - prompt: replicas
+        type: number
+        message: "Number of replicas:"
+        default: 3
+        min: 1
+        max: 10
+        when: ${{ proceed }}
+
+      # Password prompt with confirmation
+      - prompt: api_key
+        type: password
+        message: "Enter API key:"
+        confirm: true
+        when: ${{ proceed }}
+        platforms: [linux, darwin]
+
+      - log: "Configured ${{ project_name }} for ${{ environment }}"
+        level: info
+        when: ${{ proceed }}
 
   build:
     desc: Build ${{ app_name }} v${{ version }}
     alias: b
+    aliases: [bld, compile]
     deps: [lint, test:unit]
     vars:
-      output: ${{ build_dir }}/${{ app_name }}
+      output_path: ${{ build_dir }}/${{ app_name }}
     run:
       - log: Building ${{ app_name }}...
+        level: debug
       - cmd: npm run build
-      - cmd: cp -r dist ${{ output }}
+        dir: ./frontend
+        env:
+          BUILD_OUTPUT: ${{ output_path }}
+        silent: true
+        output: true
+      - cmd: cp -r dist ${{ output_path }}
         platforms: [linux, darwin]
-      - cmd: xcopy dist ${{ output }} /E
+      - cmd: xcopy dist ${{ output_path }} /E
         platforms: [windows]
       - log: Build complete!
         level: info
 
   deploy:
     desc: Deploy to ${{ env.DEPLOY_ENV }}
+    when: ${{ environment }} != 'dev'
     deps: [build]
     run:
       - log: Deploying ${{ app_name }} to ${{ env.DEPLOY_ENV }}...
@@ -100,6 +176,15 @@ tasks:
       - cmd: ./scripts/deploy.sh
         env:
           VERSION: ${{ version }}
+        when: ${{ environment }} == 'staging'
+      - cmd: ./scripts/deploy-prod.sh
+        env:
+          VERSION: ${{ version }}
+        when: ${{ environment }} == 'prod'
+      - task: utils:notify
+        when: ${{ environment }} == 'prod'
+      - log: "Use $${{ var }} for literal syntax"
+        level: debug
 ```
 
 Run your tasks:
@@ -108,7 +193,9 @@ bab                  # Browse tasks interactively
 bab --list           # List all available tasks
 bab build            # Build the application
 bab b                # Same as above (using alias)
+bab bld              # Also works (multiple aliases)
 bab t                # Run tests (using alias)
+bab utils:setup      # Run included task
 ```
 
 ## Support
