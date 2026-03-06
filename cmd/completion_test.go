@@ -96,36 +96,3 @@ func TestCLI_runCompletion(t *testing.T) {
 		})
 	}
 }
-
-func TestCLI_runCompletion_allShells(t *testing.T) {
-	shells := []string{"bash", "zsh", "fish", "powershell"}
-
-	for _, shell := range shells {
-		t.Run(shell+"_generates_output", func(t *testing.T) {
-			cli := newCLI()
-			cmd := cli.buildCommand()
-			cli.completion = shell
-
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-
-			err := cli.runCompletion(cmd)
-
-			_ = w.Close()
-			os.Stdout = oldStdout
-
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, r)
-
-			if err != nil {
-				t.Errorf("%s completion failed: %v", shell, err)
-				return
-			}
-
-			if buf.Len() < 100 {
-				t.Errorf("%s completion output too short (%d bytes)", shell, buf.Len())
-			}
-		})
-	}
-}

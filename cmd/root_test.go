@@ -12,7 +12,6 @@ func TestNewCLI(t *testing.T) {
 	cli := newCLI()
 	if cli == nil {
 		t.Fatal("newCLI() returned nil")
-		return
 	}
 	if cli.verbose {
 		t.Error("verbose should be false by default")
@@ -128,7 +127,10 @@ func TestCLI_runTask(t *testing.T) {
 				t.Fatalf("failed to create test Babfile: %v", err)
 			}
 
-			oldDir, _ := os.Getwd()
+			oldDir, err := os.Getwd()
+			if err != nil {
+				t.Fatalf("failed to get working directory: %v", err)
+			}
 			defer func() { _ = os.Chdir(oldDir) }()
 			if err := os.Chdir(tmpDir); err != nil {
 				t.Fatalf("failed to change directory: %v", err)
@@ -138,7 +140,7 @@ func TestCLI_runTask(t *testing.T) {
 			cli.ctx = context.Background()
 			cli.dryRun = true
 
-			err := cli.runTask(tt.taskName)
+			err = cli.runTask(tt.taskName)
 
 			if tt.wantErr {
 				if err == nil {
@@ -183,7 +185,10 @@ func TestCLI_run_dispatching(t *testing.T) {
 			t.Fatalf("failed to create test Babfile: %v", err)
 		}
 
-		oldDir, _ := os.Getwd()
+		oldDir, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer func() { _ = os.Chdir(oldDir) }()
 		if err := os.Chdir(tmpDir); err != nil {
 			t.Fatalf("failed to change directory: %v", err)
@@ -194,7 +199,7 @@ func TestCLI_run_dispatching(t *testing.T) {
 		cli.listTasks = true
 		cli.ctx = context.Background()
 
-		err := cli.run(cmd, []string{"nonexistent"})
+		err = cli.run(cmd, []string{"nonexistent"})
 
 		if err != nil {
 			t.Errorf("expected list to run successfully, got error: %v", err)
@@ -202,68 +207,38 @@ func TestCLI_run_dispatching(t *testing.T) {
 	})
 }
 
-func TestCLI_runTask_withBabfile(t *testing.T) {
-	tmpDir := t.TempDir()
-	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
-	babfileYAML := `tasks:
-  custom:
-    run:
-      - cmd: echo "Custom task"`
-
-	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
-		t.Fatalf("failed to create custom Babfile: %v", err)
-	}
-
-	cli := newCLI()
-	cli.ctx = context.Background()
-	cli.dryRun = true
-	cli.babfile = customPath
-
-	err := cli.runTask("custom")
-	if err != nil {
-		t.Errorf("runTask() with custom babfile unexpected error: %v", err)
-	}
-}
-
-func TestCLI_runList_withBabfile(t *testing.T) {
-	tmpDir := t.TempDir()
-	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
+func TestCLI_withCustomBabfile(t *testing.T) {
 	babfileYAML := `tasks:
   custom:
     desc: "A custom task"
     run:
       - cmd: echo "Custom task"`
 
-	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
-		t.Fatalf("failed to create custom Babfile: %v", err)
+	tests := []struct {
+		name string
+		fn   func(c *CLI) error
+	}{
+		{"runTask", func(c *CLI) error { c.dryRun = true; return c.runTask("custom") }},
+		{"runList", func(c *CLI) error { return c.runList() }},
+		{"runValidate", func(c *CLI) error { return c.runValidate() }},
 	}
 
-	cli := newCLI()
-	cli.babfile = customPath
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			customPath := filepath.Join(tmpDir, "custom-tasks.yml")
 
-	err := cli.runList()
-	if err != nil {
-		t.Errorf("runList() with custom babfile unexpected error: %v", err)
-	}
-}
+			if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
+				t.Fatalf("failed to create custom Babfile: %v", err)
+			}
 
-func TestCLI_runValidate_withBabfile(t *testing.T) {
-	tmpDir := t.TempDir()
-	customPath := filepath.Join(tmpDir, "custom-tasks.yml")
-	babfileYAML := `tasks:
-  custom:
-    run:
-      - cmd: echo "Custom task"`
+			c := newCLI()
+			c.ctx = context.Background()
+			c.babfile = customPath
 
-	if err := os.WriteFile(customPath, []byte(babfileYAML), 0600); err != nil {
-		t.Fatalf("failed to create custom Babfile: %v", err)
-	}
-
-	cli := newCLI()
-	cli.babfile = customPath
-
-	err := cli.runValidate()
-	if err != nil {
-		t.Errorf("runValidate() with custom babfile unexpected error: %v", err)
+			if err := tt.fn(c); err != nil {
+				t.Errorf("%s() with custom babfile unexpected error: %v", tt.name, err)
+			}
+		})
 	}
 }

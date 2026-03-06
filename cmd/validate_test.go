@@ -62,7 +62,10 @@ func TestCLI_runValidate(t *testing.T) {
 				t.Fatalf("failed to create test Babfile: %v", err)
 			}
 
-			oldDir, _ := os.Getwd()
+			oldDir, err := os.Getwd()
+			if err != nil {
+				t.Fatalf("failed to get working directory: %v", err)
+			}
 			defer func() { _ = os.Chdir(oldDir) }()
 			if err := os.Chdir(tmpDir); err != nil {
 				t.Fatalf("failed to change directory: %v", err)
@@ -71,7 +74,7 @@ func TestCLI_runValidate(t *testing.T) {
 			cli := newCLI()
 			cli.ctx = context.Background()
 
-			err := cli.runValidate()
+			err = cli.runValidate()
 
 			if tt.wantErr {
 				if err == nil {
@@ -88,24 +91,5 @@ func TestCLI_runValidate(t *testing.T) {
 				t.Errorf("runValidate() unexpected error: %v", err)
 			}
 		})
-	}
-}
-
-func TestCLI_runValidate_NoBabfile(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	oldDir, _ := os.Getwd()
-	defer func() { _ = os.Chdir(oldDir) }()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("failed to change directory: %v", err)
-	}
-
-	cli := newCLI()
-	cli.ctx = context.Background()
-
-	err := cli.runValidate()
-
-	if err == nil {
-		t.Error("runValidate() expected error when no Babfile exists")
 	}
 }

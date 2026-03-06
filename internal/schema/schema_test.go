@@ -7,6 +7,46 @@ import (
 	"github.com/bab-sh/bab/internal/schema"
 )
 
+func parseSchema(t *testing.T) map[string]any {
+	t.Helper()
+	s := schema.GenerateSchema()
+	data, err := json.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal schema: %v", err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("failed to unmarshal schema: %v", err)
+	}
+	return parsed
+}
+
+func getMap(t *testing.T, m map[string]any, key string) map[string]any {
+	t.Helper()
+	v, ok := m[key]
+	if !ok {
+		t.Fatalf("key %q not found", key)
+	}
+	result, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("key %q is not a map, got %T", key, v)
+	}
+	return result
+}
+
+func getSlice(t *testing.T, m map[string]any, key string) []any {
+	t.Helper()
+	v, ok := m[key]
+	if !ok {
+		t.Fatalf("key %q not found", key)
+	}
+	result, ok := v.([]any)
+	if !ok {
+		t.Fatalf("key %q is not a slice, got %T", key, v)
+	}
+	return result
+}
+
 func TestGenerateSchema(t *testing.T) {
 	s := schema.GenerateSchema()
 
@@ -33,92 +73,37 @@ func TestSchemaUsesDraft07(t *testing.T) {
 }
 
 func TestTaskSchemaHasRunWithOneOf(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal schema: %v", err)
-	}
-
-	var parsed map[string]any
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("failed to unmarshal schema: %v", err)
-	}
-
-	defs := parsed["$defs"].(map[string]any)
-	taskDef := defs["Task"].(map[string]any)
-	props := taskDef["properties"].(map[string]any)
-	runProp := props["run"].(map[string]any)
-	items := runProp["items"].(map[string]any)
-	oneOf := items["oneOf"].([]any)
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+	taskDef := getMap(t, defs, "Task")
+	props := getMap(t, taskDef, "properties")
+	runProp := getMap(t, props, "run")
+	items := getMap(t, runProp, "items")
+	oneOf := getSlice(t, items, "oneOf")
 
 	if len(oneOf) != 4 {
-		t.Errorf("run items should have 4 oneOf options, got %d", len(oneOf))
+		t.Fatalf("run items should have 4 oneOf options, got %d", len(oneOf))
 	}
 
-	cmdOption := oneOf[0].(map[string]any)
-	cmdProps := cmdOption["properties"].(map[string]any)
-	if _, ok := cmdProps["cmd"]; !ok {
-		t.Error("first oneOf should have 'cmd' property")
-	}
-
-	taskOption := oneOf[1].(map[string]any)
-	taskProps := taskOption["properties"].(map[string]any)
-	if _, ok := taskProps["task"]; !ok {
-		t.Error("second oneOf should have 'task' property")
-	}
-
-	logOption := oneOf[2].(map[string]any)
-	logProps := logOption["properties"].(map[string]any)
-	if _, ok := logProps["log"]; !ok {
-		t.Error("third oneOf should have 'log' property")
-	}
-
-	promptOption := oneOf[3].(map[string]any)
-	promptProps := promptOption["properties"].(map[string]any)
-	if _, ok := promptProps["prompt"]; !ok {
-		t.Error("fourth oneOf should have 'prompt' property")
-	}
-}
-
-func TestSchemaIsValidJSON(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		t.Fatalf("failed to marshal schema to JSON: %v", err)
-	}
-
-	var parsed map[string]interface{}
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("generated schema is not valid JSON: %v", err)
-	}
-
-	if _, ok := parsed["$schema"]; !ok {
-		t.Error("schema should have $schema key")
-	}
-	if _, ok := parsed["$defs"]; !ok {
-		t.Error("schema should have $defs key")
+	expected := []string{"cmd", "task", "log", "prompt"}
+	for i, key := range expected {
+		option, ok := oneOf[i].(map[string]any)
+		if !ok {
+			t.Fatalf("oneOf[%d] is not a map", i)
+		}
+		optProps, ok := option["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("oneOf[%d] has no properties", i)
+		}
+		if _, ok := optProps[key]; !ok {
+			t.Errorf("oneOf[%d] should have %q property", i, key)
+		}
 	}
 }
 
 func TestSchemaHasRequiredDefinitions(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal schema: %v", err)
-	}
-
-	var parsed map[string]interface{}
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("failed to unmarshal schema: %v", err)
-	}
-
-	defs, ok := parsed["$defs"].(map[string]interface{})
-	if !ok {
-		t.Fatal("$defs should be an object")
-	}
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
 
 	requiredDefs := []string{"Task", "TaskName", "Include", "Platform"}
 	for _, def := range requiredDefs {
@@ -129,20 +114,9 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 }
 
 func TestTaskSchemaNoNestedTasks(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal schema: %v", err)
-	}
-
-	var parsed map[string]interface{}
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("failed to unmarshal schema: %v", err)
-	}
-
-	defs := parsed["$defs"].(map[string]interface{})
-	taskDef := defs["Task"].(map[string]interface{})
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+	taskDef := getMap(t, defs, "Task")
 
 	additionalProps, ok := taskDef["additionalProperties"]
 	if !ok {
@@ -156,22 +130,11 @@ func TestTaskSchemaNoNestedTasks(t *testing.T) {
 }
 
 func TestTaskRunRequiresAtLeastOneItem(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal schema: %v", err)
-	}
-
-	var parsed map[string]any
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("failed to unmarshal schema: %v", err)
-	}
-
-	defs := parsed["$defs"].(map[string]any)
-	taskDef := defs["Task"].(map[string]any)
-	props := taskDef["properties"].(map[string]any)
-	runProp := props["run"].(map[string]any)
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+	taskDef := getMap(t, defs, "Task")
+	props := getMap(t, taskDef, "properties")
+	runProp := getMap(t, props, "run")
 
 	minItems, ok := runProp["minItems"]
 	if !ok {
@@ -185,23 +148,9 @@ func TestTaskRunRequiresAtLeastOneItem(t *testing.T) {
 }
 
 func TestSchemaHasTaskNameDefinition(t *testing.T) {
-	s := schema.GenerateSchema()
-
-	data, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal schema: %v", err)
-	}
-
-	var parsed map[string]any
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		t.Fatalf("failed to unmarshal schema: %v", err)
-	}
-
-	defs := parsed["$defs"].(map[string]any)
-	taskNameDef, ok := defs["TaskName"].(map[string]any)
-	if !ok {
-		t.Fatal("schema should have TaskName definition")
-	}
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+	taskNameDef := getMap(t, defs, "TaskName")
 
 	if taskNameDef["type"] != "string" {
 		t.Errorf("TaskName type should be string, got %v", taskNameDef["type"])

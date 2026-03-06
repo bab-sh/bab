@@ -112,7 +112,10 @@ func TestCompleteTaskNames(t *testing.T) {
 				}
 			}
 
-			oldDir, _ := os.Getwd()
+			oldDir, err := os.Getwd()
+			if err != nil {
+				t.Fatalf("failed to get working directory: %v", err)
+			}
 			defer func() { _ = os.Chdir(oldDir) }()
 			if err := os.Chdir(tmpDir); err != nil {
 				t.Fatalf("failed to change directory: %v", err)
@@ -150,20 +153,6 @@ func TestCompleteTaskNames(t *testing.T) {
 	}
 }
 
-func TestCompleteTaskNames_AlwaysReturnsNoFileComp(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldDir, _ := os.Getwd()
-	defer func() { _ = os.Chdir(oldDir) }()
-	_ = os.Chdir(tmpDir)
-
-	cmd := &cobra.Command{}
-	_, directive := completeTaskNames(cmd, []string{}, "")
-
-	if directive != cobra.ShellCompDirectiveNoFileComp {
-		t.Errorf("expected ShellCompDirectiveNoFileComp, got %v", directive)
-	}
-}
-
 func TestCompleteTaskNames_CompletionsAreSorted(t *testing.T) {
 	tmpDir := t.TempDir()
 	babfilePath := filepath.Join(tmpDir, "Babfile.yml")
@@ -182,7 +171,10 @@ func TestCompleteTaskNames_CompletionsAreSorted(t *testing.T) {
 		t.Fatalf("failed to create test Babfile: %v", err)
 	}
 
-	oldDir, _ := os.Getwd()
+	oldDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
 	defer func() { _ = os.Chdir(oldDir) }()
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("failed to change directory: %v", err)
