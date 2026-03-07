@@ -73,6 +73,8 @@ type PromptRun struct {
 
 func (PromptRun) isRunItem() {}
 
+func (p PromptRun) GetLine() int { return p.Line }
+
 func (p PromptRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(p.Platforms, platform)
 }

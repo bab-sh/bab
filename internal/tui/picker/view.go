@@ -60,7 +60,7 @@ func (m Model) renderLine(i int) string {
 	if len(aliases) > 0 {
 		aliasText := " (" + strings.Join(aliases, ", ") + ")"
 		if match.MatchedAlias != "" {
-			b.WriteString(highlightAlias(aliasText, match.MatchedAlias, match.AliasIndexes, aliases))
+			b.WriteString(highlightAlias(aliasText, match.MatchedAlias, aliases))
 		} else {
 			b.WriteString(aliasStyle.Render(aliasText))
 		}

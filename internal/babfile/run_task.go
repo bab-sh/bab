@@ -16,6 +16,8 @@ type TaskRun struct {
 
 func (TaskRun) isRunItem() {}
 
+func (t TaskRun) GetLine() int { return t.Line }
+
 func (t TaskRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(t.Platforms, platform)
 }

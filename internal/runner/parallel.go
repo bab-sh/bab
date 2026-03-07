@@ -211,37 +211,16 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 }
 
 func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task *babfile.Task, tasks babfile.TaskMap, state *syncState, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
-	shell, shellArg := shellCommand()
-
 	switch v := item.(type) {
 	case babfile.CommandRun:
-		cmdCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
-		interpolatedCmd, err := interpolate.Interpolate(v.Cmd, cmdCtx)
-		if err != nil {
-			return err
-		}
-
-		cmdEnv, err := r.interpolateEnv(babfile.MergeEnvMaps(taskEnv, v.Env), cmdCtx)
-		if err != nil {
-			return err
-		}
-
-		cmdDir, err := r.resolveDir(task, v.Dir, cmdCtx)
-		if err != nil {
-			return err
-		}
-
-		if !isSilent(v.Silent, overrideSilent, task.Silent, r.GlobalSilent) && stderr != nil {
-			_, _ = fmt.Fprintln(stderr, output.RenderCmd(interpolatedCmd))
-		}
-
-		showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
-		if showOutput {
-			return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, stdout, stderr, false, noColor, cmdDir)
-		}
-		return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, nil, nil, false, noColor, cmdDir)
+		shell, shellArg := shellCommand()
+		return r.executeCommand(ctx, v, task, 0, shell, shellArg, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr, noColor)
 
 	case babfile.TaskRun:
+		if r.DryRun {
+			log.Info("Would run task", "task", v.Task)
+			return nil
+		}
 		return r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr, noColor)
 
 	case babfile.LogRun:
@@ -250,13 +229,18 @@ func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task 
 		if err != nil {
 			return err
 		}
-		if stdout != nil {
+		switch {
+		case r.DryRun:
+			log.Info("Would log", "msg", interpolatedLog, "level", v.Level)
+		case stdout != nil:
 			_, _ = fmt.Fprintln(stdout, output.RenderLog(interpolatedLog, v.Level))
+		default:
+			executeLog(babfile.LogRun{Log: interpolatedLog, Level: v.Level})
 		}
 		return nil
 
 	default:
-		return fmt.Errorf("unsupported run item type in parallel: %T", item)
+		return fmt.Errorf("unsupported run item type: %T", item)
 	}
 }
 

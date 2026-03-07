@@ -42,7 +42,7 @@ func loadCache() *cache {
 		return nil
 	}
 
-	if c.CheckedAt.After(time.Now().Add(time.Hour)) {
+	if c.CheckedAt.After(time.Now()) {
 		return nil
 	}
 

@@ -257,7 +257,10 @@ func runNumber(ctx context.Context, p babfile.PromptRun, message string) (string
 		Value(&result).
 		Validate(func(s string) error {
 			if s == "" {
-				return nil
+				if p.Default != "" {
+					return nil
+				}
+				return errors.New("a number is required")
 			}
 			n, err := strconv.Atoi(s)
 			if err != nil {

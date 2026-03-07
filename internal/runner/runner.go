@@ -187,7 +187,6 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 }
 
 func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
-	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
 	skippedByCondition := 0
@@ -226,46 +225,6 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 		}
 
 		switch v := item.(type) {
-		case babfile.CommandRun:
-			if err := r.executeCommand(ctx, v, task, i+1, shell, shellArg, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr, noColor); err != nil {
-				return err
-			}
-
-		case babfile.TaskRun:
-			if r.DryRun {
-				log.Info("Would run task", "task", v.Task)
-			} else {
-				log.Debug("Running task", "task", v.Task)
-				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr, noColor); err != nil {
-					return fmt.Errorf("task %q failed: %w", v.Task, err)
-				}
-			}
-
-		case babfile.ParallelRun:
-			if r.DryRun {
-				log.Info("Would run parallel", "items", len(v.Items), "mode", v.Mode)
-			} else {
-				if err := r.executeParallel(ctx, v, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput); err != nil {
-					return err
-				}
-			}
-
-		case babfile.LogRun:
-			logCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
-			interpolatedLog, err := interpolate.Interpolate(v.Log, logCtx)
-			if err != nil {
-				return err
-			}
-
-			switch {
-			case r.DryRun:
-				log.Info("Would log", "msg", interpolatedLog, "level", v.Level)
-			case stdout != nil:
-				_, _ = fmt.Fprintln(stdout, output.RenderLog(interpolatedLog, v.Level))
-			default:
-				executeLog(babfile.LogRun{Log: interpolatedLog, Level: v.Level})
-			}
-
 		case babfile.PromptRun:
 			promptCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
 
@@ -283,6 +242,24 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				}
 				taskVars[v.Prompt] = result
 				log.Debug("Prompt result stored", "var", v.Prompt, "value", result)
+			}
+
+		case babfile.ParallelRun:
+			if r.DryRun {
+				log.Info("Would run parallel", "items", len(v.Items), "mode", v.Mode)
+			} else {
+				parallelVars := make(map[string]string, len(taskVars))
+				for k, val := range taskVars {
+					parallelVars[k] = val
+				}
+				if err := r.executeParallel(ctx, v, task, tasks, state, parallelVars, taskEnv, overrideSilent, overrideOutput); err != nil {
+					return err
+				}
+			}
+
+		default:
+			if err := r.executeRunItem(ctx, item, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr, noColor); err != nil {
+				return err
 			}
 		}
 
@@ -350,28 +327,13 @@ func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task 
 	return nil
 }
 
-func getItemLine(item babfile.RunItem) int {
-	switch v := item.(type) {
-	case babfile.CommandRun:
-		return v.Line
-	case babfile.TaskRun:
-		return v.Line
-	case babfile.LogRun:
-		return v.Line
-	case babfile.PromptRun:
-		return v.Line
-	default:
-		return 0
-	}
-}
-
 func (r *Runner) shouldSkipRunItem(item babfile.RunItem, taskVars map[string]string, taskName string, index int) (bool, error) {
 	whenCond := item.GetWhen()
 	if whenCond == "" {
 		return false, nil
 	}
 
-	itemCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, getItemLine(item))
+	itemCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, item.GetLine())
 	result, err := condition.Evaluate(whenCond, itemCtx)
 	if err != nil {
 		return false, fmt.Errorf("task %q: run[%d]: evaluating when condition: %w", taskName, index, err)

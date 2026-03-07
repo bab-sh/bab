@@ -25,7 +25,7 @@ func Evaluate(condition string, ctx *interpolate.Context) (Result, error) {
 
 	interpolated, err := interpolate.Interpolate(condition, ctx)
 	if err != nil {
-		return Result{ShouldRun: false, Reason: fmt.Sprintf("variable error: %v", err)}, nil
+		return Result{ShouldRun: false}, fmt.Errorf("evaluating condition: %w", err)
 	}
 
 	interpolated = strings.TrimSpace(interpolated)

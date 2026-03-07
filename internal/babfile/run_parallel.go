@@ -42,6 +42,8 @@ func (p ParallelRun) UseColor() bool {
 
 func (ParallelRun) isRunItem() {}
 
+func (p ParallelRun) GetLine() int { return p.Line }
+
 func (p ParallelRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(p.Platforms, platform)
 }
@@ -84,7 +86,7 @@ func ParallelRunSchema() *jsonschema.Schema {
 		Type:        "array",
 		Description: "Run items to execute in parallel",
 		MinItems:    &minItems,
-		Items:       &jsonschema.Schema{Ref: "#/$defs/RunItem"},
+		Items:       &jsonschema.Schema{Ref: "#/$defs/ParallelChildItem"},
 	})
 	props.Set("mode", ParallelModeSchema())
 	props.Set("limit", &jsonschema.Schema{

@@ -48,11 +48,12 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 		AdditionalProperties: jsonschema.FalseSchema,
 		Properties:           props,
 		Definitions: jsonschema.Definitions{
-			"Task":     Task{}.JSONSchema(),
-			"TaskName": TaskNameSchema(),
-			"Include":  Include{}.JSONSchema(),
-			"Platform": Platform("").JSONSchema(),
-			"RunItem":  RunItemSchema(),
+			"Task":              Task{}.JSONSchema(),
+			"TaskName":          TaskNameSchema(),
+			"Include":           Include{}.JSONSchema(),
+			"Platform":          Platform("").JSONSchema(),
+			"RunItem":           RunItemSchema(),
+			"ParallelChildItem": ParallelChildItemSchema(),
 		},
 	}
 }

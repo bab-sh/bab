@@ -52,6 +52,8 @@ type LogRun struct {
 
 func (LogRun) isRunItem() {}
 
+func (l LogRun) GetLine() int { return l.Line }
+
 func (l LogRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(l.Platforms, platform)
 }

@@ -39,7 +39,7 @@ func CheckCached(currentVersion string) *Info {
 		return nil
 	}
 	cached := loadCache()
-	if cached != nil && isNewer(cached.LatestVersion, currentVersion) {
+	if cached != nil && cached.isValid() && isNewer(cached.LatestVersion, currentVersion) {
 		return &Info{
 			CurrentVersion: currentVersion,
 			LatestVersion:  cached.LatestVersion,

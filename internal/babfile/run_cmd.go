@@ -18,6 +18,8 @@ type CommandRun struct {
 
 func (CommandRun) isRunItem() {}
 
+func (c CommandRun) GetLine() int { return c.Line }
+
 func (c CommandRun) ShouldRunOnPlatform(platform string) bool {
 	return matchesPlatform(c.Platforms, platform)
 }

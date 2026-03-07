@@ -115,11 +115,75 @@ func TestSchemaHasRequiredDefinitions(t *testing.T) {
 	parsed := parseSchema(t)
 	defs := getMap(t, parsed, "$defs")
 
-	requiredDefs := []string{"Task", "TaskName", "Include", "Platform"}
+	requiredDefs := []string{"Task", "TaskName", "Include", "Platform", "ParallelChildItem"}
 	for _, def := range requiredDefs {
 		if _, ok := defs[def]; !ok {
 			t.Errorf("schema should have definition for %q", def)
 		}
+	}
+}
+
+func TestParallelChildItemExcludesPromptAndParallel(t *testing.T) {
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+
+	childDef := getMap(t, defs, "ParallelChildItem")
+	oneOf := getSlice(t, childDef, "oneOf")
+
+	if len(oneOf) != 3 {
+		t.Fatalf("ParallelChildItem should have 3 oneOf options (cmd, task, log), got %d", len(oneOf))
+	}
+
+	expected := []string{"cmd", "task", "log"}
+	for i, key := range expected {
+		option, ok := oneOf[i].(map[string]any)
+		if !ok {
+			t.Fatalf("oneOf[%d] is not a map", i)
+		}
+		optProps, ok := option["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("oneOf[%d] has no properties", i)
+		}
+		if _, ok := optProps[key]; !ok {
+			t.Errorf("oneOf[%d] should have %q property", i, key)
+		}
+	}
+}
+
+func TestParallelRunSchemaRefsChildItem(t *testing.T) {
+	parsed := parseSchema(t)
+	defs := getMap(t, parsed, "$defs")
+
+	runItemDef := getMap(t, defs, "RunItem")
+	oneOf := getSlice(t, runItemDef, "oneOf")
+
+	var parallelSchema map[string]any
+	for _, opt := range oneOf {
+		m, ok := opt.(map[string]any)
+		if !ok {
+			continue
+		}
+		props, ok := m["properties"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, ok := props["parallel"]; ok {
+			parallelSchema = props
+			break
+		}
+	}
+	if parallelSchema == nil {
+		t.Fatal("could not find parallel option in RunItem oneOf")
+	}
+
+	parallelProp := parallelSchema["parallel"].(map[string]any)
+	items := getMap(t, parallelProp, "items")
+	ref, ok := items["$ref"]
+	if !ok {
+		t.Fatal("parallel items should have a $ref")
+	}
+	if ref != "#/$defs/ParallelChildItem" {
+		t.Fatalf("parallel items $ref should be '#/$defs/ParallelChildItem', got %v", ref)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bab-sh/bab/internal/babfile"
@@ -129,6 +130,7 @@ func chainFromVisited(visited map[string]bool, current string) []string {
 	for path := range visited {
 		chain = append(chain, filepath.Base(path))
 	}
+	slices.Sort(chain)
 	chain = append(chain, filepath.Base(current))
 	return chain
 }

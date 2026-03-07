@@ -85,7 +85,7 @@ func RenderLog(msg string, level babfile.LogLevel) string {
 }
 
 func ParallelDone(labels []string, errs []error) {
-	if len(errs) < len(labels) {
+	if len(errs) != len(labels) {
 		return
 	}
 	var parts []string

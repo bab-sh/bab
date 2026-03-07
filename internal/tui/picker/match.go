@@ -120,17 +120,34 @@ func highlight(text string, indexes []int, base, hl lipgloss.Style) string {
 	}
 
 	var b strings.Builder
+	var run strings.Builder
+	prevHL := false
+	first := true
 	for i, r := range text {
-		if _, ok := set[i]; ok {
-			b.WriteString(hl.Render(string(r)))
+		_, isHL := set[i]
+		if !first && isHL != prevHL {
+			if prevHL {
+				b.WriteString(hl.Render(run.String()))
+			} else {
+				b.WriteString(base.Render(run.String()))
+			}
+			run.Reset()
+		}
+		first = false
+		prevHL = isHL
+		run.WriteRune(r)
+	}
+	if run.Len() > 0 {
+		if prevHL {
+			b.WriteString(hl.Render(run.String()))
 		} else {
-			b.WriteString(base.Render(string(r)))
+			b.WriteString(base.Render(run.String()))
 		}
 	}
 	return b.String()
 }
 
-func highlightAlias(text, matchedAlias string, _ []int, allAliases []string) string {
+func highlightAlias(text, matchedAlias string, allAliases []string) string {
 	aliasStart := -1
 	for _, a := range allAliases {
 		if a == matchedAlias {
@@ -146,15 +163,15 @@ func highlightAlias(text, matchedAlias string, _ []int, allAliases []string) str
 		return aliasStyle.Render(text)
 	}
 
-	var b strings.Builder
 	aliasEnd := aliasStart + len(matchedAlias)
 
-	for i, r := range text {
-		if i >= aliasStart && i < aliasEnd {
-			b.WriteString(aliasMatchStyle.Render(string(r)))
-		} else {
-			b.WriteString(aliasStyle.Render(string(r)))
-		}
+	var b strings.Builder
+	if aliasStart > 0 {
+		b.WriteString(aliasStyle.Render(text[:aliasStart]))
+	}
+	b.WriteString(aliasMatchStyle.Render(text[aliasStart:aliasEnd]))
+	if aliasEnd < len(text) {
+		b.WriteString(aliasStyle.Render(text[aliasEnd:]))
 	}
 	return b.String()
 }

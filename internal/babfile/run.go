@@ -4,6 +4,7 @@ import "github.com/invopop/jsonschema"
 
 type RunItem interface {
 	isRunItem()
+	GetLine() int
 	ShouldRunOnPlatform(platform string) bool
 	GetWhen() string
 }
@@ -16,6 +17,16 @@ func RunItemSchema() *jsonschema.Schema {
 			LogRunSchema(),
 			PromptRunSchema(),
 			ParallelRunSchema(),
+		},
+	}
+}
+
+func ParallelChildItemSchema() *jsonschema.Schema {
+	return &jsonschema.Schema{
+		OneOf: []*jsonschema.Schema{
+			CommandRunSchema(),
+			TaskRunSchema(),
+			LogRunSchema(),
 		},
 	}
 }

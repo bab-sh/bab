@@ -116,6 +116,17 @@ func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem
 			prefixed[i] = v
 		case babfile.PromptRun:
 			prefixed[i] = v
+		case babfile.ParallelRun:
+			prefixed[i] = babfile.ParallelRun{
+				Line:      v.Line,
+				Items:     prefixTaskRuns(v.Items, namespace),
+				Labels:    v.Labels,
+				Mode:      v.Mode,
+				Limit:     v.Limit,
+				Color:     v.Color,
+				Platforms: v.Platforms,
+				When:      v.When,
+			}
 		}
 	}
 	return prefixed

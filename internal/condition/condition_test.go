@@ -33,7 +33,7 @@ func TestEvaluate_Equality(t *testing.T) {
 		{"not equals no match", "${{ env }} != 'prod'", false},
 		{"double quotes equals", "${{ env }} == \"prod\"", true},
 		{"double quotes not equals", "${{ env }} != \"prod\"", false},
-		{"empty string equals", "${{ missing }} == ''", false},
+		{"empty string equals", "${{ name }} == 'missing'", false},
 		{"whitespace in condition", "${{ env }}  ==  'prod'", true},
 	}
 
@@ -91,12 +91,9 @@ func TestEvaluate_Truthy(t *testing.T) {
 func TestEvaluate_UndefinedVariable(t *testing.T) {
 	ctx := interpolate.NewContext(nil)
 
-	result, err := Evaluate("${{ undefined }}", ctx)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.ShouldRun {
-		t.Error("undefined variable should be falsy")
+	_, err := Evaluate("${{ undefined }}", ctx)
+	if err == nil {
+		t.Fatal("expected error for undefined variable, got nil")
 	}
 }
 
