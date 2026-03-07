@@ -10,9 +10,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var versionString = "dev"
+var (
+	versionString = "dev"
+	versionShort  = "dev"
+)
 
 func SetVersionInfo(version, commit, date string) {
+	versionShort = version
 	versionString = version
 	if commit != "none" {
 		versionString = fmt.Sprintf("%s\n  commit: %s\n  built:  %s", version, commit, date)
@@ -40,11 +44,11 @@ func newCLI() *CLI {
 func (c *CLI) execute(ctx context.Context) error {
 	c.ctx = ctx
 
-	update.StartBackgroundRefresh(ctx, versionString)
+	update.StartBackgroundRefresh(ctx, versionShort)
 
 	err := c.buildCommand().Execute()
 
-	if info := update.CheckCached(versionString); info != nil {
+	if info := update.CheckCached(versionShort); info != nil {
 		log.Warn("A new version of bab is available",
 			"latest", info.LatestVersion,
 			"current", info.CurrentVersion)
