@@ -97,6 +97,7 @@ tasks:
             label: build
         mode: grouped
         limit: 2
+        color: false
 
   configure:
     desc: Interactive project configuration
