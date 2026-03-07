@@ -279,6 +279,11 @@
               "minimum": 0,
               "description": "Maximum number of items to run concurrently (0 = unlimited)"
             },
+            "color": {
+              "type": "boolean",
+              "description": "Preserve colors in child process output (default: true). When false, strips ANSI codes and sets NO_COLOR=1",
+              "default": true
+            },
             "platforms": {
               "items": {
                 "$ref": "#/$defs/Platform"

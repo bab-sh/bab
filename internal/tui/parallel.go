@@ -2,13 +2,14 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 
 	"github.com/bab-sh/bab/internal/theme"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 const frameHeight = 5
@@ -30,25 +31,22 @@ type ItemDoneMsg struct {
 
 type AllDoneMsg struct{}
 
-func RunParallel(ctx context.Context, items []ParallelItem) (*tea.Program, error) {
+func RunParallel(items []ParallelItem, cancel context.CancelFunc) (*tea.Program, error) {
 	states := make([]itemState, len(items))
 	for i, item := range items {
-		s := spinner.New()
-		s.Spinner = spinner.Dot
-		s.Style = lipgloss.NewStyle().Foreground(item.Color)
 		states[i] = itemState{
-			label:   item.Label,
-			color:   item.Color,
-			spinner: s,
+			label: item.Label,
+			color: item.Color,
 		}
 	}
 
 	model := parallelModel{
-		items: states,
-		width: 80,
+		items:  states,
+		width:  80,
+		cancel: cancel,
 	}
 
-	program := tea.NewProgram(model, tea.WithOutput(os.Stderr), tea.WithContext(ctx))
+	program := tea.NewProgram(model, tea.WithOutput(os.Stderr))
 
 	go func() {
 		_, _ = program.Run()
@@ -58,32 +56,29 @@ func RunParallel(ctx context.Context, items []ParallelItem) (*tea.Program, error
 }
 
 type parallelModel struct {
-	items []itemState
-	width int
-	done  bool
+	items     []itemState
+	width     int
+	done      bool
+	cancelled bool
+	cancel    context.CancelFunc
 }
 
 type itemState struct {
-	label   string
-	color   lipgloss.Color
-	lines   []string
-	spinner spinner.Model
-	done    bool
-	err     error
+	label string
+	color lipgloss.Color
+	lines []string
+	done  bool
+	err   error
 }
 
 var (
-	dimBorder    = lipgloss.NewStyle().Foreground(theme.Dim)
+	dimStyle     = lipgloss.NewStyle().Foreground(theme.Dim)
 	successStyle = lipgloss.NewStyle().Foreground(theme.Cyan)
 	failureStyle = lipgloss.NewStyle().Foreground(theme.Pink)
 )
 
 func (m parallelModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{tea.WindowSize()}
-	for i := range m.items {
-		cmds = append(cmds, m.items[i].spinner.Tick)
-	}
-	return tea.Batch(cmds...)
+	return tea.WindowSize()
 }
 
 func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -115,21 +110,14 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-
-	case spinner.TickMsg:
-		var cmds []tea.Cmd
-		for i := range m.items {
-			if !m.items[i].done {
-				var cmd tea.Cmd
-				m.items[i].spinner, cmd = m.items[i].spinner.Update(msg)
-				if cmd != nil {
-					cmds = append(cmds, cmd)
+			if !m.cancelled {
+				m.cancelled = true
+				if m.cancel != nil {
+					m.cancel()
 				}
 			}
+			return m, nil
 		}
-		return m, tea.Batch(cmds...)
 	}
 
 	return m, nil
@@ -137,47 +125,48 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m parallelModel) View() string {
 	if m.done {
-		return ""
+		return " "
 	}
 
-	var b strings.Builder
+	var out []string
 	for _, item := range m.items {
-		b.WriteString(m.renderFrame(item))
+		out = append(out, m.renderFrameLines(item)...)
 	}
-	return b.String()
+	return strings.Join(out, "\n")
 }
 
-func (m parallelModel) renderFrame(item itemState) string {
+func (m parallelModel) renderFrameLines(item itemState) []string {
 	titleStyle := lipgloss.NewStyle().Foreground(item.color).Bold(true)
 
-	var b strings.Builder
-
-	status := item.spinner.View()
-	if item.done {
-		if item.err != nil {
-			status = failureStyle.Render("✗")
-		} else {
-			status = successStyle.Render("✓")
-		}
+	var status string
+	switch {
+	case item.done && item.err != nil && errors.Is(item.err, context.Canceled):
+		status = dimStyle.Render("⊘")
+	case item.done && item.err != nil:
+		status = failureStyle.Render("✗")
+	case item.done:
+		status = successStyle.Render("✓")
+	case m.cancelled:
+		status = dimStyle.Render("⊘")
+	default:
+		status = dimStyle.Render("◦")
 	}
-	b.WriteString(dimBorder.Render("┌─") + " " + titleStyle.Render(item.label) + " " + status + "\n")
 
-	lines := item.lines
+	lines := make([]string, 0, frameHeight+2)
+	lines = append(lines, dimStyle.Render("┌─")+" "+titleStyle.Render(item.label)+" "+status)
+
 	maxWidth := m.width - 4
-
-	for _, line := range lines {
-		if maxWidth > 0 && len(line) > maxWidth {
-			line = line[:maxWidth]
+	for _, line := range item.lines {
+		if maxWidth > 0 && ansi.StringWidth(line) > maxWidth {
+			line = ansi.Truncate(line, maxWidth, "")
 		}
-		b.WriteString(dimBorder.Render("│") + "  " + line + "\n")
+		lines = append(lines, dimStyle.Render("│")+"  "+line)
 	}
 
-	remaining := frameHeight - len(lines)
-	for j := 0; j < remaining; j++ {
-		b.WriteString(dimBorder.Render("│") + "\n")
+	for range frameHeight - len(item.lines) {
+		lines = append(lines, dimStyle.Render("│"))
 	}
 
-	b.WriteString(dimBorder.Render("└") + "\n")
-
-	return b.String()
+	lines = append(lines, dimStyle.Render("└"))
+	return lines
 }

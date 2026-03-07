@@ -73,15 +73,16 @@ func (r *Runner) executeParallel(ctx context.Context, pr babfile.ParallelRun, ta
 		return nil
 	}
 
+	noColor := !pr.UseColor()
 	useGroupedTUI := pr.Mode == babfile.ParallelGrouped && term.IsTerminal(int(os.Stderr.Fd()))
 
 	if useGroupedTUI {
-		return r.executeParallelGrouped(ctx, pr, task, tasks, state, labels, taskVars, taskEnv, overrideSilent, overrideOutput)
+		return r.executeParallelGrouped(ctx, pr, task, tasks, state, labels, taskVars, taskEnv, overrideSilent, overrideOutput, noColor)
 	}
-	return r.executeParallelInterleaved(ctx, pr, task, tasks, state, labels, maxLabelLen, taskVars, taskEnv, overrideSilent, overrideOutput)
+	return r.executeParallelInterleaved(ctx, pr, task, tasks, state, labels, maxLabelLen, taskVars, taskEnv, overrideSilent, overrideOutput, noColor)
 }
 
-func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, maxLabelLen int, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool) error {
+func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, maxLabelLen int, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, noColor bool) error {
 	var sem chan struct{}
 	if pr.Limit > 0 {
 		sem = make(chan struct{}, pr.Limit)
@@ -107,14 +108,14 @@ func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.Para
 				defer func() { <-sem }()
 			}
 
-			pw := NewPrefixWriter(labels[idx], maxLabelLen, colorForIndex(idx), os.Stdout, &mu)
-			pwErr := NewPrefixWriter(labels[idx], maxLabelLen, colorForIndex(idx), os.Stderr, &mu)
+			pw := NewPrefixWriter(labels[idx], maxLabelLen, colorForIndex(idx), os.Stdout, &mu, noColor)
+			pwErr := NewPrefixWriter(labels[idx], maxLabelLen, colorForIndex(idx), os.Stderr, &mu, noColor)
 			defer func() {
 				_ = pw.Flush()
 				_ = pwErr.Flush()
 			}()
 
-			err := r.executeRunItem(ctx, runItem, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput, pw, pwErr)
+			err := r.executeRunItem(ctx, runItem, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput, pw, pwErr, noColor)
 			if err != nil {
 				firstErrOnce.Do(func() {
 					firstErr = fmt.Errorf("parallel item %q failed: %w", labels[idx], err)
@@ -127,7 +128,7 @@ func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.Para
 	return firstErr
 }
 
-func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool) error {
+func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, noColor bool) error {
 	tuiItems := make([]tui.ParallelItem, len(pr.Items))
 	for i, label := range labels {
 		tuiItems[i] = tui.ParallelItem{
@@ -136,10 +137,16 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 		}
 	}
 
-	program, err := tui.RunParallel(ctx, tuiItems)
+	workCtx, workCancel := context.WithCancel(ctx)
+	defer workCancel()
+
+	program, err := tui.RunParallel(tuiItems, workCancel)
 	if err != nil {
 		return fmt.Errorf("failed to start parallel TUI: %w", err)
 	}
+
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(os.Stderr)
 
 	var sem chan struct{}
 	if pr.Limit > 0 {
@@ -150,6 +157,7 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 	var firstErr error
 	var firstErrOnce sync.Once
 	itemErrs := make([]error, len(pr.Items))
+	itemDone := make([]bool, len(pr.Items))
 
 	for i, item := range pr.Items {
 		wg.Add(1)
@@ -160,17 +168,18 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 			if sem != nil {
 				select {
 				case sem <- struct{}{}:
-				case <-ctx.Done():
+				case <-workCtx.Done():
 					return
 				}
 				defer func() { <-sem }()
 			}
 
-			lw := NewLineWriter(idx, program)
+			lw := NewLineWriter(idx, program, noColor)
 			defer lw.Flush()
 
-			err := r.executeRunItem(ctx, runItem, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput, lw, lw)
+			err := r.executeRunItem(workCtx, runItem, task, tasks, state, taskVars, taskEnv, overrideSilent, overrideOutput, lw, lw, noColor)
 			itemErrs[idx] = err
+			itemDone[idx] = true
 
 			program.Send(tui.ItemDoneMsg{Index: idx, Err: err})
 
@@ -183,21 +192,25 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 	}
 
 	wg.Wait()
-	if ctx.Err() != nil {
-		program.Kill()
-	} else {
-		program.Send(tui.AllDoneMsg{})
+	if workCtx.Err() != nil {
+		for i := range itemErrs {
+			if !itemDone[i] {
+				itemErrs[i] = context.Canceled
+			}
+		}
 	}
+
+	program.Send(tui.AllDoneMsg{})
 	program.Wait()
 
-	if ctx.Err() == nil && !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
+	if !isSilent(overrideSilent, task.Silent, r.GlobalSilent) {
 		output.ParallelDone(labels, itemErrs)
 	}
 
 	return firstErr
 }
 
-func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task *babfile.Task, tasks babfile.TaskMap, state *syncState, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task *babfile.Task, tasks babfile.TaskMap, state *syncState, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
 	shell, shellArg := shellCommand()
 
 	switch v := item.(type) {
@@ -224,12 +237,12 @@ func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task 
 
 		showOutput := isOutput(v.Output, overrideOutput, task.Output, r.GlobalOutput)
 		if showOutput {
-			return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, stdout, stderr, false, cmdDir)
+			return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, stdout, stderr, false, noColor, cmdDir)
 		}
-		return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, nil, nil, false, cmdDir)
+		return runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, nil, nil, false, noColor, cmdDir)
 
 	case babfile.TaskRun:
-		return r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr)
+		return r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr, noColor)
 
 	case babfile.LogRun:
 		logCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
@@ -238,7 +251,7 @@ func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task 
 			return err
 		}
 		if stdout != nil {
-			_, _ = fmt.Fprintln(stdout, interpolatedLog)
+			_, _ = fmt.Fprintln(stdout, output.RenderLog(interpolatedLog, v.Level))
 		}
 		return nil
 
@@ -266,7 +279,7 @@ func (r *Runner) preResolveDeps(ctx context.Context, items []babfile.RunItem, ta
 			if state.get(dep) == done {
 				continue
 			}
-			if err := r.runTask(ctx, dep, tasks, state, false, overrideSilent, overrideOutput, nil, nil); err != nil {
+			if err := r.runTask(ctx, dep, tasks, state, false, overrideSilent, overrideOutput, nil, nil, false); err != nil {
 				return fmt.Errorf("parallel pre-dependency %q failed: %w", dep, err)
 			}
 		}

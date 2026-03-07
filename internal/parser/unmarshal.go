@@ -43,6 +43,7 @@ const (
 	keyParallel    = "parallel"
 	keyMode        = "mode"
 	keyLimit       = "limit"
+	keyColor       = "color"
 	keyLabel       = "label"
 )
 
@@ -463,16 +464,10 @@ func parseRunFields(path string, node *yaml.Node, taskName string, index int, ve
 				rf.hasErrors = true
 			}
 		case keyPlatforms:
-			if err := val.Decode(&rf.platforms); err != nil {
-				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platforms", taskName, index), Cause: err})
+			var ok bool
+			rf.platforms, ok = parsePlatforms(path, key.Line, fmt.Sprintf("task %q: run[%d]", taskName, index), val, verrs)
+			if !ok {
 				rf.hasErrors = true
-			} else {
-				for _, p := range rf.platforms {
-					if !p.Valid() {
-						verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: run[%d]: invalid platform %q, must be one of: linux, darwin, windows", taskName, index, p)})
-						rf.hasErrors = true
-					}
-				}
 			}
 		case keyLabel:
 		default:
@@ -493,6 +488,7 @@ func parseParallelRun(path string, node *yaml.Node, taskName string, index int, 
 	var itemsNode *yaml.Node
 	var mode babfile.ParallelMode
 	var limit int
+	var color *bool
 	var platforms []babfile.Platform
 	var when string
 	var labels []string
@@ -531,17 +527,19 @@ func parseParallelRun(path string, node *yaml.Node, taskName string, index int, 
 			} else {
 				limit = v
 			}
-		case keyPlatforms:
-			if err := val.Decode(&platforms); err != nil {
-				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: invalid platforms", prefix), Cause: err})
+		case keyColor:
+			var v bool
+			if err := val.Decode(&v); err != nil {
+				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid color value", prefix), Cause: err})
 				hasErrors = true
 			} else {
-				for _, p := range platforms {
-					if !p.Valid() {
-						verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: invalid platform %q, must be one of: linux, darwin, windows", prefix, p)})
-						hasErrors = true
-					}
-				}
+				color = &v
+			}
+		case keyPlatforms:
+			var ok bool
+			platforms, ok = parsePlatforms(path, key.Line, prefix, val, verrs)
+			if !ok {
+				hasErrors = true
 			}
 		case keyWhen:
 			when = val.Value
@@ -605,9 +603,25 @@ func parseParallelRun(path string, node *yaml.Node, taskName string, index int, 
 		Labels:    labels,
 		Mode:      mode,
 		Limit:     limit,
+		Color:     color,
 		Platforms: platforms,
 		When:      when,
 	}, true
+}
+
+func parsePlatforms(path string, line int, prefix string, val *yaml.Node, verrs *errs.ValidationErrors) ([]babfile.Platform, bool) {
+	var platforms []babfile.Platform
+	if err := val.Decode(&platforms); err != nil {
+		verrs.Add(&errs.ParseError{Path: path, Line: line, Message: fmt.Sprintf("%s: invalid platforms", prefix), Cause: err})
+		return nil, false
+	}
+	for _, p := range platforms {
+		if !p.Valid() {
+			verrs.Add(&errs.ParseError{Path: path, Line: line, Message: fmt.Sprintf("%s: invalid platform %q, must be one of: linux, darwin, windows", prefix, p)})
+			return nil, false
+		}
+	}
+	return platforms, true
 }
 
 func buildLogRun(path string, line int, taskName string, index int, log string, level babfile.LogLevel, platforms []babfile.Platform, when string, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {

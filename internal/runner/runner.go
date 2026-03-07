@@ -96,7 +96,7 @@ func (r *Runner) resolveTaskName(name string) string {
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
 	state := &syncState{state: make(map[string]status)}
-	return r.runTask(ctx, taskName, tasks, state, true, nil, nil, nil, nil)
+	return r.runTask(ctx, taskName, tasks, state, true, nil, nil, nil, nil, false)
 }
 
 func isSilent(vals ...*bool) bool {
@@ -117,7 +117,7 @@ func isOutput(vals ...*bool) bool {
 	return true
 }
 
-func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
 	switch state.claim(name) {
 	case done:
 		return nil
@@ -171,13 +171,13 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	for _, dep := range task.Deps {
 		log.Debug("Running dependency", "task", name, "dep", dep)
-		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil, stdout, stderr); err != nil {
+		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil, stdout, stderr, noColor); err != nil {
 			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
 
 	if len(task.Run) > 0 {
-		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput, stdout, stderr); err != nil {
+		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput, stdout, stderr, noColor); err != nil {
 			return err
 		}
 	}
@@ -186,7 +186,7 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 	return nil
 }
 
-func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
 	shell, shellArg := shellCommand()
 	platform := runtime.GOOS
 	executed := 0
@@ -227,7 +227,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 
 		switch v := item.(type) {
 		case babfile.CommandRun:
-			if err := r.executeCommand(ctx, v, task, i+1, shell, shellArg, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr); err != nil {
+			if err := r.executeCommand(ctx, v, task, i+1, shell, shellArg, taskVars, taskEnv, overrideSilent, overrideOutput, stdout, stderr, noColor); err != nil {
 				return err
 			}
 
@@ -236,7 +236,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				log.Info("Would run task", "task", v.Task)
 			} else {
 				log.Debug("Running task", "task", v.Task)
-				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr); err != nil {
+				if err := r.runTask(ctx, v.Task, tasks, state, false, v.Silent, v.Output, stdout, stderr, noColor); err != nil {
 					return fmt.Errorf("task %q failed: %w", v.Task, err)
 				}
 			}
@@ -257,9 +257,12 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 				return err
 			}
 
-			if r.DryRun {
+			switch {
+			case r.DryRun:
 				log.Info("Would log", "msg", interpolatedLog, "level", v.Level)
-			} else {
+			case stdout != nil:
+				_, _ = fmt.Fprintln(stdout, output.RenderLog(interpolatedLog, v.Level))
+			default:
 				executeLog(babfile.LogRun{Log: interpolatedLog, Level: v.Level})
 			}
 
@@ -297,7 +300,7 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	return nil
 }
 
-func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task *babfile.Task, cmdIndex int, shell, shellArg string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer) error {
+func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task *babfile.Task, cmdIndex int, shell, shellArg string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool) error {
 	if strings.TrimSpace(v.Cmd) == "" {
 		return fmt.Errorf("task %q command %d is empty", task.Name, cmdIndex)
 	}
@@ -336,7 +339,7 @@ func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task 
 		if showOutput {
 			outW, errW = stdout, stderr
 		}
-		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, outW, errW, false, cmdDir); err != nil {
+		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, outW, errW, false, noColor, cmdDir); err != nil {
 			return fmt.Errorf("task %q: command %d failed: %w", task.Name, cmdIndex, err)
 		}
 	} else {
@@ -497,16 +500,22 @@ func runCommand(ctx context.Context, shell, shellArg, command string, env map[st
 		stdout = os.Stdout
 		stderr = os.Stderr
 	}
-	return runCommandWithWriters(ctx, shell, shellArg, command, env, stdout, stderr, showOutput, dir)
+	return runCommandWithWriters(ctx, shell, shellArg, command, env, stdout, stderr, showOutput, false, dir)
 }
 
-func runCommandWithWriters(ctx context.Context, shell, shellArg, command string, env map[string]string, stdout, stderr io.Writer, connectStdin bool, dir string) error {
+func isRealTerminal(w io.Writer) bool {
+	return w == os.Stdout || w == os.Stderr
+}
+
+func runCommandWithWriters(ctx context.Context, shell, shellArg, command string, env map[string]string, stdout, stderr io.Writer, connectStdin bool, noColor bool, dir string) error {
 	cmd := exec.CommandContext(ctx, shell, shellArg, command)
 	cmd.SysProcAttr = sysProcAttr()
 	cmd.Cancel = func() error {
 		return signalProcessGroup(cmd)
 	}
 	cmd.WaitDelay = 3 * time.Second
+
+	piped := (stdout != nil && !isRealTerminal(stdout)) || (stderr != nil && !isRealTerminal(stderr))
 
 	if stdout != nil {
 		cmd.Stdout = stdout
@@ -522,8 +531,19 @@ func runCommandWithWriters(ctx context.Context, shell, shellArg, command string,
 		cmd.Stdin = os.Stdin
 	}
 
+	cmdEnv := os.Environ()
+	if piped {
+		if noColor {
+			cmdEnv = append(cmdEnv, "TERM=dumb", "NO_COLOR=1")
+		} else {
+			cmdEnv = append(cmdEnv, "FORCE_COLOR=1")
+		}
+	}
 	if len(env) > 0 {
-		cmd.Env = append(os.Environ(), babfile.MergeEnv(env)...)
+		cmdEnv = append(cmdEnv, babfile.MergeEnv(env)...)
+	}
+	if len(env) > 0 || piped {
+		cmd.Env = cmdEnv
 	}
 
 	if dir != "" {
