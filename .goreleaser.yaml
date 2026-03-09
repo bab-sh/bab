@@ -410,6 +410,7 @@ aurs:
 
 aur_sources:
   - name: bab
+    skip_upload: true
     homepage: "https://github.com/bab-sh/bab"
     description: "Task runner for defining project commands in YAML"
     maintainers:
