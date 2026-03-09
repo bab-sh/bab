@@ -722,242 +722,141 @@ func TestParseLogAllLevels(t *testing.T) {
 	}
 }
 
-func TestParseSilentGlobal(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "silent_global.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
+func assertBoolPtr(t *testing.T, label string, got *bool, want bool) {
+	t.Helper()
+	if got == nil {
+		t.Fatalf("expected %s to be set", label)
 	}
-
-	if result.GlobalSilent == nil {
-		t.Fatal("expected GlobalSilent to be set")
-	}
-	if *result.GlobalSilent != true {
-		t.Errorf("expected GlobalSilent = true, got %v", *result.GlobalSilent)
+	if *got != want {
+		t.Errorf("expected %s = %v, got %v", label, want, *got)
 	}
 }
 
-func TestParseSilentTask(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "silent_task.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	task := result.Tasks["hello"]
-	if task == nil {
-		t.Fatal("task 'hello' not found")
-	}
-	if task.Silent == nil {
-		t.Fatal("expected Silent to be set on task")
-	}
-	if *task.Silent != true {
-		t.Errorf("expected Silent = true, got %v", *task.Silent)
-	}
+type boolFlagAccessors struct {
+	global       func(*ParseResult) *bool
+	task         func(*babfile.Task) *bool
+	cmdRunItem   func(babfile.CommandRun) *bool
+	taskRunItem  func(babfile.TaskRun) *bool
+	globalFile   string
+	taskFile     string
+	allFalseFile string
+	allTrueFile  string
+	cmdFile      string
+	taskRefFile  string
+	globalVal    bool
+	taskVal      bool
 }
 
-func TestParseSilentRunItem(t *testing.T) {
-	tests := []struct {
-		name     string
-		file     string
-		taskName string
-		checkFn  func(t *testing.T, item babfile.RunItem)
-	}{
-		{
-			name:     "command",
-			file:     "silent_command.yml",
-			taskName: "hello",
-			checkFn: func(t *testing.T, item babfile.RunItem) {
-				cmd, ok := item.(babfile.CommandRun)
-				if !ok {
-					t.Fatal("expected CommandRun")
-				}
-				if cmd.Silent == nil || !*cmd.Silent {
-					t.Error("expected Silent = true")
-				}
-			},
-		},
-		{
-			name:     "task_ref",
-			file:     "silent_taskrun.yml",
-			taskName: "main",
-			checkFn: func(t *testing.T, item babfile.RunItem) {
-				taskRef, ok := item.(babfile.TaskRun)
-				if !ok {
-					t.Fatal("expected TaskRun")
-				}
-				if taskRef.Silent == nil || !*taskRef.Silent {
-					t.Error("expected Silent = true")
-				}
-			},
-		},
+func runParseBoolFlagSuite(t *testing.T, a boolFlagAccessors) {
+	t.Helper()
+
+	t.Run("global", func(t *testing.T) {
+		result, err := Parse(filepath.Join("testdata", a.globalFile))
+		if err != nil {
+			t.Fatalf("Parse() error: %v", err)
+		}
+		assertBoolPtr(t, "global flag", a.global(result), a.globalVal)
+	})
+
+	t.Run("task", func(t *testing.T) {
+		result, err := Parse(filepath.Join("testdata", a.taskFile))
+		if err != nil {
+			t.Fatalf("Parse() error: %v", err)
+		}
+		task := result.Tasks["hello"]
+		if task == nil {
+			t.Fatal("task 'hello' not found")
+		}
+		assertBoolPtr(t, "task flag", a.task(task), a.taskVal)
+	})
+
+	allLevelsFile := a.allFalseFile
+	allLevelsVal := false
+	if a.allTrueFile != "" {
+		allLevelsFile = a.allTrueFile
+		allLevelsVal = true
 	}
+	t.Run("all_levels", func(t *testing.T) {
+		result, err := Parse(filepath.Join("testdata", allLevelsFile))
+		if err != nil {
+			t.Fatalf("Parse() error: %v", err)
+		}
+		assertBoolPtr(t, "global flag", a.global(result), allLevelsVal)
+		task := result.Tasks["hello"]
+		if task == nil {
+			t.Fatal("task 'hello' not found")
+		}
+		assertBoolPtr(t, "task flag", a.task(task), allLevelsVal)
+		cmd, ok := task.Run[0].(babfile.CommandRun)
+		if !ok {
+			t.Fatal("expected CommandRun")
+		}
+		assertBoolPtr(t, "cmd flag", a.cmdRunItem(cmd), allLevelsVal)
+	})
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := Parse(filepath.Join("testdata", tc.file))
-			if err != nil {
-				t.Fatalf("Parse() error: %v", err)
-			}
+	t.Run("run_item_command", func(t *testing.T) {
+		result, err := Parse(filepath.Join("testdata", a.cmdFile))
+		if err != nil {
+			t.Fatalf("Parse() error: %v", err)
+		}
+		task := result.Tasks["hello"]
+		if task == nil {
+			t.Fatal("task 'hello' not found")
+		}
+		cmd, ok := task.Run[0].(babfile.CommandRun)
+		if !ok {
+			t.Fatal("expected CommandRun")
+		}
+		assertBoolPtr(t, "cmd flag", a.cmdRunItem(cmd), !allLevelsVal)
+	})
 
-			task := result.Tasks[tc.taskName]
-			if task == nil {
-				t.Fatalf("task %q not found", tc.taskName)
-			}
-			if len(task.Run) < 1 {
-				t.Fatal("expected at least 1 run item")
-			}
-
-			tc.checkFn(t, task.Run[0])
-		})
-	}
+	t.Run("run_item_task_ref", func(t *testing.T) {
+		result, err := Parse(filepath.Join("testdata", a.taskRefFile))
+		if err != nil {
+			t.Fatalf("Parse() error: %v", err)
+		}
+		task := result.Tasks["main"]
+		if task == nil {
+			t.Fatal("task 'main' not found")
+		}
+		taskRef, ok := task.Run[0].(babfile.TaskRun)
+		if !ok {
+			t.Fatal("expected TaskRun")
+		}
+		assertBoolPtr(t, "taskRef flag", a.taskRunItem(taskRef), !allLevelsVal)
+	})
 }
 
-func TestParseSilentFalse(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "silent_false.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	if result.GlobalSilent == nil {
-		t.Fatal("expected GlobalSilent to be set")
-	}
-	if *result.GlobalSilent != false {
-		t.Errorf("expected GlobalSilent = false, got %v", *result.GlobalSilent)
-	}
-
-	task := result.Tasks["hello"]
-	if task == nil {
-		t.Fatal("task 'hello' not found")
-	}
-	if task.Silent == nil || *task.Silent != false {
-		t.Errorf("expected task Silent = false")
-	}
-
-	cmd, ok := task.Run[0].(babfile.CommandRun)
-	if !ok {
-		t.Fatal("expected CommandRun")
-	}
-	if cmd.Silent == nil || *cmd.Silent != false {
-		t.Errorf("expected command Silent = false")
-	}
+func TestParseSilent(t *testing.T) {
+	runParseBoolFlagSuite(t, boolFlagAccessors{
+		global:       func(r *ParseResult) *bool { return r.GlobalSilent },
+		task:         func(task *babfile.Task) *bool { return task.Silent },
+		cmdRunItem:   func(cmd babfile.CommandRun) *bool { return cmd.Silent },
+		taskRunItem:  func(tr babfile.TaskRun) *bool { return tr.Silent },
+		globalFile:   "silent_global.yml",
+		taskFile:     "silent_task.yml",
+		allFalseFile: "silent_false.yml",
+		cmdFile:      "silent_command.yml",
+		taskRefFile:  "silent_taskrun.yml",
+		globalVal:    true,
+		taskVal:      true,
+	})
 }
 
-func TestParseOutputGlobal(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "output_global.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	if result.GlobalOutput == nil {
-		t.Fatal("expected GlobalOutput to be set")
-	}
-	if *result.GlobalOutput != false {
-		t.Errorf("expected GlobalOutput = false, got %v", *result.GlobalOutput)
-	}
-}
-
-func TestParseOutputTask(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "output_task.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	task := result.Tasks["hello"]
-	if task == nil {
-		t.Fatal("task 'hello' not found")
-	}
-	if task.Output == nil {
-		t.Fatal("expected Output to be set on task")
-	}
-	if *task.Output != false {
-		t.Errorf("expected Output = false, got %v", *task.Output)
-	}
-}
-
-func TestParseOutputRunItem(t *testing.T) {
-	tests := []struct {
-		name     string
-		file     string
-		taskName string
-		checkFn  func(t *testing.T, item babfile.RunItem)
-	}{
-		{
-			name:     "command",
-			file:     "output_command.yml",
-			taskName: "hello",
-			checkFn: func(t *testing.T, item babfile.RunItem) {
-				cmd, ok := item.(babfile.CommandRun)
-				if !ok {
-					t.Fatal("expected CommandRun")
-				}
-				if cmd.Output == nil || *cmd.Output != false {
-					t.Error("expected Output = false")
-				}
-			},
-		},
-		{
-			name:     "task_ref",
-			file:     "output_taskrun.yml",
-			taskName: "main",
-			checkFn: func(t *testing.T, item babfile.RunItem) {
-				taskRef, ok := item.(babfile.TaskRun)
-				if !ok {
-					t.Fatal("expected TaskRun")
-				}
-				if taskRef.Output == nil || *taskRef.Output != false {
-					t.Error("expected Output = false")
-				}
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := Parse(filepath.Join("testdata", tc.file))
-			if err != nil {
-				t.Fatalf("Parse() error: %v", err)
-			}
-
-			task := result.Tasks[tc.taskName]
-			if task == nil {
-				t.Fatalf("task %q not found", tc.taskName)
-			}
-			if len(task.Run) < 1 {
-				t.Fatal("expected at least 1 run item")
-			}
-
-			tc.checkFn(t, task.Run[0])
-		})
-	}
-}
-
-func TestParseOutputTrue(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "output_true.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	if result.GlobalOutput == nil {
-		t.Fatal("expected GlobalOutput to be set")
-	}
-	if *result.GlobalOutput != true {
-		t.Errorf("expected GlobalOutput = true, got %v", *result.GlobalOutput)
-	}
-
-	task := result.Tasks["hello"]
-	if task == nil {
-		t.Fatal("task 'hello' not found")
-	}
-	if task.Output == nil || *task.Output != true {
-		t.Errorf("expected task Output = true")
-	}
-
-	cmd, ok := task.Run[0].(babfile.CommandRun)
-	if !ok {
-		t.Fatal("expected CommandRun")
-	}
-	if cmd.Output == nil || *cmd.Output != true {
-		t.Errorf("expected command Output = true")
-	}
+func TestParseOutput(t *testing.T) {
+	runParseBoolFlagSuite(t, boolFlagAccessors{
+		global:      func(r *ParseResult) *bool { return r.GlobalOutput },
+		task:        func(task *babfile.Task) *bool { return task.Output },
+		cmdRunItem:  func(cmd babfile.CommandRun) *bool { return cmd.Output },
+		taskRunItem: func(tr babfile.TaskRun) *bool { return tr.Output },
+		globalFile:  "output_global.yml",
+		taskFile:    "output_task.yml",
+		allTrueFile: "output_true.yml",
+		cmdFile:     "output_command.yml",
+		taskRefFile: "output_taskrun.yml",
+		globalVal:   false,
+		taskVal:     false,
+	})
 }
 
 func TestParsePromptInput(t *testing.T) {
@@ -1128,149 +1027,113 @@ func TestParsePromptNumber(t *testing.T) {
 	}
 }
 
-func TestParsePromptMissingType(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_missing_type.yml"))
-	if err == nil {
-		t.Fatal("expected error for missing type")
+func TestParsePromptErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		file string
+	}{
+		{"missing type", "prompt_invalid_missing_type.yml"},
+		{"invalid type", "prompt_invalid_type.yml"},
+		{"select missing options", "prompt_invalid_missing_options.yml"},
+		{"select default not in options", "prompt_invalid_default_not_in_options.yml"},
+		{"options on input", "prompt_invalid_options_on_input.yml"},
+		{"confirm on input", "prompt_invalid_confirm_on_input.yml"},
+		{"number invalid default", "prompt_invalid_number_default.yml"},
 	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParsePromptInvalidType(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_type.yml"))
-	if err == nil {
-		t.Fatal("expected error for invalid type")
-	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParsePromptSelectMissingOptions(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_missing_options.yml"))
-	if err == nil {
-		t.Fatal("expected error for missing options")
-	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(filepath.Join("testdata", tt.file))
+			if err == nil {
+				t.Fatalf("expected error for %s", tt.name)
+			}
+			var verrs *errs.ValidationErrors
+			if !errors.As(err, &verrs) {
+				t.Fatalf("expected ValidationErrors, got %T", err)
+			}
+		})
 	}
 }
 
-func TestParsePromptSelectDefaultNotInOptions(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_default_not_in_options.yml"))
-	if err == nil {
-		t.Fatal("expected error for default not in options")
+func TestParseDir(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		checkFn func(t *testing.T, result *ParseResult)
+	}{
+		{
+			name: "global",
+			file: "dir_global.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				if result.GlobalDir != "./subdir" {
+					t.Errorf("expected GlobalDir './subdir', got %q", result.GlobalDir)
+				}
+			},
+		},
+		{
+			name: "task",
+			file: "dir_task.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["test"]
+				if task == nil {
+					t.Fatal("task 'test' not found")
+				}
+				if task.Dir != "./mydir" {
+					t.Errorf("expected Dir './mydir', got %q", task.Dir)
+				}
+			},
+		},
+		{
+			name: "command",
+			file: "dir_command.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["test"]
+				if task == nil {
+					t.Fatal("task 'test' not found")
+				}
+				cmd, ok := task.Run[0].(babfile.CommandRun)
+				if !ok {
+					t.Fatal("expected CommandRun")
+				}
+				if cmd.Dir != "./cmddir" {
+					t.Errorf("expected Dir './cmddir', got %q", cmd.Dir)
+				}
+			},
+		},
+		{
+			name: "cascade",
+			file: "dir_cascade.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				if result.GlobalDir != "./global" {
+					t.Errorf("expected GlobalDir './global', got %q", result.GlobalDir)
+				}
+				task := result.Tasks["test"]
+				if task == nil {
+					t.Fatal("task 'test' not found")
+				}
+				if task.Dir != "./task" {
+					t.Errorf("expected task Dir './task', got %q", task.Dir)
+				}
+				if len(task.Run) < 2 {
+					t.Fatal("expected at least 2 run items")
+				}
+				cmd2, ok := task.Run[1].(babfile.CommandRun)
+				if !ok {
+					t.Fatal("expected CommandRun for second item")
+				}
+				if cmd2.Dir != "./cmd" {
+					t.Errorf("expected cmd Dir './cmd', got %q", cmd2.Dir)
+				}
+			},
+		},
 	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParsePromptOptionsOnInput(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_options_on_input.yml"))
-	if err == nil {
-		t.Fatal("expected error for options on input type")
-	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParsePromptConfirmOnInput(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_confirm_on_input.yml"))
-	if err == nil {
-		t.Fatal("expected error for confirm on input type")
-	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParsePromptNumberInvalidDefault(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "prompt_invalid_number_default.yml"))
-	if err == nil {
-		t.Fatal("expected error for non-numeric default on number type")
-	}
-	var verrs *errs.ValidationErrors
-	if !errors.As(err, &verrs) {
-		t.Fatalf("expected ValidationErrors, got %T", err)
-	}
-}
-
-func TestParseDirGlobal(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "dir_global.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-	if result.GlobalDir != "./subdir" {
-		t.Errorf("expected GlobalDir './subdir', got %q", result.GlobalDir)
-	}
-}
-
-func TestParseDirTask(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "dir_task.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-	task := result.Tasks["test"]
-	if task == nil {
-		t.Fatal("task 'test' not found")
-	}
-	if task.Dir != "./mydir" {
-		t.Errorf("expected Dir './mydir', got %q", task.Dir)
-	}
-}
-
-func TestParseDirCommand(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "dir_command.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-	task := result.Tasks["test"]
-	if task == nil {
-		t.Fatal("task 'test' not found")
-	}
-	cmd, ok := task.Run[0].(babfile.CommandRun)
-	if !ok {
-		t.Fatal("expected CommandRun")
-	}
-	if cmd.Dir != "./cmddir" {
-		t.Errorf("expected Dir './cmddir', got %q", cmd.Dir)
-	}
-}
-
-func TestParseDirCascade(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "dir_cascade.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-	if result.GlobalDir != "./global" {
-		t.Errorf("expected GlobalDir './global', got %q", result.GlobalDir)
-	}
-	task := result.Tasks["test"]
-	if task == nil {
-		t.Fatal("task 'test' not found")
-	}
-	if task.Dir != "./task" {
-		t.Errorf("expected task Dir './task', got %q", task.Dir)
-	}
-	if len(task.Run) < 2 {
-		t.Fatal("expected at least 2 run items")
-	}
-	cmd2, ok := task.Run[1].(babfile.CommandRun)
-	if !ok {
-		t.Fatal("expected CommandRun for second item")
-	}
-	if cmd2.Dir != "./cmd" {
-		t.Errorf("expected cmd Dir './cmd', got %q", cmd2.Dir)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tt.file))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+			tt.checkFn(t, result)
+		})
 	}
 }
 
@@ -1371,87 +1234,112 @@ func TestParseIncludePreservesDir(t *testing.T) {
 	}
 }
 
-func TestParseSingleAlias(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "alias_single.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
+func TestParseAlias(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		checkFn func(t *testing.T, result *ParseResult)
+	}{
+		{
+			name: "single",
+			file: "alias_single.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["greet"]
+				if task == nil {
+					t.Fatal("task 'greet' not found")
+				}
+				if task.Alias != "g" {
+					t.Errorf("expected alias 'g', got %q", task.Alias)
+				}
+				if result.Aliases["g"] != "greet" {
+					t.Errorf("expected Aliases['g'] = 'greet', got %q", result.Aliases["g"])
+				}
+			},
+		},
+		{
+			name: "multiple",
+			file: "alias_multiple.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["build"]
+				if task == nil {
+					t.Fatal("task 'build' not found")
+				}
+				if len(task.Aliases) != 2 {
+					t.Errorf("expected 2 aliases, got %d", len(task.Aliases))
+				}
+				if task.Aliases[0] != "b" || task.Aliases[1] != "bld" {
+					t.Errorf("expected aliases [b, bld], got %v", task.Aliases)
+				}
+				if result.Aliases["b"] != "build" {
+					t.Errorf("expected Aliases['b'] = 'build', got %q", result.Aliases["b"])
+				}
+				if result.Aliases["bld"] != "build" {
+					t.Errorf("expected Aliases['bld'] = 'build', got %q", result.Aliases["bld"])
+				}
+			},
+		},
+		{
+			name: "both alias and aliases",
+			file: "alias_both.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["deploy"]
+				if task == nil {
+					t.Fatal("task 'deploy' not found")
+				}
+				allAliases := task.GetAllAliases()
+				if len(allAliases) != 3 {
+					t.Errorf("expected 3 total aliases, got %d: %v", len(allAliases), allAliases)
+				}
+				for _, alias := range []string{"d", "dep", "ship"} {
+					if result.Aliases[alias] != "deploy" {
+						t.Errorf("expected Aliases[%q] = 'deploy', got %q", alias, result.Aliases[alias])
+					}
+				}
+			},
+		},
+		{
+			name: "empty aliases ignored",
+			file: "alias_empty.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				if len(result.Aliases) != 1 {
+					t.Errorf("expected 1 alias, got %d: %v", len(result.Aliases), result.Aliases)
+				}
+				if result.Aliases["l"] != "lint" {
+					t.Errorf("expected Aliases['l'] = 'lint', got %q", result.Aliases["l"])
+				}
+			},
+		},
 	}
-
-	task := result.Tasks["greet"]
-	if task == nil {
-		t.Fatal("task 'greet' not found")
-	}
-	if task.Alias != "g" {
-		t.Errorf("expected alias 'g', got %q", task.Alias)
-	}
-	if result.Aliases["g"] != "greet" {
-		t.Errorf("expected Aliases['g'] = 'greet', got %q", result.Aliases["g"])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tt.file))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+			tt.checkFn(t, result)
+		})
 	}
 }
 
-func TestParseMultipleAliases(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "alias_multiple.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
+func TestParseAliasErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		wantErr error
+	}{
+		{"conflicts with task name", "alias_conflict.yml", errs.ErrAliasConflict},
+		{"duplicate alias", "alias_duplicate.yml", errs.ErrDuplicateAlias},
 	}
-
-	task := result.Tasks["build"]
-	if task == nil {
-		t.Fatal("task 'build' not found")
-	}
-	if len(task.Aliases) != 2 {
-		t.Errorf("expected 2 aliases, got %d", len(task.Aliases))
-	}
-	if task.Aliases[0] != "b" || task.Aliases[1] != "bld" {
-		t.Errorf("expected aliases [b, bld], got %v", task.Aliases)
-	}
-	if result.Aliases["b"] != "build" {
-		t.Errorf("expected Aliases['b'] = 'build', got %q", result.Aliases["b"])
-	}
-	if result.Aliases["bld"] != "build" {
-		t.Errorf("expected Aliases['bld'] = 'build', got %q", result.Aliases["bld"])
-	}
-}
-
-func TestParseBothAliasAndAliases(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "alias_both.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-
-	task := result.Tasks["deploy"]
-	if task == nil {
-		t.Fatal("task 'deploy' not found")
-	}
-
-	allAliases := task.GetAllAliases()
-	if len(allAliases) != 3 {
-		t.Errorf("expected 3 total aliases, got %d: %v", len(allAliases), allAliases)
-	}
-	for _, alias := range []string{"d", "dep", "ship"} {
-		if result.Aliases[alias] != "deploy" {
-			t.Errorf("expected Aliases[%q] = 'deploy', got %q", alias, result.Aliases[alias])
-		}
-	}
-}
-
-func TestParseAliasConflictsWithTaskName(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "alias_conflict.yml"))
-	if err == nil {
-		t.Fatal("expected error for alias conflicting with task name")
-	}
-	if !errors.Is(err, errs.ErrAliasConflict) {
-		t.Errorf("expected ErrAliasConflict, got %v", err)
-	}
-}
-
-func TestParseDuplicateAlias(t *testing.T) {
-	_, err := Parse(filepath.Join("testdata", "alias_duplicate.yml"))
-	if err == nil {
-		t.Fatal("expected error for duplicate alias")
-	}
-	if !errors.Is(err, errs.ErrDuplicateAlias) {
-		t.Errorf("expected ErrDuplicateAlias, got %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse(filepath.Join("testdata", tt.file))
+			if err == nil {
+				t.Fatalf("expected error for %s", tt.name)
+			}
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("expected %v, got %v", tt.wantErr, err)
+			}
+		})
 	}
 }
 
@@ -1475,19 +1363,6 @@ func TestParseIncludeWithAliases(t *testing.T) {
 	}
 	if genBuild.Alias != "gen:b" {
 		t.Errorf("expected task alias 'gen:b', got %q", genBuild.Alias)
-	}
-}
-
-func TestParseEmptyAliasesIgnored(t *testing.T) {
-	result, err := Parse(filepath.Join("testdata", "alias_empty.yml"))
-	if err != nil {
-		t.Fatalf("Parse() error: %v", err)
-	}
-	if len(result.Aliases) != 1 {
-		t.Errorf("expected 1 alias, got %d: %v", len(result.Aliases), result.Aliases)
-	}
-	if result.Aliases["l"] != "lint" {
-		t.Errorf("expected Aliases['l'] = 'lint', got %q", result.Aliases["l"])
 	}
 }
 
@@ -1750,5 +1625,84 @@ func TestParseParallelItemLabel(t *testing.T) {
 
 	if label := pr.ItemLabel(2); label != "libs" {
 		t.Errorf("expected label 'libs', got %q", label)
+	}
+}
+
+func TestParseWhen(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		checkFn func(t *testing.T, result *ParseResult)
+	}{
+		{
+			name: "task level when",
+			file: "when_task.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["deploy"]
+				if task == nil {
+					t.Fatal("task 'deploy' not found")
+				}
+				if task.When != "${{ confirm }} == 'true'" {
+					t.Errorf("expected task When = %q, got %q", "${{ confirm }} == 'true'", task.When)
+				}
+			},
+		},
+		{
+			name: "command level when",
+			file: "when_command.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["test"]
+				if task == nil {
+					t.Fatal("task 'test' not found")
+				}
+				if len(task.Run) != 2 {
+					t.Fatalf("expected 2 run items, got %d", len(task.Run))
+				}
+				cmd0 := task.Run[0].(babfile.CommandRun)
+				if cmd0.GetWhen() != "${{ confirm }} == 'true'" {
+					t.Errorf("cmd[0] When = %q, want %q", cmd0.GetWhen(), "${{ confirm }} == 'true'")
+				}
+				cmd1 := task.Run[1].(babfile.CommandRun)
+				if cmd1.GetWhen() != "${{ confirm }} != 'true'" {
+					t.Errorf("cmd[1] When = %q, want %q", cmd1.GetWhen(), "${{ confirm }} != 'true'")
+				}
+			},
+		},
+		{
+			name: "all run item types",
+			file: "when_all_types.yml",
+			checkFn: func(t *testing.T, result *ParseResult) {
+				task := result.Tasks["test"]
+				if task == nil {
+					t.Fatal("task 'test' not found")
+				}
+				if task.When != "${{ enabled }}" {
+					t.Errorf("task When = %q, want %q", task.When, "${{ enabled }}")
+				}
+				if len(task.Run) != 4 {
+					t.Fatalf("expected 4 run items, got %d", len(task.Run))
+				}
+				wantWhens := []string{
+					"${{ run_cmd }} == 'true'",
+					"${{ run_task }} == 'true'",
+					"${{ run_log }} == 'true'",
+					"${{ run_prompt }} == 'true'",
+				}
+				for i, want := range wantWhens {
+					if got := task.Run[i].GetWhen(); got != want {
+						t.Errorf("run[%d].GetWhen() = %q, want %q", i, got, want)
+					}
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Parse(filepath.Join("testdata", tt.file))
+			if err != nil {
+				t.Fatalf("Parse() error: %v", err)
+			}
+			tt.checkFn(t, result)
+		})
 	}
 }

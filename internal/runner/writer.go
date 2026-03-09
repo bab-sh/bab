@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -49,12 +50,47 @@ func cleanLine(line string, strip bool) string {
 	return sanitizeLine(line)
 }
 
-type PrefixWriter struct {
-	prefix  string
-	dest    io.Writer
-	mu      *sync.Mutex
+type lineBuffer struct {
 	partial []byte
 	strip   bool
+}
+
+func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error) {
+	total := len(data)
+	lb.partial = append(lb.partial, data...)
+	buf := lb.partial
+	lb.partial = nil
+
+	for len(buf) > 0 {
+		idx := bytes.IndexByte(buf, '\n')
+		if idx < 0 {
+			lb.partial = append(lb.partial, buf...)
+			break
+		}
+		line := cleanLine(string(buf[:idx]), lb.strip)
+		buf = buf[idx+1:]
+		if err := emit(line); err != nil {
+			return total, err
+		}
+	}
+
+	return total, nil
+}
+
+func (lb *lineBuffer) flush(emit func(string) error) error {
+	if len(lb.partial) > 0 {
+		line := cleanLine(string(lb.partial), lb.strip)
+		lb.partial = nil
+		return emit(line)
+	}
+	return nil
+}
+
+type PrefixWriter struct {
+	prefix string
+	dest   io.Writer
+	mu     *sync.Mutex
+	buf    lineBuffer
 }
 
 func NewPrefixWriter(label string, padWidth int, color lipgloss.Color, dest io.Writer, mu *sync.Mutex, strip bool) *PrefixWriter {
@@ -65,98 +101,91 @@ func NewPrefixWriter(label string, padWidth int, color lipgloss.Color, dest io.W
 		prefix: prefix,
 		dest:   dest,
 		mu:     mu,
-		strip:  strip,
+		buf:    lineBuffer{strip: strip},
 	}
 }
 
 func (pw *PrefixWriter) Write(p []byte) (int, error) {
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
-
-	total := len(p)
-	pw.partial = append(pw.partial, p...)
-	data := pw.partial
-	pw.partial = nil
-
-	for len(data) > 0 {
-		idx := bytes.IndexByte(data, '\n')
-		if idx < 0 {
-			pw.partial = append(pw.partial, data...)
-			break
-		}
-		line := cleanLine(string(data[:idx]), pw.strip)
-		data = data[idx+1:]
-		if _, err := fmt.Fprintln(pw.dest, pw.prefix+line); err != nil {
-			return total, err
-		}
-	}
-
-	return total, nil
+	return pw.buf.process(p, func(line string) error {
+		_, err := fmt.Fprintln(pw.dest, pw.prefix+line)
+		return err
+	})
 }
 
 func (pw *PrefixWriter) Flush() error {
 	pw.mu.Lock()
 	defer pw.mu.Unlock()
-
-	if len(pw.partial) > 0 {
-		line := cleanLine(string(pw.partial), pw.strip)
-		pw.partial = nil
+	return pw.buf.flush(func(line string) error {
 		_, err := fmt.Fprintln(pw.dest, pw.prefix+line)
 		return err
-	}
-	return nil
+	})
 }
 
-type LineWriter struct {
-	index   int
+type KeyLineWriter struct {
+	key     string
 	program *tea.Program
 	mu      sync.Mutex
-	partial []byte
-	strip   bool
+	buf     lineBuffer
 }
 
-func NewLineWriter(index int, program *tea.Program, strip bool) *LineWriter {
-	return &LineWriter{
-		index:   index,
+func NewKeyLineWriter(key string, program *tea.Program, strip bool) *KeyLineWriter {
+	return &KeyLineWriter{
+		key:     key,
 		program: program,
-		strip:   strip,
+		buf:     lineBuffer{strip: strip},
 	}
 }
 
-func (lw *LineWriter) Write(p []byte) (int, error) {
-	lw.mu.Lock()
-	defer lw.mu.Unlock()
-
-	total := len(p)
-	lw.partial = append(lw.partial, p...)
-	data := lw.partial
-	lw.partial = nil
-
-	for len(data) > 0 {
-		idx := bytes.IndexByte(data, '\n')
-		if idx < 0 {
-			lw.partial = append(lw.partial, data...)
-			break
-		}
-		line := cleanLine(string(data[:idx]), lw.strip)
-		data = data[idx+1:]
-		lw.program.Send(tui.ItemOutputMsg{Index: lw.index, Line: line})
-	}
-
-	return total, nil
+func (kw *KeyLineWriter) Write(p []byte) (int, error) {
+	kw.mu.Lock()
+	defer kw.mu.Unlock()
+	return kw.buf.process(p, func(line string) error {
+		kw.program.Send(tui.ItemOutputMsg{Key: kw.key, Line: line})
+		return nil
+	})
 }
 
-func (lw *LineWriter) Flush() {
-	lw.mu.Lock()
-	defer lw.mu.Unlock()
-
-	if len(lw.partial) > 0 {
-		line := cleanLine(string(lw.partial), lw.strip)
-		lw.partial = nil
-		lw.program.Send(tui.ItemOutputMsg{Index: lw.index, Line: line})
-	}
+func (kw *KeyLineWriter) Flush() {
+	kw.mu.Lock()
+	defer kw.mu.Unlock()
+	_ = kw.buf.flush(func(line string) error {
+		kw.program.Send(tui.ItemOutputMsg{Key: kw.key, Line: line})
+		return nil
+	})
 }
 
-func colorForIndex(index int) lipgloss.Color {
-	return theme.ParallelColors[index%len(theme.ParallelColors)]
+func colorForPath(path []int) lipgloss.Color {
+	if len(path) == 0 {
+		return theme.ParallelBaseColors[0]
+	}
+	bases := theme.ParallelBaseColors
+	base := bases[path[0]%len(bases)]
+	depth := len(path) - 1
+	if depth == 0 {
+		return base
+	}
+	return dimColor(base, depth)
+}
+
+func dimColor(c lipgloss.Color, steps int) lipgloss.Color {
+	code, err := strconv.Atoi(string(c))
+	if err != nil || code < 16 || code > 231 {
+		return c
+	}
+
+	idx := code - 16
+	r := idx / 36
+	g := (idx % 36) / 6
+	b := idx % 6
+
+	for range steps {
+		r = (r * 3) / 5
+		g = (g * 3) / 5
+		b = (b * 3) / 5
+	}
+
+	dimmed := 16 + 36*r + 6*g + b
+	return lipgloss.Color(strconv.Itoa(dimmed))
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/bab-sh/bab/internal/theme"
@@ -19,29 +20,48 @@ type ParallelItem struct {
 	Color lipgloss.Color
 }
 
+type ItemRegisterMsg struct {
+	Key    string
+	Parent string
+	Label  string
+	Color  lipgloss.Color
+}
+
+type ItemStartMsg struct {
+	Key string
+}
+
 type ItemOutputMsg struct {
-	Index int
-	Line  string
+	Key  string
+	Line string
 }
 
 type ItemDoneMsg struct {
-	Index int
-	Err   error
+	Key string
+	Err error
+}
+
+type ItemClearChildrenMsg struct {
+	Key string
 }
 
 type AllDoneMsg struct{}
 
 func RunParallel(items []ParallelItem, cancel context.CancelFunc) (*tea.Program, error) {
-	states := make([]itemState, len(items))
+	stateMap := make(map[string]*itemState, len(items))
+	roots := make([]string, len(items))
 	for i, item := range items {
-		states[i] = itemState{
+		key := strconv.Itoa(i)
+		stateMap[key] = &itemState{
 			label: item.Label,
 			color: item.Color,
 		}
+		roots[i] = key
 	}
 
 	model := parallelModel{
-		items:  states,
+		items:  stateMap,
+		roots:  roots,
 		width:  80,
 		cancel: cancel,
 	}
@@ -56,7 +76,8 @@ func RunParallel(items []ParallelItem, cancel context.CancelFunc) (*tea.Program,
 }
 
 type parallelModel struct {
-	items     []itemState
+	items     map[string]*itemState
+	roots     []string
 	width     int
 	done      bool
 	cancelled bool
@@ -64,11 +85,13 @@ type parallelModel struct {
 }
 
 type itemState struct {
-	label string
-	color lipgloss.Color
-	lines []string
-	done  bool
-	err   error
+	label    string
+	color    lipgloss.Color
+	lines    []string
+	started  bool
+	done     bool
+	err      error
+	children []string
 }
 
 var (
@@ -87,9 +110,27 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		return m, nil
 
+	case ItemRegisterMsg:
+		m.items[msg.Key] = &itemState{
+			label: msg.Label,
+			color: msg.Color,
+		}
+		if msg.Parent != "" {
+			if parent := m.items[msg.Parent]; parent != nil {
+				parent.children = append(parent.children, msg.Key)
+				parent.lines = nil
+			}
+		}
+		return m, nil
+
+	case ItemStartMsg:
+		if item := m.items[msg.Key]; item != nil {
+			item.started = true
+		}
+		return m, nil
+
 	case ItemOutputMsg:
-		if msg.Index >= 0 && msg.Index < len(m.items) {
-			item := &m.items[msg.Index]
+		if item := m.items[msg.Key]; item != nil {
 			item.lines = append(item.lines, msg.Line)
 			if len(item.lines) > frameHeight {
 				item.lines = item.lines[len(item.lines)-frameHeight:]
@@ -98,9 +139,18 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ItemDoneMsg:
-		if msg.Index >= 0 && msg.Index < len(m.items) {
-			m.items[msg.Index].done = true
-			m.items[msg.Index].err = msg.Err
+		if item := m.items[msg.Key]; item != nil {
+			item.done = true
+			item.err = msg.Err
+		}
+		return m, nil
+
+	case ItemClearChildrenMsg:
+		if item := m.items[msg.Key]; item != nil {
+			for _, ck := range item.children {
+				m.removeItemTree(ck)
+			}
+			item.children = nil
 		}
 		return m, nil
 
@@ -123,50 +173,130 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m parallelModel) removeItemTree(key string) {
+	item := m.items[key]
+	if item != nil {
+		for _, ck := range item.children {
+			m.removeItemTree(ck)
+		}
+	}
+	delete(m.items, key)
+}
+
 func (m parallelModel) View() string {
 	if m.done {
 		return " "
 	}
 
 	var out []string
-	for _, item := range m.items {
-		out = append(out, m.renderFrameLines(item)...)
+	for _, key := range m.roots {
+		out = append(out, m.renderItem(key, "", m.width, 0)...)
 	}
 	return strings.Join(out, "\n")
 }
 
-func (m parallelModel) renderFrameLines(item itemState) []string {
-	titleStyle := lipgloss.NewStyle().Foreground(item.color).Bold(true)
-
-	var status string
-	switch {
-	case item.done && item.err != nil && errors.Is(item.err, context.Canceled):
-		status = dimStyle.Render("⊘")
-	case item.done && item.err != nil:
-		status = failureStyle.Render("✗")
-	case item.done:
-		status = successStyle.Render("✓")
-	case m.cancelled:
-		status = dimStyle.Render("⊘")
-	default:
-		status = dimStyle.Render("◦")
+func (m parallelModel) renderItem(key string, indent string, width int, depth int) []string {
+	item := m.items[key]
+	if item == nil {
+		return nil
 	}
+
+	if depth > 0 {
+		var lines []string
+		lines = append(lines, m.renderCompactLine(item, indent, width))
+		if len(item.children) > 0 {
+			childIndent := indent + "  "
+			childWidth := width - 2
+			if childWidth < 20 {
+				childWidth = 20
+			}
+			for _, ck := range item.children {
+				lines = append(lines, m.renderItem(ck, childIndent, childWidth, depth+1)...)
+			}
+		}
+		return lines
+	}
+
+	titleStyle := lipgloss.NewStyle().Foreground(item.color).Bold(true)
+	status := m.statusIcon(item)
 
 	lines := make([]string, 0, frameHeight+2)
-	lines = append(lines, dimStyle.Render("┌─")+" "+titleStyle.Render(item.label)+" "+status)
+	lines = append(lines, indent+dimStyle.Render("┌─")+" "+titleStyle.Render(item.label)+" "+status)
 
-	maxWidth := m.width - 4
-	for _, line := range item.lines {
-		if maxWidth > 0 && ansi.StringWidth(line) > maxWidth {
-			line = ansi.Truncate(line, maxWidth, "")
+	if len(item.children) > 0 {
+		childIndent := indent + dimStyle.Render("│") + "  "
+		childWidth := width - 3
+		if childWidth < 20 {
+			childWidth = 20
 		}
-		lines = append(lines, dimStyle.Render("│")+"  "+line)
+		for _, ck := range item.children {
+			lines = append(lines, m.renderItem(ck, childIndent, childWidth, 1)...)
+		}
+	} else {
+		maxWidth := width - 4
+		for _, line := range item.lines {
+			if maxWidth > 0 && ansi.StringWidth(line) > maxWidth {
+				line = ansi.Truncate(line, maxWidth, "")
+			}
+			lines = append(lines, indent+dimStyle.Render("│")+"  "+line)
+		}
+		if !item.done && len(item.lines) > 0 {
+			for range frameHeight - len(item.lines) {
+				lines = append(lines, indent+dimStyle.Render("│"))
+			}
+		}
 	}
 
-	for range frameHeight - len(item.lines) {
-		lines = append(lines, dimStyle.Render("│"))
-	}
-
-	lines = append(lines, dimStyle.Render("└"))
+	lines = append(lines, indent+dimStyle.Render("└"))
 	return lines
+}
+
+func (m parallelModel) renderCompactLine(item *itemState, indent string, width int) string {
+	titleStyle := lipgloss.NewStyle().Foreground(item.color).Bold(true)
+	status := m.statusIcon(item)
+	label := titleStyle.Render(item.label)
+
+	prefix := status + " " + label
+	prefixWidth := ansi.StringWidth(status) + 1 + ansi.StringWidth(item.label)
+
+	if item.done && item.err == nil {
+		return indent + prefix
+	}
+
+	snippet := ""
+	for i := len(item.lines) - 1; i >= 0; i-- {
+		if strings.TrimSpace(item.lines[i]) != "" {
+			snippet = item.lines[i]
+			break
+		}
+	}
+
+	if snippet != "" {
+		available := width - ansi.StringWidth(indent) - prefixWidth - 2
+		if available > 0 {
+			if ansi.StringWidth(snippet) > available {
+				snippet = ansi.Truncate(snippet, available, "…")
+			}
+			return indent + prefix + "  " + dimStyle.Render(snippet)
+		}
+	}
+
+	return indent + prefix
+}
+
+func (m parallelModel) statusIcon(item *itemState) string {
+	switch {
+	case item.done && item.err != nil && errors.Is(item.err, context.Canceled):
+		return dimStyle.Render("⊘")
+	case item.done && item.err != nil:
+		return failureStyle.Render("✗")
+	case item.done:
+		return successStyle.Render("✓")
+	case m.cancelled:
+		return dimStyle.Render("⊘")
+	case !item.started:
+		return dimStyle.Render("∙")
+	default:
+		return dimStyle.Render("◦")
+	}
 }

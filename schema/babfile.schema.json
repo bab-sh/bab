@@ -420,6 +420,14 @@
               "description": "Preserve colors in child process output (default: true). When false, strips ANSI codes and sets NO_COLOR=1",
               "default": true
             },
+            "silent": {
+              "type": "boolean",
+              "description": "Suppress command execution output (e.g., '$ go mod download')"
+            },
+            "output": {
+              "type": "boolean",
+              "description": "Show process output (stdout/stderr). Defaults to true."
+            },
             "platforms": {
               "items": {
                 "$ref": "#/$defs/Platform"

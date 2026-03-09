@@ -480,90 +480,67 @@ func parseRunFields(path string, node *yaml.Node, taskName string, index int, ve
 	return rf
 }
 
-func parseParallelRun(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
-	prefix := fmt.Sprintf("task %q: run[%d]", taskName, index)
-	line := node.Line
-	hasErrors := false
+type parallelFields struct {
+	itemsNode *yaml.Node
+	mode      babfile.ParallelMode
+	limit     int
+	color     *bool
+	silent    *bool
+	output    *bool
+	platforms []babfile.Platform
+	when      string
+}
 
-	var itemsNode *yaml.Node
-	var mode babfile.ParallelMode
-	var limit int
-	var color *bool
-	var platforms []babfile.Platform
-	var when string
-	var labels []string
-
-	for i := 0; i < len(node.Content); i += 2 {
-		key := node.Content[i]
-		val := node.Content[i+1]
-
-		switch key.Value {
-		case keyParallel:
-			if val.Kind != yaml.SequenceNode {
-				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: parallel must be a sequence", prefix)})
-				hasErrors = true
-			} else {
-				itemsNode = val
-			}
-		case keyMode:
-			if val.Kind != yaml.ScalarNode {
-				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: mode must be a string", prefix)})
-				hasErrors = true
-			} else {
-				mode = babfile.ParallelMode(val.Value)
-				if !mode.Valid() {
-					verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid mode %q, must be one of: interleaved, grouped", prefix, val.Value)})
-					hasErrors = true
-				}
-			}
-		case keyLimit:
-			var v int
-			if err := val.Decode(&v); err != nil {
-				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid limit value", prefix), Cause: err})
-				hasErrors = true
-			} else if v < 0 {
-				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: limit must be >= 0", prefix)})
-				hasErrors = true
-			} else {
-				limit = v
-			}
-		case keyColor:
-			var v bool
-			if err := val.Decode(&v); err != nil {
-				verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid color value", prefix), Cause: err})
-				hasErrors = true
-			} else {
-				color = &v
-			}
-		case keyPlatforms:
-			var ok bool
-			platforms, ok = parsePlatforms(path, key.Line, prefix, val, verrs)
-			if !ok {
-				hasErrors = true
-			}
-		case keyWhen:
-			when = val.Value
-		default:
-			verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: unknown key %q in parallel block", prefix, key.Value)})
-			hasErrors = true
+func parseParallelKey(key, val *yaml.Node, pf *parallelFields, path, prefix string, verrs *errs.ValidationErrors) bool {
+	switch key.Value {
+	case keyParallel:
+		if val.Kind != yaml.SequenceNode {
+			verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: parallel must be a sequence", prefix)})
+			return false
 		}
+		pf.itemsNode = val
+	case keyMode:
+		if val.Kind != yaml.ScalarNode {
+			verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: mode must be a string", prefix)})
+			return false
+		}
+		pf.mode = babfile.ParallelMode(val.Value)
+		if !pf.mode.Valid() {
+			verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid mode %q, must be one of: interleaved, grouped", prefix, val.Value)})
+			return false
+		}
+	case keyLimit:
+		var v int
+		if err := val.Decode(&v); err != nil {
+			verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: invalid limit value", prefix), Cause: err})
+			return false
+		}
+		if v < 0 {
+			verrs.Add(&errs.ParseError{Path: path, Line: val.Line, Message: fmt.Sprintf("%s: limit must be >= 0", prefix)})
+			return false
+		}
+		pf.limit = v
+	case keyColor:
+		return parseBool(path, val, &pf.color, verrs)
+	case keySilent:
+		return parseBool(path, val, &pf.silent, verrs)
+	case keyOutput:
+		return parseBool(path, val, &pf.output, verrs)
+	case keyPlatforms:
+		var ok bool
+		pf.platforms, ok = parsePlatforms(path, key.Line, prefix, val, verrs)
+		return ok
+	case keyWhen:
+		pf.when = val.Value
+	default:
+		verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("%s: unknown key %q in parallel block", prefix, key.Value)})
+		return false
 	}
+	return true
+}
 
-	if hasErrors || itemsNode == nil {
-		return nil, false
-	}
-
-	if len(itemsNode.Content) == 0 {
-		verrs.Add(&errs.ParseError{Path: path, Line: itemsNode.Line, Message: fmt.Sprintf("%s: parallel must have at least one item", prefix)})
-		return nil, false
-	}
-
-	items, ok := parseRunItems(path, itemsNode, taskName, verrs)
-	if !ok {
-		return nil, false
-	}
-
-	labels = make([]string, len(items))
+func validateParallelItems(path, prefix string, itemsNode *yaml.Node, items []babfile.RunItem, verrs *errs.ValidationErrors) bool {
+	hasErrors := false
 	for j, item := range items {
 		switch item.(type) {
 		case babfile.PromptRun:
@@ -574,11 +551,11 @@ func parseParallelRun(path string, node *yaml.Node, taskName string, index int, 
 			hasErrors = true
 		}
 	}
+	return !hasErrors
+}
 
-	if hasErrors {
-		return nil, false
-	}
-
+func extractParallelLabels(itemsNode *yaml.Node, items []babfile.RunItem) []string {
+	labels := make([]string, len(items))
 	for j, itemNode := range itemsNode.Content {
 		if j >= len(items) {
 			break
@@ -592,20 +569,55 @@ func parseParallelRun(path string, node *yaml.Node, taskName string, index int, 
 			}
 		}
 	}
+	return labels
+}
 
-	if mode == "" {
-		mode = babfile.ParallelInterleaved
+func parseParallelRun(path string, node *yaml.Node, taskName string, index int, verrs *errs.ValidationErrors) (babfile.RunItem, bool) {
+	prefix := fmt.Sprintf("task %q: run[%d]", taskName, index)
+	line := node.Line
+	hasErrors := false
+
+	var pf parallelFields
+
+	for i := 0; i < len(node.Content); i += 2 {
+		if !parseParallelKey(node.Content[i], node.Content[i+1], &pf, path, prefix, verrs) {
+			hasErrors = true
+		}
+	}
+
+	if hasErrors || pf.itemsNode == nil {
+		return nil, false
+	}
+
+	if len(pf.itemsNode.Content) == 0 {
+		verrs.Add(&errs.ParseError{Path: path, Line: pf.itemsNode.Line, Message: fmt.Sprintf("%s: parallel must have at least one item", prefix)})
+		return nil, false
+	}
+
+	items, ok := parseRunItems(path, pf.itemsNode, taskName, verrs)
+	if !ok {
+		return nil, false
+	}
+
+	if !validateParallelItems(path, prefix, pf.itemsNode, items, verrs) {
+		return nil, false
+	}
+
+	if pf.mode == "" {
+		pf.mode = babfile.ParallelInterleaved
 	}
 
 	return babfile.ParallelRun{
 		Line:      line,
 		Items:     items,
-		Labels:    labels,
-		Mode:      mode,
-		Limit:     limit,
-		Color:     color,
-		Platforms: platforms,
-		When:      when,
+		Labels:    extractParallelLabels(pf.itemsNode, items),
+		Mode:      pf.mode,
+		Limit:     pf.limit,
+		Color:     pf.color,
+		Silent:    pf.silent,
+		Output:    pf.output,
+		Platforms: pf.platforms,
+		When:      pf.when,
 	}, true
 }
 

@@ -32,6 +32,8 @@ type ParallelRun struct {
 	Mode      ParallelMode `json:"mode,omitempty" yaml:"mode,omitempty"`
 	Limit     int          `json:"limit,omitempty" yaml:"limit,omitempty"`
 	Color     *bool        `json:"color,omitempty" yaml:"color,omitempty"`
+	Silent    *bool        `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output    *bool        `json:"output,omitempty" yaml:"output,omitempty"`
 	Platforms []Platform   `json:"platforms,omitempty" yaml:"platforms,omitempty"`
 	When      string       `json:"when,omitempty" yaml:"when,omitempty"`
 }
@@ -99,6 +101,8 @@ func ParallelRunSchema() *jsonschema.Schema {
 		Default:     true,
 		Description: "Preserve colors in child process output (default: true). When false, strips ANSI codes and sets NO_COLOR=1",
 	})
+	props.Set("silent", SilentSchema())
+	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())
 	props.Set("when", WhenSchema())
 

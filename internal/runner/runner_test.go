@@ -213,55 +213,62 @@ func TestRunTaskRefCircular(t *testing.T) {
 	}
 }
 
-func TestRunWithGlobalEnv(t *testing.T) {
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+func TestRunEnv(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskName string
+		tasks    babfile.TaskMap
+		setup    func(r *Runner)
+	}{
+		{
+			name:     "global env",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+				},
+			},
+			setup: func(r *Runner) { r.GlobalEnv = map[string]string{"FOO": "bar"} },
 		},
-	}
-
-	r := New(true, "")
-	r.GlobalEnv = map[string]string{"FOO": "bar"}
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithTaskEnv(t *testing.T) {
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Env:  map[string]string{"FOO": "task-value"},
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+		{
+			name:     "task env",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Env:  map[string]string{"FOO": "task-value"},
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo $FOO"}},
+				},
+			},
 		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithCommandEnv(t *testing.T) {
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run: []babfile.RunItem{
-				babfile.CommandRun{
-					Cmd: "echo $FOO",
-					Env: map[string]string{"FOO": "cmd-value"},
+		{
+			name:     "command env",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run: []babfile.RunItem{
+						babfile.CommandRun{
+							Cmd: "echo $FOO",
+							Env: map[string]string{"FOO": "cmd-value"},
+						},
+					},
 				},
 			},
 		},
 	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := New(true, "")
+			if tt.setup != nil {
+				tt.setup(r)
+			}
+			err := r.RunWithTasks(context.Background(), tt.taskName, tt.tasks)
+			if err != nil {
+				t.Errorf("RunWithTasks() error: %v", err)
+			}
+		})
 	}
 }
 
@@ -409,73 +416,72 @@ func TestBoolInheritanceFunctions(t *testing.T) {
 	})
 }
 
-func TestRunWithGlobalSilent(t *testing.T) {
+func TestRunSilent(t *testing.T) {
 	trueVal := true
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+	tests := []struct {
+		name     string
+		taskName string
+		tasks    babfile.TaskMap
+		setup    func(r *Runner)
+	}{
+		{
+			name:     "global silent",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+				},
+			},
+			setup: func(r *Runner) { r.GlobalSilent = &trueVal },
+		},
+		{
+			name:     "task silent",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name:   "hello",
+					Silent: &trueVal,
+					Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+				},
+			},
+		},
+		{
+			name:     "command silent",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Silent: &trueVal}},
+				},
+			},
+		},
+		{
+			name:     "task ref silent",
+			taskName: "main",
+			tasks: babfile.TaskMap{
+				"main": &babfile.Task{
+					Name: "main",
+					Run:  []babfile.RunItem{babfile.TaskRun{Task: "helper", Silent: &trueVal}},
+				},
+				"helper": &babfile.Task{
+					Name: "helper",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo helper"}},
+				},
+			},
 		},
 	}
-
-	r := New(true, "")
-	r.GlobalSilent = &trueVal
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithTaskSilent(t *testing.T) {
-	trueVal := true
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name:   "hello",
-			Silent: &trueVal,
-			Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
-		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithCommandSilent(t *testing.T) {
-	trueVal := true
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Silent: &trueVal}},
-		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithTaskRefSilent(t *testing.T) {
-	trueVal := true
-	tasks := babfile.TaskMap{
-		"main": &babfile.Task{
-			Name: "main",
-			Run:  []babfile.RunItem{babfile.TaskRun{Task: "helper", Silent: &trueVal}},
-		},
-		"helper": &babfile.Task{
-			Name: "helper",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo helper"}},
-		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "main", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := New(true, "")
+			if tt.setup != nil {
+				tt.setup(r)
+			}
+			err := r.RunWithTasks(context.Background(), tt.taskName, tt.tasks)
+			if err != nil {
+				t.Errorf("RunWithTasks() error: %v", err)
+			}
+		})
 	}
 }
 
@@ -500,53 +506,58 @@ func TestSilentInheritance(t *testing.T) {
 	}
 }
 
-func TestRunWithGlobalOutput(t *testing.T) {
+func TestRunOutput(t *testing.T) {
 	falseVal := false
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+	tests := []struct {
+		name     string
+		taskName string
+		tasks    babfile.TaskMap
+		setup    func(r *Runner)
+	}{
+		{
+			name:     "global output",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+				},
+			},
+			setup: func(r *Runner) { r.GlobalOutput = &falseVal },
+		},
+		{
+			name:     "task output",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name:   "hello",
+					Output: &falseVal,
+					Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+				},
+			},
+		},
+		{
+			name:     "command output",
+			taskName: "hello",
+			tasks: babfile.TaskMap{
+				"hello": &babfile.Task{
+					Name: "hello",
+					Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Output: &falseVal}},
+				},
+			},
 		},
 	}
-
-	r := New(true, "")
-	r.GlobalOutput = &falseVal
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithTaskOutput(t *testing.T) {
-	falseVal := false
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name:   "hello",
-			Output: &falseVal,
-			Run:    []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
-		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
-	}
-}
-
-func TestRunWithCommandOutput(t *testing.T) {
-	falseVal := false
-	tasks := babfile.TaskMap{
-		"hello": &babfile.Task{
-			Name: "hello",
-			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello", Output: &falseVal}},
-		},
-	}
-
-	r := New(true, "")
-	err := r.RunWithTasks(context.Background(), "hello", tasks)
-	if err != nil {
-		t.Errorf("RunWithTasks() error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := New(true, "")
+			if tt.setup != nil {
+				tt.setup(r)
+			}
+			err := r.RunWithTasks(context.Background(), tt.taskName, tt.tasks)
+			if err != nil {
+				t.Errorf("RunWithTasks() error: %v", err)
+			}
+		})
 	}
 }
 

@@ -11,14 +11,14 @@ var (
 	Dim    = lipgloss.Color("238")
 	Muted  = lipgloss.Color("245")
 
-	ParallelColors = []lipgloss.Color{
-		lipgloss.Color("212"), // pink
-		lipgloss.Color("43"),  // cyan
-		lipgloss.Color("141"), // purple
-		lipgloss.Color("220"), // yellow
-		lipgloss.Color("82"),  // green
-		lipgloss.Color("208"), // orange
-		lipgloss.Color("51"),  // bright cyan
-		lipgloss.Color("199"), // magenta
+	ParallelBaseColors = []lipgloss.Color{
+		lipgloss.Color("212"),
+		lipgloss.Color("43"),
+		lipgloss.Color("141"),
+		lipgloss.Color("220"),
+		lipgloss.Color("82"),
+		lipgloss.Color("208"),
+		lipgloss.Color("51"),
+		lipgloss.Color("199"),
 	}
 )

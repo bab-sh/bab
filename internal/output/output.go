@@ -84,9 +84,9 @@ func RenderLog(msg string, level babfile.LogLevel) string {
 	return fmt.Sprintf("%s %s", style.Render(strings.ToUpper(string(level))), msg)
 }
 
-func ParallelDone(labels []string, errs []error) {
+func RenderParallelDone(labels []string, errs []error) string {
 	if len(errs) != len(labels) {
-		return
+		return ""
 	}
 	var parts []string
 	for i, label := range labels {
@@ -101,11 +101,18 @@ func ParallelDone(labels []string, errs []error) {
 		}
 	}
 
-	_, _ = fmt.Fprintf(Writer, "%s %s %s%s%s\n",
+	return fmt.Sprintf("%s %s %s%s%s",
 		taskIndicator.Render("●"),
 		taskAction.Render("Parallel"),
 		secondary.Render("["),
 		strings.Join(parts, "  "),
 		secondary.Render("]"),
 	)
+}
+
+func ParallelDone(labels []string, errs []error) {
+	s := RenderParallelDone(labels, errs)
+	if s != "" {
+		_, _ = fmt.Fprintln(Writer, s)
+	}
 }

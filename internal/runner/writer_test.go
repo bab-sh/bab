@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/bab-sh/bab/internal/theme"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -119,5 +120,177 @@ func TestPrefixWriterFlush(t *testing.T) {
 	_ = pw.Flush()
 	if !strings.Contains(buf.String(), "partial") {
 		t.Errorf("Flush should write partial line, got %q", buf.String())
+	}
+}
+
+func TestLineBuffer(t *testing.T) {
+	tests := []struct {
+		name     string
+		writes   []string
+		flush    bool
+		strip    bool
+		wantEmit []string
+	}{
+		{
+			name:     "single complete line",
+			writes:   []string{"hello\n"},
+			wantEmit: []string{"hello"},
+		},
+		{
+			name:     "multiple lines in one write",
+			writes:   []string{"line1\nline2\n"},
+			wantEmit: []string{"line1", "line2"},
+		},
+		{
+			name:     "partial line buffered",
+			writes:   []string{"hel"},
+			wantEmit: nil,
+		},
+		{
+			name:     "partial then complete",
+			writes:   []string{"hel", "lo\n"},
+			wantEmit: []string{"hello"},
+		},
+		{
+			name:     "flush with buffered content",
+			writes:   []string{"partial"},
+			flush:    true,
+			wantEmit: []string{"partial"},
+		},
+		{
+			name:     "flush with empty buffer",
+			writes:   []string{"done\n"},
+			flush:    true,
+			wantEmit: []string{"done"},
+		},
+		{
+			name:     "strip mode removes ANSI",
+			writes:   []string{"\x1b[31mred\x1b[0m\n"},
+			strip:    true,
+			wantEmit: []string{"red"},
+		},
+		{
+			name:     "non-strip keeps SGR",
+			writes:   []string{"\x1b[31mred\x1b[0m\n"},
+			strip:    false,
+			wantEmit: []string{"\x1b[31mred\x1b[0m"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lb := &lineBuffer{strip: tt.strip}
+			var emitted []string
+			emit := func(line string) error {
+				emitted = append(emitted, line)
+				return nil
+			}
+			for _, w := range tt.writes {
+				if _, err := lb.process([]byte(w), emit); err != nil {
+					t.Fatalf("process() error: %v", err)
+				}
+			}
+			if tt.flush {
+				if err := lb.flush(emit); err != nil {
+					t.Fatalf("flush() error: %v", err)
+				}
+			}
+			if len(emitted) != len(tt.wantEmit) {
+				t.Fatalf("emitted %d lines, want %d: %v", len(emitted), len(tt.wantEmit), emitted)
+			}
+			for i, want := range tt.wantEmit {
+				if emitted[i] != want {
+					t.Errorf("emitted[%d] = %q, want %q", i, emitted[i], want)
+				}
+			}
+		})
+	}
+}
+
+func TestColorForPath(t *testing.T) {
+	tests := []struct {
+		name string
+		path []int
+		want lipgloss.Color
+	}{
+		{"empty path", nil, theme.ParallelBaseColors[0]},
+		{"single index 0", []int{0}, theme.ParallelBaseColors[0]},
+		{"single index 1", []int{1}, theme.ParallelBaseColors[1]},
+		{"wraps around", []int{len(theme.ParallelBaseColors)}, theme.ParallelBaseColors[0]},
+		{"nested path is dimmed", []int{0, 0}, dimColor(theme.ParallelBaseColors[0], 1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := colorForPath(tt.path)
+			if got != tt.want {
+				t.Errorf("colorForPath(%v) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDimColor(t *testing.T) {
+	tests := []struct {
+		name  string
+		color lipgloss.Color
+		steps int
+		check func(t *testing.T, result lipgloss.Color)
+	}{
+		{
+			name:  "invalid color string",
+			color: lipgloss.Color("notacolor"),
+			steps: 1,
+			check: func(t *testing.T, result lipgloss.Color) {
+				if result != "notacolor" {
+					t.Errorf("expected unchanged, got %q", result)
+				}
+			},
+		},
+		{
+			name:  "color code below 16",
+			color: lipgloss.Color("10"),
+			steps: 1,
+			check: func(t *testing.T, result lipgloss.Color) {
+				if result != "10" {
+					t.Errorf("expected unchanged, got %q", result)
+				}
+			},
+		},
+		{
+			name:  "color code above 231",
+			color: lipgloss.Color("240"),
+			steps: 1,
+			check: func(t *testing.T, result lipgloss.Color) {
+				if result != "240" {
+					t.Errorf("expected unchanged, got %q", result)
+				}
+			},
+		},
+		{
+			name:  "valid 256-color dimmed",
+			color: lipgloss.Color("196"),
+			steps: 1,
+			check: func(t *testing.T, result lipgloss.Color) {
+				if result == "196" {
+					t.Error("expected color to be dimmed")
+				}
+			},
+		},
+		{
+			name:  "multiple steps progressively dimmer",
+			color: lipgloss.Color("196"),
+			steps: 2,
+			check: func(t *testing.T, result lipgloss.Color) {
+				oneStep := dimColor(lipgloss.Color("196"), 1)
+				if result == oneStep {
+					t.Error("two steps should be dimmer than one step")
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := dimColor(tt.color, tt.steps)
+			tt.check(t, result)
+		})
 	}
 }
