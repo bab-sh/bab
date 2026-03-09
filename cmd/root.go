@@ -3,12 +3,17 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
+	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/runner"
 	"github.com/bab-sh/bab/internal/update"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 )
+
+var argNameRegex = regexp.MustCompile(babfile.VarNamePattern)
 
 var (
 	versionString = "dev"
@@ -99,12 +104,35 @@ func (c *CLI) run(cmd *cobra.Command, args []string) error {
 		return c.runList()
 	}
 	if len(args) > 0 {
-		return c.runTask(args[0])
+		return c.runTask(args[0], args[1:])
 	}
 	return c.runInteractive()
 }
 
-func (c *CLI) runTask(taskName string) error {
+func (c *CLI) runTask(taskName string, rawArgs []string) error {
 	r := runner.New(c.dryRun, c.babfile)
+	if len(rawArgs) > 0 {
+		cliArgs, err := parseKVArgs(rawArgs)
+		if err != nil {
+			return err
+		}
+		r.CLIArgs = cliArgs
+	}
 	return r.Run(c.ctx, taskName)
+}
+
+func parseKVArgs(args []string) (map[string]string, error) {
+	result := make(map[string]string, len(args))
+	for _, arg := range args {
+		idx := strings.Index(arg, "=")
+		if idx <= 0 {
+			return nil, fmt.Errorf("invalid argument %q: expected format key=value", arg)
+		}
+		key := arg[:idx]
+		if !argNameRegex.MatchString(key) {
+			return nil, fmt.Errorf("invalid argument name %q: must match pattern %s", key, babfile.VarNamePattern)
+		}
+		result[key] = arg[idx+1:]
+	}
+	return result, nil
 }

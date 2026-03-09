@@ -78,6 +78,16 @@
               "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
               "description": "Task reference"
             },
+            "args": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "propertyNames": {
+                "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              },
+              "type": "object",
+              "description": "Arguments to pass to the referenced task"
+            },
             "silent": {
               "type": "boolean",
               "description": "Suppress command execution output (e.g., '$ go mod download')"
@@ -222,6 +232,16 @@
               "minLength": 1,
               "pattern": "^[a-zA-Z0-9_-]+(:[a-zA-Z0-9_-]+)*$",
               "description": "Task reference"
+            },
+            "args": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "propertyNames": {
+                "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              },
+              "type": "object",
+              "description": "Arguments to pass to the referenced task"
             },
             "silent": {
               "type": "boolean",
@@ -469,6 +489,36 @@
           "type": "array",
           "uniqueItems": true,
           "description": "Short aliases for the task"
+        },
+        "args": {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "null",
+                "description": "Required argument (no default)"
+              },
+              {
+                "properties": {
+                  "default": {
+                    "type": "string",
+                    "description": "Default value for the argument"
+                  }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "default"
+                ],
+                "description": "Optional argument with default value"
+              }
+            ]
+          },
+          "propertyNames": {
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "description": "Argument name"
+          },
+          "type": "object",
+          "description": "Named arguments the task accepts. Null value = required, object with default = optional."
         },
         "vars": {
           "additionalProperties": {

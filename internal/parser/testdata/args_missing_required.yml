@@ -1,0 +1,10 @@
+tasks:
+  greet:
+    args:
+      name:
+    run:
+      - log: "${{ name }}"
+
+  caller:
+    run:
+      - task: greet

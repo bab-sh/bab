@@ -1,0 +1,10 @@
+tasks:
+  simple:
+    run:
+      - cmd: echo hello
+
+  caller:
+    run:
+      - task: simple
+        args:
+          name: World

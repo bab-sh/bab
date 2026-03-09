@@ -45,6 +45,7 @@ const (
 	keyLimit       = "limit"
 	keyColor       = "color"
 	keyLabel       = "label"
+	keyArgs        = "args"
 )
 
 type promptFields struct {
@@ -116,6 +117,112 @@ func parseVarMap(path string, node *yaml.Node, vars *babfile.VarMap, verrs *errs
 		}
 
 		(*vars)[keyNode.Value] = valNode.Value
+	}
+
+	return !hasErrors
+}
+
+func parseArgDefs(path string, node *yaml.Node, taskName string, verrs *errs.ValidationErrors) (babfile.ArgMap, bool) {
+	if node.Kind != yaml.MappingNode {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: args must be a mapping", taskName)})
+		return nil, false
+	}
+
+	args := make(babfile.ArgMap, len(node.Content)/2)
+	hasErrors := false
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+
+		if !varNameRegex.MatchString(keyNode.Value) {
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    keyNode.Line,
+				Message: fmt.Sprintf("task %q: invalid arg name %q, must match pattern %s", taskName, keyNode.Value, babfile.VarNamePattern),
+			})
+			hasErrors = true
+			continue
+		}
+
+		switch {
+		case valNode.Tag == "!!null" || (valNode.Kind == yaml.ScalarNode && valNode.Value == ""):
+			args[keyNode.Value] = babfile.ArgDef{Line: keyNode.Line}
+		case valNode.Kind == yaml.MappingNode:
+			var defaultVal *string
+			validKey := false
+			for j := 0; j < len(valNode.Content); j += 2 {
+				k := valNode.Content[j]
+				v := valNode.Content[j+1]
+				if k.Value == keyDefault {
+					s := v.Value
+					defaultVal = &s
+					validKey = true
+				} else {
+					verrs.Add(&errs.ParseError{
+						Path:    path,
+						Line:    k.Line,
+						Message: fmt.Sprintf("task %q: arg %q: unknown key %q, only 'default' is allowed", taskName, keyNode.Value, k.Value),
+					})
+					hasErrors = true
+				}
+			}
+			if !validKey {
+				verrs.Add(&errs.ParseError{
+					Path:    path,
+					Line:    valNode.Line,
+					Message: fmt.Sprintf("task %q: arg %q: must be null (required) or have a 'default' key", taskName, keyNode.Value),
+				})
+				hasErrors = true
+			}
+			args[keyNode.Value] = babfile.ArgDef{Default: defaultVal, Line: keyNode.Line}
+		default:
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    valNode.Line,
+				Message: fmt.Sprintf("task %q: arg %q: must be null (required) or a mapping with 'default'", taskName, keyNode.Value),
+			})
+			hasErrors = true
+		}
+	}
+
+	return args, !hasErrors
+}
+
+func parseArgValues(path string, node *yaml.Node, taskName string, index int, args *map[string]string, verrs *errs.ValidationErrors) bool {
+	if node.Kind != yaml.MappingNode {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("task %q: run[%d]: args must be a mapping", taskName, index)})
+		return false
+	}
+
+	*args = make(map[string]string, len(node.Content)/2)
+	hasErrors := false
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valNode := node.Content[i+1]
+
+		if !varNameRegex.MatchString(keyNode.Value) {
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    keyNode.Line,
+				Message: fmt.Sprintf("task %q: run[%d]: invalid arg name %q, must match pattern %s", taskName, index, keyNode.Value, babfile.VarNamePattern),
+			})
+			hasErrors = true
+			continue
+		}
+
+		if valNode.Kind != yaml.ScalarNode {
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    valNode.Line,
+				Message: fmt.Sprintf("task %q: run[%d]: arg value for %q must be a string", taskName, index, keyNode.Value),
+			})
+			hasErrors = true
+			continue
+		}
+
+		(*args)[keyNode.Value] = valNode.Value
 	}
 
 	return !hasErrors
@@ -250,6 +357,12 @@ func parseTask(path string, node *yaml.Node, taskName string, verrs *errs.Valida
 				verrs.Add(&errs.ParseError{Path: path, Line: key.Line, Message: fmt.Sprintf("task %q: invalid aliases", taskName), Cause: err})
 				hasErrors = true
 			}
+		case keyArgs:
+			args, ok := parseArgDefs(path, val, taskName, verrs)
+			if !ok {
+				hasErrors = true
+			}
+			task.Args = args
 		case keyVars:
 			if !parseVarMap(path, val, &task.Vars, verrs) {
 				hasErrors = true
@@ -405,7 +518,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 	case rf.cmd != "":
 		return babfile.CommandRun{Line: rf.line, Cmd: rf.cmd, Dir: rf.dir, Env: rf.env, Silent: rf.silent, Output: rf.output, Platforms: rf.platforms, When: rf.when}, true
 	case rf.task != "":
-		return babfile.TaskRun{Line: rf.line, Task: rf.task, Silent: rf.silent, Output: rf.output, Platforms: rf.platforms, When: rf.when}, true
+		return babfile.TaskRun{Line: rf.line, Task: rf.task, Args: rf.args, Silent: rf.silent, Output: rf.output, Platforms: rf.platforms, When: rf.when}, true
 	case rf.log != "":
 		return buildLogRun(path, rf.line, taskName, index, rf.log, rf.level, rf.platforms, rf.when, verrs)
 	case rf.pf.name != "":
@@ -418,6 +531,7 @@ func parseRunItem(path string, node *yaml.Node, taskName string, index int, verr
 type runFields struct {
 	cmd, task, log, dir, when string
 	env                       map[string]string
+	args                      map[string]string
 	platforms                 []babfile.Platform
 	level                     babfile.LogLevel
 	silent, output            *bool
@@ -451,6 +565,10 @@ func parseRunFields(path string, node *yaml.Node, taskName string, index int, ve
 			rf.log = val.Value
 		case keyLevel:
 			rf.level = babfile.LogLevel(val.Value)
+		case keyArgs:
+			if !parseArgValues(path, val, taskName, index, &rf.args, verrs) {
+				rf.hasErrors = true
+			}
 		case keyEnv:
 			if !parseEnvMap(path, val, &rf.env, verrs) {
 				rf.hasErrors = true

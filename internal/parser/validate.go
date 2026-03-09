@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/errs"
 )
@@ -9,6 +11,7 @@ func validateAll(path string, tasks babfile.TaskMap) error {
 	verrs := &errs.ValidationErrors{}
 	validateDependencies(path, tasks, verrs)
 	validateRunTaskRefs(path, tasks, verrs)
+	validateTaskArgs(path, tasks, verrs)
 	validateRunCycles(path, tasks, verrs)
 	validateAliases(path, tasks, verrs)
 	return verrs.OrNil()
@@ -95,6 +98,54 @@ func validateRunItemTaskRefs(path, referencedBy string, items []babfile.RunItem,
 			}
 		case babfile.ParallelRun:
 			validateRunItemTaskRefs(path, referencedBy, v.Items, tasks, verrs)
+		}
+	}
+}
+
+func validateTaskArgs(path string, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
+	for _, task := range tasks {
+		validateRunItemArgs(path, task.Run, tasks, verrs)
+	}
+}
+
+func validateRunItemArgs(path string, items []babfile.RunItem, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
+	for _, item := range items {
+		switch v := item.(type) {
+		case babfile.TaskRun:
+			target, exists := tasks[v.Task]
+			if !exists {
+				continue
+			}
+			if len(v.Args) > 0 && target.Args == nil {
+				verrs.Add(&errs.ParseError{
+					Path:    path,
+					Line:    v.Line,
+					Message: fmt.Sprintf("task %q does not accept arguments", v.Task),
+				})
+				continue
+			}
+			for argName := range v.Args {
+				if _, defined := target.Args[argName]; !defined {
+					verrs.Add(&errs.ParseError{
+						Path:    path,
+						Line:    v.Line,
+						Message: fmt.Sprintf("task %q: unknown argument %q", v.Task, argName),
+					})
+				}
+			}
+			for argName, def := range target.Args {
+				if def.Default == nil {
+					if _, provided := v.Args[argName]; !provided {
+						verrs.Add(&errs.ParseError{
+							Path:    path,
+							Line:    v.Line,
+							Message: fmt.Sprintf("task %q: required argument %q not provided", v.Task, argName),
+						})
+					}
+				}
+			}
+		case babfile.ParallelRun:
+			validateRunItemArgs(path, v.Items, tasks, verrs)
 		}
 	}
 }

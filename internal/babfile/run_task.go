@@ -6,12 +6,13 @@ import (
 )
 
 type TaskRun struct {
-	Line      int        `json:"-" yaml:"-"`
-	Task      string     `json:"task" yaml:"task"`
-	Silent    *bool      `json:"silent,omitempty" yaml:"silent,omitempty"`
-	Output    *bool      `json:"output,omitempty" yaml:"output,omitempty"`
-	Platforms []Platform `json:"platforms,omitempty" yaml:"platforms,omitempty"`
-	When      string     `json:"when,omitempty" yaml:"when,omitempty"`
+	Line      int               `json:"-" yaml:"-"`
+	Task      string            `json:"task" yaml:"task"`
+	Args      map[string]string `json:"args,omitempty" yaml:"args,omitempty"`
+	Silent    *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
+	Output    *bool             `json:"output,omitempty" yaml:"output,omitempty"`
+	Platforms []Platform        `json:"platforms,omitempty" yaml:"platforms,omitempty"`
+	When      string            `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (TaskRun) isRunItem() {}
@@ -35,6 +36,7 @@ func TaskRunSchema() *jsonschema.Schema {
 		Pattern:     TaskNamePattern,
 		Description: "Task reference",
 	})
+	props.Set("args", TaskRunArgsSchema())
 	props.Set("silent", SilentSchema())
 	props.Set("output", OutputSchema())
 	props.Set("platforms", PlatformsArraySchema())

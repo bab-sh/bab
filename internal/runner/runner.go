@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ type Runner struct {
 	GlobalOutput *bool
 	GlobalDir    string
 	Aliases      map[string]string
+	CLIArgs      map[string]string
 }
 
 func New(dryRun bool, babfile string) *Runner {
@@ -96,7 +98,7 @@ func (r *Runner) resolveTaskName(name string) string {
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
 	state := &syncState{state: make(map[string]status)}
-	return r.runTask(ctx, taskName, tasks, state, true, nil, nil, nil, nil, false, nil)
+	return r.runTask(ctx, taskName, tasks, state, true, r.CLIArgs, nil, nil, nil, nil, false, nil)
 }
 
 func isSilent(vals ...*bool) bool {
@@ -126,8 +128,12 @@ func firstNonNil(vals ...*bool) *bool {
 	return nil
 }
 
-func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool, pctx *ParallelContext) error {
-	switch state.claim(name) {
+func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap, state *syncState, isMain bool, callerArgs map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool, pctx *ParallelContext) error {
+	stateKey := name
+	if len(callerArgs) > 0 {
+		stateKey = name + "|" + sortedArgsKey(callerArgs)
+	}
+	switch state.claim(stateKey) {
 	case done:
 		return nil
 	case running:
@@ -180,22 +186,22 @@ func (r *Runner) runTask(ctx context.Context, name string, tasks babfile.TaskMap
 
 	for _, dep := range task.Deps {
 		log.Debug("Running dependency", "task", name, "dep", dep)
-		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil, stdout, stderr, noColor, pctx); err != nil {
+		if err := r.runTask(ctx, dep, tasks, state, false, nil, nil, nil, stdout, stderr, noColor, pctx); err != nil {
 			return fmt.Errorf("dependency %q failed: %w", dep, err)
 		}
 	}
 
 	if len(task.Run) > 0 {
-		if err := r.executeTask(ctx, task, tasks, state, overrideSilent, overrideOutput, stdout, stderr, noColor, pctx); err != nil {
+		if err := r.executeTask(ctx, task, tasks, state, callerArgs, overrideSilent, overrideOutput, stdout, stderr, noColor, pctx); err != nil {
 			return err
 		}
 	}
 
-	state.set(name, done)
+	state.set(stateKey, done)
 	return nil
 }
 
-func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool, pctx *ParallelContext) error {
+func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babfile.TaskMap, state *syncState, callerArgs map[string]string, overrideSilent, overrideOutput *bool, stdout, stderr io.Writer, noColor bool, pctx *ParallelContext) error {
 	platform := runtime.GOOS
 	executed := 0
 	skippedByCondition := 0
@@ -203,6 +209,26 @@ func (r *Runner) executeTask(ctx context.Context, task *babfile.Task, tasks babf
 	taskVars, err := interpolate.ResolveVarsWithLocation(task.Vars, r.GlobalVars, r.BabfilePath, task.Line)
 	if err != nil {
 		return err
+	}
+
+	if len(callerArgs) > 0 && task.Args == nil {
+		return fmt.Errorf("task %q does not accept arguments", task.Name)
+	}
+	if task.Args != nil {
+		for argName := range callerArgs {
+			if _, defined := task.Args[argName]; !defined {
+				return fmt.Errorf("task %q: unknown argument %q", task.Name, argName)
+			}
+		}
+		for argName, def := range task.Args {
+			if val, ok := callerArgs[argName]; ok {
+				taskVars[argName] = val
+			} else if def.Default != nil {
+				taskVars[argName] = *def.Default
+			} else {
+				return fmt.Errorf("task %q: required argument %q not provided", task.Name, argName)
+			}
+		}
 	}
 
 	taskCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, task.Line)
@@ -541,6 +567,24 @@ func executeLog(l babfile.LogRun) {
 	default:
 		log.Info(l.Log)
 	}
+}
+
+func sortedArgsKey(args map[string]string) string {
+	keys := make([]string, 0, len(args))
+	for k := range args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for i, k := range keys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(k)
+		b.WriteByte('=')
+		b.WriteString(args[k])
+	}
+	return b.String()
 }
 
 func buildChainSlice(current string, tasks babfile.TaskMap, state map[string]status) []string {

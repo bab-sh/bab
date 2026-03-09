@@ -1,0 +1,13 @@
+tasks:
+  greet:
+    args:
+      name:
+    run:
+      - log: "${{ name }}"
+
+  caller:
+    run:
+      - task: greet
+        args:
+          name: World
+          unknown_arg: bad

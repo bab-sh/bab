@@ -140,7 +140,7 @@ func TestCLI_runTask(t *testing.T) {
 			cli.ctx = context.Background()
 			cli.dryRun = true
 
-			err = cli.runTask(tt.taskName)
+			err = cli.runTask(tt.taskName, nil)
 
 			if tt.wantErr {
 				if err == nil {
@@ -218,7 +218,7 @@ func TestCLI_withCustomBabfile(t *testing.T) {
 		name string
 		fn   func(c *CLI) error
 	}{
-		{"runTask", func(c *CLI) error { c.dryRun = true; return c.runTask("custom") }},
+		{"runTask", func(c *CLI) error { c.dryRun = true; return c.runTask("custom", nil) }},
 		{"runList", func(c *CLI) error { return c.runList() }},
 		{"runValidate", func(c *CLI) error { return c.runValidate() }},
 	}

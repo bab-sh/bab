@@ -1,0 +1,15 @@
+tasks:
+  greet:
+    args:
+      name:
+      greeting:
+        default: "Hello"
+    run:
+      - log: "${{ greeting }}, ${{ name }}!"
+
+  welcome:
+    run:
+      - task: greet
+        args:
+          name: World
+          greeting: Hi

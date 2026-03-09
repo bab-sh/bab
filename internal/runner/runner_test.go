@@ -1001,6 +1001,179 @@ func TestRunIncludedTaskUsesSourceDir(t *testing.T) {
 	}
 }
 
+func strPtr(s string) *string { return &s }
+
+func TestRunTaskWithArgs(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name":     {Default: nil},
+				"greeting": {Default: strPtr("Hello")},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ greeting }} ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	r.CLIArgs = map[string]string{"name": "World"}
+	err := r.RunWithTasks(context.Background(), "greet", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunTaskWithArgsMissingRequired(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name": {Default: nil},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "greet", tasks)
+	if err == nil {
+		t.Fatal("expected error for missing required arg")
+	}
+	if !strings.Contains(err.Error(), "required argument") {
+		t.Errorf("expected 'required argument' error, got: %v", err)
+	}
+}
+
+func TestRunTaskWithArgsUnknown(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name": {Default: nil},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	r.CLIArgs = map[string]string{"name": "World", "unknown": "bad"}
+	err := r.RunWithTasks(context.Background(), "greet", tasks)
+	if err == nil {
+		t.Fatal("expected error for unknown arg")
+	}
+	if !strings.Contains(err.Error(), "unknown argument") {
+		t.Errorf("expected 'unknown argument' error, got: %v", err)
+	}
+}
+
+func TestRunTaskWithArgsNoArgsDefined(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"simple": &babfile.Task{
+			Name: "simple",
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo hello"}},
+		},
+	}
+
+	r := New(true, "")
+	r.CLIArgs = map[string]string{"name": "World"}
+	err := r.RunWithTasks(context.Background(), "simple", tasks)
+	if err == nil {
+		t.Fatal("expected error for args on task without args")
+	}
+	if !strings.Contains(err.Error(), "does not accept arguments") {
+		t.Errorf("expected 'does not accept arguments' error, got: %v", err)
+	}
+}
+
+func TestRunTaskWithArgsDefault(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name":     {Default: nil},
+				"greeting": {Default: strPtr("Hello")},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ greeting }} ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	r.CLIArgs = map[string]string{"name": "World"}
+	err := r.RunWithTasks(context.Background(), "greet", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunTaskWithArgsOverrideVars(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"test": &babfile.Task{
+			Name: "test",
+			Args: babfile.ArgMap{
+				"name": {Default: nil},
+			},
+			Vars: babfile.VarMap{"name": "from-vars"},
+			Run:  []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	r.CLIArgs = map[string]string{"name": "from-args"}
+	err := r.RunWithTasks(context.Background(), "test", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunTaskToTaskWithArgs(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"caller": &babfile.Task{
+			Name: "caller",
+			Run: []babfile.RunItem{
+				babfile.TaskRun{Task: "greet", Args: map[string]string{"name": "World"}},
+			},
+		},
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name": {Default: nil},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "caller", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
+func TestRunSameTaskDifferentArgsRunsBoth(t *testing.T) {
+	tasks := babfile.TaskMap{
+		"caller": &babfile.Task{
+			Name: "caller",
+			Run: []babfile.RunItem{
+				babfile.TaskRun{Task: "greet", Args: map[string]string{"name": "Alice"}},
+				babfile.TaskRun{Task: "greet", Args: map[string]string{"name": "Bob"}},
+			},
+		},
+		"greet": &babfile.Task{
+			Name: "greet",
+			Args: babfile.ArgMap{
+				"name": {Default: nil},
+			},
+			Run: []babfile.RunItem{babfile.CommandRun{Cmd: "echo ${{ name }}"}},
+		},
+	}
+
+	r := New(true, "")
+	err := r.RunWithTasks(context.Background(), "caller", tasks)
+	if err != nil {
+		t.Errorf("RunWithTasks() error: %v", err)
+	}
+}
+
 func TestInterpolatePromptFields(t *testing.T) {
 	ctx := &interpolate.Context{
 		Vars: map[string]string{

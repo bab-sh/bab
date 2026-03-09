@@ -1628,6 +1628,105 @@ func TestParseParallelItemLabel(t *testing.T) {
 	}
 }
 
+func TestParseArgsSimple(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "args_simple.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["greet"]
+	if task == nil {
+		t.Fatal("task 'greet' not found")
+	}
+	if task.Args == nil {
+		t.Fatal("expected args to be set")
+	}
+	if len(task.Args) != 2 {
+		t.Fatalf("expected 2 args, got %d", len(task.Args))
+	}
+
+	nameArg, ok := task.Args["name"]
+	if !ok {
+		t.Fatal("expected 'name' arg")
+	}
+	if nameArg.Default != nil {
+		t.Error("expected 'name' arg to be required (nil default)")
+	}
+
+	greetingArg, ok := task.Args["greeting"]
+	if !ok {
+		t.Fatal("expected 'greeting' arg")
+	}
+	if greetingArg.Default == nil {
+		t.Fatal("expected 'greeting' arg to have a default")
+	}
+	if *greetingArg.Default != "Hello" {
+		t.Errorf("expected 'greeting' default 'Hello', got %q", *greetingArg.Default)
+	}
+}
+
+func TestParseArgsTaskRun(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "args_taskrun.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+
+	task := result.Tasks["welcome"]
+	if task == nil {
+		t.Fatal("task 'welcome' not found")
+	}
+	if len(task.Run) != 1 {
+		t.Fatalf("expected 1 run item, got %d", len(task.Run))
+	}
+
+	tr, ok := task.Run[0].(babfile.TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun")
+	}
+	if tr.Task != "greet" {
+		t.Errorf("expected task 'greet', got %q", tr.Task)
+	}
+	if len(tr.Args) != 2 {
+		t.Fatalf("expected 2 args, got %d", len(tr.Args))
+	}
+	if tr.Args["name"] != "World" {
+		t.Errorf("expected name='World', got %q", tr.Args["name"])
+	}
+	if tr.Args["greeting"] != "Hi" {
+		t.Errorf("expected greeting='Hi', got %q", tr.Args["greeting"])
+	}
+}
+
+func TestParseArgsMissingRequired(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "args_missing_required.yml"))
+	if err == nil {
+		t.Fatal("expected error for missing required arg")
+	}
+	if !strings.Contains(err.Error(), "required argument") {
+		t.Errorf("expected 'required argument' error, got: %v", err)
+	}
+}
+
+func TestParseArgsUnknown(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "args_unknown.yml"))
+	if err == nil {
+		t.Fatal("expected error for unknown arg")
+	}
+	if !strings.Contains(err.Error(), "unknown argument") {
+		t.Errorf("expected 'unknown argument' error, got: %v", err)
+	}
+}
+
+func TestParseArgsNoArgsTask(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "args_no_args_task.yml"))
+	if err == nil {
+		t.Fatal("expected error for args on task without args")
+	}
+	if !strings.Contains(err.Error(), "does not accept arguments") {
+		t.Errorf("expected 'does not accept arguments' error, got: %v", err)
+	}
+}
+
 func TestParseWhen(t *testing.T) {
 	tests := []struct {
 		name    string

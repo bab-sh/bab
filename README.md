@@ -156,6 +156,26 @@ tasks:
         level: info
         when: ${{ proceed }}
 
+  greet:
+    desc: Greet someone
+    args:
+      name:
+      greeting:
+        default: "Hello"
+    run:
+      - log: "${{ greeting }}, ${{ name }}!"
+
+  welcome:
+    desc: Welcome the team
+    run:
+      - task: greet
+        args:
+          name: World
+          greeting: Hi
+      - task: greet
+        args:
+          name: "${{ app_name }}"
+
   build:
     desc: Build ${{ app_name }} v${{ version }}
     alias: b
@@ -209,6 +229,8 @@ bab b                # Same as above (using alias)
 bab bld              # Also works (multiple aliases)
 bab t                # Run tests (using alias)
 bab utils:setup      # Run included task
+bab greet name=World # Pass arguments to a task
+bab greet name=World greeting=Hey
 ```
 
 ## Support

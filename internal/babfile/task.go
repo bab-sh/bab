@@ -15,6 +15,7 @@ type Task struct {
 	Desc       string            `json:"desc,omitempty" yaml:"desc,omitempty"`
 	Alias      string            `json:"alias,omitempty" yaml:"alias,omitempty"`
 	Aliases    []string          `json:"aliases,omitempty" yaml:"aliases,omitempty"`
+	Args       ArgMap            `json:"args,omitempty" yaml:"args,omitempty"`
 	Vars       VarMap            `json:"vars,omitempty" yaml:"vars,omitempty"`
 	Env        map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Silent     *bool             `json:"silent,omitempty" yaml:"silent,omitempty"`
@@ -72,6 +73,7 @@ func (Task) JSONSchema() *jsonschema.Schema {
 		},
 		UniqueItems: true,
 	})
+	props.Set("args", ArgsSchema())
 	props.Set("vars", VarsSchema())
 	props.Set("env", EnvSchema())
 	props.Set("silent", SilentSchema())

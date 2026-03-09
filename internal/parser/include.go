@@ -54,6 +54,7 @@ func resolveInclude(namespace, babfilePath, baseDir string, tasks babfile.TaskMa
 			Desc:       task.Desc,
 			Alias:      prefixAlias(task.Alias, namespace),
 			Aliases:    prefixAliases(task.Aliases, namespace),
+			Args:       task.Args,
 			Vars:       taskVars,
 			Env:        taskEnv,
 			Silent:     taskSilent,
@@ -107,6 +108,7 @@ func prefixTaskRuns(items []babfile.RunItem, namespace string) []babfile.RunItem
 			prefixed[i] = babfile.TaskRun{
 				Line:      v.Line,
 				Task:      namespace + ":" + v.Task,
+				Args:      v.Args,
 				Silent:    v.Silent,
 				Output:    v.Output,
 				Platforms: v.Platforms,

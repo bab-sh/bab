@@ -294,12 +294,24 @@ func (r *Runner) executeRunItem(ctx context.Context, item babfile.RunItem, task 
 
 	case babfile.TaskRun:
 		if r.DryRun {
-			log.Info("Would run task", "task", v.Task)
+			log.Info("Would run task", "task", v.Task, "args", v.Args)
 			return nil
+		}
+		var interpolatedArgs map[string]string
+		if len(v.Args) > 0 {
+			interpolatedArgs = make(map[string]string, len(v.Args))
+			argCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
+			for k, val := range v.Args {
+				interp, err := interpolate.Interpolate(val, argCtx)
+				if err != nil {
+					return fmt.Errorf("task %q: interpolating arg %q: %w", task.Name, k, err)
+				}
+				interpolatedArgs[k] = interp
+			}
 		}
 		effSilent := firstNonNil(v.Silent, overrideSilent)
 		effOutput := firstNonNil(v.Output, overrideOutput)
-		return r.runTask(ctx, v.Task, tasks, state, false, effSilent, effOutput, stdout, stderr, noColor, pctx)
+		return r.runTask(ctx, v.Task, tasks, state, false, interpolatedArgs, effSilent, effOutput, stdout, stderr, noColor, pctx)
 
 	case babfile.LogRun:
 		logCtx := interpolate.NewContextWithLocation(taskVars, r.BabfilePath, v.Line)
@@ -341,7 +353,7 @@ func (r *Runner) preResolveDeps(ctx context.Context, items []babfile.RunItem, ta
 			if state.get(dep) == done {
 				continue
 			}
-			if err := r.runTask(ctx, dep, tasks, state, false, overrideSilent, overrideOutput, stdout, stderr, noColor, pctx); err != nil {
+			if err := r.runTask(ctx, dep, tasks, state, false, nil, overrideSilent, overrideOutput, stdout, stderr, noColor, pctx); err != nil {
 				return fmt.Errorf("parallel pre-dependency %q failed: %w", dep, err)
 			}
 		}
