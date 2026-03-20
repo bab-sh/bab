@@ -191,12 +191,19 @@ func (m parallelModel) View() tea.View {
 
 	var out []string
 	for _, key := range m.roots {
-		out = append(out, m.renderItem(key, "", m.width, 0)...)
+		out = append(out, m.renderItem(key, "", 0)...)
 	}
 	return tea.NewView(strings.Join(out, "\n"))
 }
 
-func (m parallelModel) renderItem(key string, indent string, width int, depth int) []string {
+func truncateLine(line string, maxWidth int) string {
+	if maxWidth <= 0 || ansi.StringWidth(line) <= maxWidth {
+		return line
+	}
+	return ansi.Truncate(line, maxWidth, "")
+}
+
+func (m parallelModel) renderItem(key string, indent string, depth int) []string {
 	item := m.items[key]
 	if item == nil {
 		return nil
@@ -204,15 +211,11 @@ func (m parallelModel) renderItem(key string, indent string, width int, depth in
 
 	if depth > 0 {
 		var lines []string
-		lines = append(lines, m.renderCompactLine(item, indent, width))
+		lines = append(lines, m.renderCompactLine(item, indent))
 		if len(item.children) > 0 {
 			childIndent := indent + "  "
-			childWidth := width - 2
-			if childWidth < 20 {
-				childWidth = 20
-			}
 			for _, ck := range item.children {
-				lines = append(lines, m.renderItem(ck, childIndent, childWidth, depth+1)...)
+				lines = append(lines, m.renderItem(ck, childIndent, depth+1)...)
 			}
 		}
 		return lines
@@ -222,46 +225,47 @@ func (m parallelModel) renderItem(key string, indent string, width int, depth in
 	status := m.statusIcon(item)
 
 	lines := make([]string, 0, frameHeight+2)
-	lines = append(lines, indent+dimStyle.Render("┌─")+" "+titleStyle.Render(item.label)+" "+status)
+	lines = append(lines, truncateLine(
+		indent+dimStyle.Render("┌─")+" "+titleStyle.Render(item.label)+" "+status,
+		m.width,
+	))
 
 	if len(item.children) > 0 {
 		childIndent := indent + dimStyle.Render("│") + "  "
-		childWidth := width - 3
-		if childWidth < 20 {
-			childWidth = 20
-		}
 		for _, ck := range item.children {
-			lines = append(lines, m.renderItem(ck, childIndent, childWidth, 1)...)
+			lines = append(lines, m.renderItem(ck, childIndent, 1)...)
 		}
 	} else {
-		maxWidth := width - 4
+		linePrefix := indent + dimStyle.Render("│") + "  "
+		linePrefixWidth := ansi.StringWidth(linePrefix)
+		contentMax := m.width - linePrefixWidth
 		for _, line := range item.lines {
-			if maxWidth > 0 && ansi.StringWidth(line) > maxWidth {
-				line = ansi.Truncate(line, maxWidth, "")
+			if contentMax > 0 && ansi.StringWidth(line) > contentMax {
+				line = ansi.Truncate(line, contentMax, "")
 			}
-			lines = append(lines, indent+dimStyle.Render("│")+"  "+line)
+			lines = append(lines, truncateLine(linePrefix+line, m.width))
 		}
 		if !item.done && len(item.lines) > 0 {
 			for range frameHeight - len(item.lines) {
-				lines = append(lines, indent+dimStyle.Render("│"))
+				lines = append(lines, truncateLine(indent+dimStyle.Render("│"), m.width))
 			}
 		}
 	}
 
-	lines = append(lines, indent+dimStyle.Render("└"))
+	lines = append(lines, truncateLine(indent+dimStyle.Render("└"), m.width))
 	return lines
 }
 
-func (m parallelModel) renderCompactLine(item *itemState, indent string, width int) string {
+func (m parallelModel) renderCompactLine(item *itemState, indent string) string {
 	titleStyle := lipgloss.NewStyle().Foreground(item.color).Bold(true)
 	status := m.statusIcon(item)
 	label := titleStyle.Render(item.label)
 
 	prefix := status + " " + label
-	prefixWidth := ansi.StringWidth(status) + 1 + ansi.StringWidth(item.label)
+	prefixWidth := ansi.StringWidth(prefix)
 
 	if item.done && item.err == nil {
-		return indent + prefix
+		return truncateLine(indent+prefix, m.width)
 	}
 
 	snippet := ""
@@ -273,16 +277,16 @@ func (m parallelModel) renderCompactLine(item *itemState, indent string, width i
 	}
 
 	if snippet != "" {
-		available := width - ansi.StringWidth(indent) - prefixWidth - 2
+		available := m.width - ansi.StringWidth(indent) - prefixWidth - 2
 		if available > 0 {
 			if ansi.StringWidth(snippet) > available {
 				snippet = ansi.Truncate(snippet, available, "…")
 			}
-			return indent + prefix + "  " + dimStyle.Render(snippet)
+			return truncateLine(indent+prefix+"  "+dimStyle.Render(snippet), m.width)
 		}
 	}
 
-	return indent + prefix
+	return truncateLine(indent+prefix, m.width)
 }
 
 func (m parallelModel) statusIcon(item *itemState) string {

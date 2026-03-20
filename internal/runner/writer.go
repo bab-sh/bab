@@ -17,7 +17,7 @@ import (
 
 func sanitizeLine(line string) string {
 	if !strings.ContainsRune(line, '\x1b') && !strings.ContainsRune(line, 0x9b) {
-		return line
+		return stripControlChars(line)
 	}
 	var b strings.Builder
 	b.Grow(len(line))
@@ -40,7 +40,25 @@ func sanitizeLine(line string) string {
 		}
 		input = input[n:]
 	}
+	return stripControlChars(b.String())
+}
+
+func stripControlChars(s string) string {
+	if !strings.ContainsFunc(s, isUnsafeControl) {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if !isUnsafeControl(r) {
+			b.WriteRune(r)
+		}
+	}
 	return b.String()
+}
+
+func isUnsafeControl(r rune) bool {
+	return r < 0x20 && r != '\t' && r != '\x1b'
 }
 
 func cleanLine(line string, strip bool) string {
@@ -55,6 +73,13 @@ type lineBuffer struct {
 	strip   bool
 }
 
+func resolveCR(raw string) string {
+	if i := strings.LastIndexByte(raw, '\r'); i >= 0 {
+		return raw[i+1:]
+	}
+	return raw
+}
+
 func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error) {
 	total := len(data)
 	lb.partial = append(lb.partial, data...)
@@ -67,7 +92,7 @@ func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error)
 			lb.partial = append(lb.partial, buf...)
 			break
 		}
-		line := cleanLine(string(buf[:idx]), lb.strip)
+		line := cleanLine(resolveCR(string(buf[:idx])), lb.strip)
 		buf = buf[idx+1:]
 		if err := emit(line); err != nil {
 			return total, err
@@ -79,7 +104,7 @@ func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error)
 
 func (lb *lineBuffer) flush(emit func(string) error) error {
 	if len(lb.partial) > 0 {
-		line := cleanLine(string(lb.partial), lb.strip)
+		line := cleanLine(resolveCR(string(lb.partial)), lb.strip)
 		lb.partial = nil
 		return emit(line)
 	}
