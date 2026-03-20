@@ -13,7 +13,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-
 type ParallelItem struct {
 	Label string
 	Color color.Color
@@ -178,7 +177,6 @@ func (b *baseModel) removeItemTree(key string) {
 	}
 	delete(b.items, key)
 }
-
 
 var (
 	dimStyle     = lipgloss.NewStyle().Foreground(theme.Dim)
