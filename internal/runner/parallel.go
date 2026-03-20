@@ -99,15 +99,16 @@ func (r *Runner) executeParallel(ctx context.Context, pr babfile.ParallelRun, ta
 	}
 
 	isTerminal := term.IsTerminal(int(os.Stderr.Fd()))
-	hasParentGrouped := pctx != nil && pctx.Program != nil
-	useGroupedTUI := pr.Mode == babfile.ParallelGrouped && isTerminal && (stdout == nil || hasParentGrouped)
+	hasParentTUI := pctx != nil && pctx.Program != nil
+	isTUIMode := pr.Mode == babfile.ParallelGrouped || pr.Mode == babfile.ParallelTabs
+	useTUI := isTUIMode && isTerminal && (stdout == nil || hasParentTUI)
 
-	if pr.Mode == babfile.ParallelGrouped && !useGroupedTUI {
-		log.Debug("Grouped parallel downgraded to interleaved", "reason", "nested inside non-grouped parent")
+	if isTUIMode && !useTUI {
+		log.Debug("TUI parallel downgraded to interleaved", "mode", pr.Mode)
 	}
 
-	if useGroupedTUI {
-		return r.executeParallelGrouped(ctx, pr, task, tasks, state, labels, taskVars, taskEnv, overrideSilent, overrideOutput, noColor, pctx)
+	if useTUI {
+		return r.executeParallelTUI(ctx, pr, task, tasks, state, labels, taskVars, taskEnv, overrideSilent, overrideOutput, noColor, pctx)
 	}
 	return r.executeParallelInterleaved(ctx, pr, task, tasks, state, labels, maxLabelLen, taskVars, taskEnv, overrideSilent, overrideOutput, noColor, stdout, stderr)
 }
@@ -164,7 +165,7 @@ func (r *Runner) executeParallelInterleaved(ctx context.Context, pr babfile.Para
 	return firstErr
 }
 
-func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, noColor bool, pctx *ParallelContext) error {
+func (r *Runner) executeParallelTUI(ctx context.Context, pr babfile.ParallelRun, task *babfile.Task, tasks babfile.TaskMap, state *syncState, labels []string, taskVars map[string]string, taskEnv map[string]string, overrideSilent, overrideOutput *bool, noColor bool, pctx *ParallelContext) error {
 	var program *tea.Program
 	var ownsProgram bool
 	var basePath []int
@@ -196,8 +197,15 @@ func (r *Runner) executeParallelGrouped(ctx context.Context, pr babfile.Parallel
 		defer workCancel()
 		ctx = workCtx
 
+		var model tea.Model
+		if pr.Mode == babfile.ParallelTabs {
+			model = tui.NewTabsModel(tuiItems, workCancel)
+		} else {
+			model = tui.NewGroupedModel(tuiItems, workCancel)
+		}
+
 		var err error
-		program, err = tui.RunParallel(tuiItems, workCancel)
+		program, err = tui.RunParallel(model)
 		if err != nil {
 			return fmt.Errorf("failed to start parallel TUI: %w", err)
 		}

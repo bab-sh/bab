@@ -12,9 +12,10 @@ type ParallelMode string
 const (
 	ParallelInterleaved ParallelMode = "interleaved"
 	ParallelGrouped     ParallelMode = "grouped"
+	ParallelTabs        ParallelMode = "tabs"
 )
 
-var ValidParallelModes = []ParallelMode{ParallelInterleaved, ParallelGrouped}
+var ValidParallelModes = []ParallelMode{ParallelInterleaved, ParallelGrouped, ParallelTabs}
 
 func (m ParallelMode) Valid() bool {
 	for _, v := range ValidParallelModes {
