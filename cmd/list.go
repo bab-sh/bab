@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/tree"
 	"github.com/bab-sh/bab/internal/runner"
 	"github.com/bab-sh/bab/internal/theme"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/tree"
 	"github.com/charmbracelet/log"
 )
 

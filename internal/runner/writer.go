@@ -3,21 +3,21 @@ package runner
 import (
 	"bytes"
 	"fmt"
+	"image/color"
 	"io"
-	"strconv"
 	"strings"
 	"sync"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/bab-sh/bab/internal/theme"
 	"github.com/bab-sh/bab/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
 func sanitizeLine(line string) string {
 	if !strings.ContainsRune(line, '\x1b') && !strings.ContainsRune(line, 0x9b) {
-		return line
+		return stripControlChars(line)
 	}
 	var b strings.Builder
 	b.Grow(len(line))
@@ -40,7 +40,25 @@ func sanitizeLine(line string) string {
 		}
 		input = input[n:]
 	}
+	return stripControlChars(b.String())
+}
+
+func stripControlChars(s string) string {
+	if !strings.ContainsFunc(s, isUnsafeControl) {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if !isUnsafeControl(r) {
+			b.WriteRune(r)
+		}
+	}
 	return b.String()
+}
+
+func isUnsafeControl(r rune) bool {
+	return r < 0x20 && r != '\t' && r != '\x1b'
 }
 
 func cleanLine(line string, strip bool) string {
@@ -55,6 +73,13 @@ type lineBuffer struct {
 	strip   bool
 }
 
+func resolveCR(raw string) string {
+	if i := strings.LastIndexByte(raw, '\r'); i >= 0 {
+		return raw[i+1:]
+	}
+	return raw
+}
+
 func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error) {
 	total := len(data)
 	lb.partial = append(lb.partial, data...)
@@ -67,7 +92,7 @@ func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error)
 			lb.partial = append(lb.partial, buf...)
 			break
 		}
-		line := cleanLine(string(buf[:idx]), lb.strip)
+		line := cleanLine(resolveCR(string(buf[:idx])), lb.strip)
 		buf = buf[idx+1:]
 		if err := emit(line); err != nil {
 			return total, err
@@ -79,7 +104,7 @@ func (lb *lineBuffer) process(data []byte, emit func(string) error) (int, error)
 
 func (lb *lineBuffer) flush(emit func(string) error) error {
 	if len(lb.partial) > 0 {
-		line := cleanLine(string(lb.partial), lb.strip)
+		line := cleanLine(resolveCR(string(lb.partial)), lb.strip)
 		lb.partial = nil
 		return emit(line)
 	}
@@ -93,8 +118,8 @@ type PrefixWriter struct {
 	buf    lineBuffer
 }
 
-func NewPrefixWriter(label string, padWidth int, color lipgloss.Color, dest io.Writer, mu *sync.Mutex, strip bool) *PrefixWriter {
-	style := lipgloss.NewStyle().Foreground(color)
+func NewPrefixWriter(label string, padWidth int, c color.Color, dest io.Writer, mu *sync.Mutex, strip bool) *PrefixWriter {
+	style := lipgloss.NewStyle().Foreground(c)
 	paddedLabel := fmt.Sprintf("%-*s", padWidth, label)
 	prefix := style.Render("["+paddedLabel+"]") + " "
 	return &PrefixWriter{
@@ -156,7 +181,7 @@ func (kw *KeyLineWriter) Flush() {
 	})
 }
 
-func colorForPath(path []int) lipgloss.Color {
+func colorForPath(path []int) color.Color {
 	if len(path) == 0 {
 		return theme.ParallelBaseColors[0]
 	}
@@ -169,16 +194,20 @@ func colorForPath(path []int) lipgloss.Color {
 	return dimColor(base, depth)
 }
 
-func dimColor(c lipgloss.Color, steps int) lipgloss.Color {
-	code, err := strconv.Atoi(string(c))
-	if err != nil || code < 16 || code > 231 {
+func dimColor(c color.Color, steps int) color.Color {
+	idx, ok := c.(ansi.IndexedColor)
+	if !ok {
+		return c
+	}
+	code := int(idx)
+	if code < 16 || code > 231 {
 		return c
 	}
 
-	idx := code - 16
-	r := idx / 36
-	g := (idx % 36) / 6
-	b := idx % 6
+	ci := code - 16
+	r := ci / 36
+	g := (ci % 36) / 6
+	b := ci % 6
 
 	for range steps {
 		r = (r * 3) / 5
@@ -187,5 +216,5 @@ func dimColor(c lipgloss.Color, steps int) lipgloss.Color {
 	}
 
 	dimmed := 16 + 36*r + 6*g + b
-	return lipgloss.Color(strconv.Itoa(dimmed))
+	return lipgloss.ANSIColor(uint8(dimmed)) //nolint:gosec // dimmed is always in [16,231]
 }

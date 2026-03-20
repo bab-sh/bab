@@ -2,12 +2,13 @@ package runner
 
 import (
 	"bytes"
+	"image/color"
 	"strings"
 	"sync"
 	"testing"
 
+	"charm.land/lipgloss/v2"
 	"github.com/bab-sh/bab/internal/theme"
-	"github.com/charmbracelet/lipgloss"
 )
 
 func TestPrefixWriterSingleLine(t *testing.T) {
@@ -206,11 +207,17 @@ func TestLineBuffer(t *testing.T) {
 	}
 }
 
+func colorsEqual(a, b color.Color) bool {
+	r1, g1, b1, a1 := a.RGBA()
+	r2, g2, b2, a2 := b.RGBA()
+	return r1 == r2 && g1 == g2 && b1 == b2 && a1 == a2
+}
+
 func TestColorForPath(t *testing.T) {
 	tests := []struct {
 		name string
 		path []int
-		want lipgloss.Color
+		want color.Color
 	}{
 		{"empty path", nil, theme.ParallelBaseColors[0]},
 		{"single index 0", []int{0}, theme.ParallelBaseColors[0]},
@@ -221,8 +228,8 @@ func TestColorForPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := colorForPath(tt.path)
-			if got != tt.want {
-				t.Errorf("colorForPath(%v) = %q, want %q", tt.path, got, tt.want)
+			if !colorsEqual(got, tt.want) {
+				t.Errorf("colorForPath(%v) = %v, want %v", tt.path, got, tt.want)
 			}
 		})
 	}
@@ -231,27 +238,17 @@ func TestColorForPath(t *testing.T) {
 func TestDimColor(t *testing.T) {
 	tests := []struct {
 		name  string
-		color lipgloss.Color
+		color color.Color
 		steps int
-		check func(t *testing.T, result lipgloss.Color)
+		check func(t *testing.T, result color.Color)
 	}{
-		{
-			name:  "invalid color string",
-			color: lipgloss.Color("notacolor"),
-			steps: 1,
-			check: func(t *testing.T, result lipgloss.Color) {
-				if result != "notacolor" {
-					t.Errorf("expected unchanged, got %q", result)
-				}
-			},
-		},
 		{
 			name:  "color code below 16",
 			color: lipgloss.Color("10"),
 			steps: 1,
-			check: func(t *testing.T, result lipgloss.Color) {
-				if result != "10" {
-					t.Errorf("expected unchanged, got %q", result)
+			check: func(t *testing.T, result color.Color) {
+				if !colorsEqual(result, lipgloss.Color("10")) {
+					t.Errorf("expected unchanged, got %v", result)
 				}
 			},
 		},
@@ -259,9 +256,9 @@ func TestDimColor(t *testing.T) {
 			name:  "color code above 231",
 			color: lipgloss.Color("240"),
 			steps: 1,
-			check: func(t *testing.T, result lipgloss.Color) {
-				if result != "240" {
-					t.Errorf("expected unchanged, got %q", result)
+			check: func(t *testing.T, result color.Color) {
+				if !colorsEqual(result, lipgloss.Color("240")) {
+					t.Errorf("expected unchanged, got %v", result)
 				}
 			},
 		},
@@ -269,8 +266,8 @@ func TestDimColor(t *testing.T) {
 			name:  "valid 256-color dimmed",
 			color: lipgloss.Color("196"),
 			steps: 1,
-			check: func(t *testing.T, result lipgloss.Color) {
-				if result == "196" {
+			check: func(t *testing.T, result color.Color) {
+				if colorsEqual(result, lipgloss.Color("196")) {
 					t.Error("expected color to be dimmed")
 				}
 			},
@@ -279,9 +276,9 @@ func TestDimColor(t *testing.T) {
 			name:  "multiple steps progressively dimmer",
 			color: lipgloss.Color("196"),
 			steps: 2,
-			check: func(t *testing.T, result lipgloss.Color) {
+			check: func(t *testing.T, result color.Color) {
 				oneStep := dimColor(lipgloss.Color("196"), 1)
-				if result == oneStep {
+				if colorsEqual(result, oneStep) {
 					t.Error("two steps should be dimmer than one step")
 				}
 			},

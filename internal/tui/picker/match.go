@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/bab-sh/bab/internal/babfile"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 )
 

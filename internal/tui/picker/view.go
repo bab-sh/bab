@@ -3,11 +3,13 @@ package picker
 import (
 	"fmt"
 	"strings"
+
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
 	if m.quitting {
-		return ""
+		return tea.NewView("")
 	}
 
 	var b strings.Builder
@@ -18,14 +20,19 @@ func (m Model) View() string {
 
 	if len(m.matches) == 0 {
 		b.WriteString(noResultsStyle.Render("  No matching tasks :(") + "\n")
-		return b.String()
+		v := tea.NewView(b.String())
+		v.AltScreen = true
+		return v
 	}
 
 	end := min(m.offset+m.visibleLines(), len(m.matches))
 	for i := m.offset; i < end; i++ {
 		b.WriteString(m.renderLine(i) + "\n")
 	}
-	return b.String()
+
+	v := tea.NewView(b.String())
+	v.AltScreen = true
+	return v
 }
 
 func (m Model) renderSeparator() string {

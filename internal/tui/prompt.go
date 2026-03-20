@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"charm.land/huh/v2"
 	"github.com/bab-sh/bab/internal/babfile"
-	"github.com/charmbracelet/huh"
 	"golang.org/x/term"
 )
 
