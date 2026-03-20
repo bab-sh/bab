@@ -3,8 +3,8 @@ package picker
 import (
 	"sort"
 
+	"charm.land/bubbles/v2/textinput"
 	"github.com/bab-sh/bab/internal/babfile"
-	"github.com/charmbracelet/bubbles/textinput"
 )
 
 const headerLines = 4
@@ -36,10 +36,12 @@ func New(tasks babfile.TaskMap) Model {
 	ti := textinput.New()
 	ti.Focus()
 	ti.CharLimit = 100
-	ti.Width = 50
+	ti.SetWidth(50)
 	ti.Prompt = "> "
-	ti.PromptStyle = promptStyle
-	ti.TextStyle = inputStyle
+	s := ti.Styles()
+	s.Focused.Prompt = promptStyle
+	s.Focused.Text = inputStyle
+	ti.SetStyles(s)
 
 	m := Model{input: ti, tasks: list, width: 80, height: 20}
 	m.updateMatches()

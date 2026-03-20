@@ -3,13 +3,14 @@ package tui
 import (
 	"context"
 	"errors"
+	"image/color"
 	"os"
 	"strconv"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/bab-sh/bab/internal/theme"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -17,14 +18,14 @@ const frameHeight = 5
 
 type ParallelItem struct {
 	Label string
-	Color lipgloss.Color
+	Color color.Color
 }
 
 type ItemRegisterMsg struct {
 	Key    string
 	Parent string
 	Label  string
-	Color  lipgloss.Color
+	Color  color.Color
 }
 
 type ItemStartMsg struct {
@@ -86,7 +87,7 @@ type parallelModel struct {
 
 type itemState struct {
 	label    string
-	color    lipgloss.Color
+	color    color.Color
 	lines    []string
 	started  bool
 	done     bool
@@ -101,7 +102,7 @@ var (
 )
 
 func (m parallelModel) Init() tea.Cmd {
-	return tea.WindowSize()
+	return tea.RequestWindowSize
 }
 
 func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -158,7 +159,7 @@ func (m parallelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.done = true
 		return m, tea.Quit
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			if !m.cancelled {
 				m.cancelled = true
@@ -183,16 +184,16 @@ func (m parallelModel) removeItemTree(key string) {
 	delete(m.items, key)
 }
 
-func (m parallelModel) View() string {
+func (m parallelModel) View() tea.View {
 	if m.done {
-		return " "
+		return tea.NewView(" ")
 	}
 
 	var out []string
 	for _, key := range m.roots {
 		out = append(out, m.renderItem(key, "", m.width, 0)...)
 	}
-	return strings.Join(out, "\n")
+	return tea.NewView(strings.Join(out, "\n"))
 }
 
 func (m parallelModel) renderItem(key string, indent string, width int, depth int) []string {

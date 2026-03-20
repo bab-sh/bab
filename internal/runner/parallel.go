@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/interpolate"
 	"github.com/bab-sh/bab/internal/output"
 	"github.com/bab-sh/bab/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
 	"golang.org/x/term"
 )

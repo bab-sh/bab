@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/theme"
-	"github.com/charmbracelet/lipgloss"
 )
 
 var (
