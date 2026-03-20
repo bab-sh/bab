@@ -405,7 +405,8 @@
               "type": "string",
               "enum": [
                 "interleaved",
-                "grouped"
+                "grouped",
+                "tabs"
               ],
               "description": "Display mode for parallel output (interleaved, grouped)",
               "default": "interleaved"
