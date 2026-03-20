@@ -29,9 +29,10 @@ tasks:
       - cmd: go clean -cache
 
   check:
-    desc: Run all checks that CI runs (lint, test with race)
+    desc: Run all checks that CI runs (format, lint, test with race)
     run:
       - log: Running CI checks...
+      - task: format
       - task: lint
       - task: test:race
       - log: All checks passed
