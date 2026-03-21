@@ -36,6 +36,11 @@ func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+
 	cmd.SetVersionInfo(version, commit, date)
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		if isCancellation(err) {

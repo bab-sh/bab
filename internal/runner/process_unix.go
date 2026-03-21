@@ -17,7 +17,7 @@ func signalProcessGroup(cmd *exec.Cmd) error {
 	if cmd.Process == nil {
 		return nil
 	}
-	err := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+	err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
 		return nil
 	}

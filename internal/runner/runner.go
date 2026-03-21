@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/bab-sh/bab/internal/babfile"
 	"github.com/bab-sh/bab/internal/condition"
@@ -20,6 +19,7 @@ import (
 	"github.com/bab-sh/bab/internal/parser"
 	"github.com/bab-sh/bab/internal/tui"
 	"github.com/charmbracelet/log"
+	"golang.org/x/term"
 )
 
 type status int
@@ -95,6 +95,12 @@ func (r *Runner) resolveTaskName(name string) string {
 }
 
 func (r *Runner) RunWithTasks(ctx context.Context, taskName string, tasks babfile.TaskMap) error {
+	if fd := int(os.Stdin.Fd()); term.IsTerminal(fd) {
+		if oldState, err := term.GetState(fd); err == nil {
+			defer func() { _ = term.Restore(fd, oldState) }()
+		}
+	}
+
 	state := &syncState{state: make(map[string]status)}
 	return r.runTask(ctx, taskName, tasks, state, true, nil, nil, nil, nil, false, nil)
 }
@@ -484,7 +490,6 @@ func runCommandWithWriters(ctx context.Context, shell, shellArg, command string,
 	cmd.Cancel = func() error {
 		return signalProcessGroup(cmd)
 	}
-	cmd.WaitDelay = 3 * time.Second
 
 	piped := (stdout != nil && !isRealTerminal(stdout)) || (stderr != nil && !isRealTerminal(stderr))
 
