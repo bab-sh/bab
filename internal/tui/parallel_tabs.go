@@ -41,12 +41,12 @@ func (m *tabsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if km, ok := msg.(tea.KeyPressMsg); ok && len(m.roots) > 0 {
 		n := len(m.roots)
 		switch km.String() {
-		case "right", "l", "n", "tab":
+		case "tab":
 			m.activeTab = (m.activeTab + 1) % n
 			m.updateViewport()
 			m.viewport.GotoBottom()
 			return m, nil
-		case "left", "h", "p", "shift+tab":
+		case "shift+tab":
 			m.activeTab = (m.activeTab - 1 + n) % n
 			m.updateViewport()
 			m.viewport.GotoBottom()
@@ -86,7 +86,7 @@ func (m *tabsModel) updateViewport() {
 		return
 	}
 
-	contentWidth := m.width
+	contentWidth := m.width - 2
 	if contentWidth < 1 {
 		contentWidth = 1
 	}
@@ -226,12 +226,5 @@ func (m *tabsModel) buildContent(item *itemState, width int) string {
 		return dimStyle.Render("Running…")
 	}
 
-	lines := make([]string, 0, len(item.lines))
-	for _, line := range item.lines {
-		if width > 0 && ansi.StringWidth(line) > width {
-			line = ansi.Truncate(line, width, "")
-		}
-		lines = append(lines, line)
-	}
-	return strings.Join(lines, "\n")
+	return strings.Join(item.lines, "\n")
 }
