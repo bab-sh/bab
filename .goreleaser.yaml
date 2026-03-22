@@ -225,8 +225,7 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binaries:
-      - bab
+    binary: bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
@@ -254,8 +253,7 @@ homebrew_casks:
     directory: Casks
     url:
       verified: github.com/bab-sh/bab
-    binaries:
-      - bab
+    binary: bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
@@ -468,6 +466,34 @@ aur_sources:
       install -Dm644 ./completions/bab.bash "${pkgdir}/usr/share/bash-completion/completions/bab"
       install -Dm644 ./completions/bab.zsh "${pkgdir}/usr/share/zsh/site-functions/_bab"
       install -Dm644 ./completions/bab.fish "${pkgdir}/usr/share/fish/vendor_completions.d/bab.fish"
+
+nix:
+  - name: bab
+    repository:
+      owner: bab-sh
+      name: nur-packages
+      branch: main
+      token: "{{ .Env.PAT_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: "[email protected]"
+    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
+    homepage: "https://github.com/bab-sh/bab"
+    description: "Task runner for defining project commands in YAML"
+    license: "mit"
+    goamd64: v1
+    install: |-
+      mkdir -p $out/bin
+      cp -vr bab $out/bin/bab
+
+      installShellCompletion --cmd bab \
+        --bash completions/bab.bash \
+        --zsh completions/bab.zsh \
+        --fish completions/bab.fish
+
+      mkdir -p $out/share/doc/bab
+      cp -v README.md $out/share/doc/bab/README.md
+      cp -v LICENSE $out/share/doc/bab/LICENSE
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
