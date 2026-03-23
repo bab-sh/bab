@@ -87,6 +87,22 @@ nix profile install nur#repos.bab-sh.bab
 go install github.com/bab-sh/bab@latest
 ```
 
+### Go Tool (Go 1.24+) {#go-tool}
+
+Add bab as a project-local tool dependency:
+
+```bash
+go get -tool github.com/bab-sh/bab@latest
+```
+
+Then run via:
+
+```bash
+go tool bab [task]
+```
+
+This pins bab in your `go.mod` so all contributors use the same version.
+
 ## Manual Download
 
 Download the archive for your platform from [GitHub Releases](https://github.com/bab-sh/bab/releases/latest):
@@ -143,7 +159,7 @@ go build -o bab
 sudo mv bab /usr/local/bin/
 ```
 
-Requires Go 1.23+.
+Requires Go 1.25+.
 
 ## Shell Completions
 

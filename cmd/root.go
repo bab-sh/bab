@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
+	"strings"
 
 	"github.com/bab-sh/bab/internal/runner"
 	"github.com/bab-sh/bab/internal/update"
@@ -20,6 +22,15 @@ func SetVersionInfo(version, commit, date string) {
 	versionString = version
 	if commit != "none" {
 		versionString = fmt.Sprintf("%s\n  commit: %s\n  built:  %s", version, commit, date)
+	}
+
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			if v := info.Main.Version; v != "" && v != "(devel)" {
+				versionShort = strings.TrimPrefix(v, "v")
+				versionString = versionShort
+			}
+		}
 	}
 }
 
