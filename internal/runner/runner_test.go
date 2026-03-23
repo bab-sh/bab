@@ -772,6 +772,75 @@ func TestResolveDirFileNotDir(t *testing.T) {
 	}
 }
 
+func TestResolveDirGlobalWithIncludedTask(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "sub")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subDir: %v", err)
+	}
+	globalDir := filepath.Join(tmpDir, "globaldir")
+	if err := os.Mkdir(globalDir, 0750); err != nil {
+		t.Fatalf("failed to create globaldir: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	subBabfile := filepath.Join(subDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = mainBabfile
+	r.GlobalDir = "./globaldir"
+
+	task := &babfile.Task{
+		Name:       "sub:build",
+		SourcePath: subBabfile,
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != globalDir {
+		t.Errorf("expected global dir resolved from main babfile %q, got %q", globalDir, dir)
+	}
+}
+
+func TestResolveDirIncludedTaskDirOverridesGlobal(t *testing.T) {
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "sub")
+	if err := os.Mkdir(subDir, 0750); err != nil {
+		t.Fatalf("failed to create subDir: %v", err)
+	}
+	taskDir := filepath.Join(subDir, "taskdir")
+	if err := os.Mkdir(taskDir, 0750); err != nil {
+		t.Fatalf("failed to create taskdir: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	subBabfile := filepath.Join(subDir, "Babfile.yml")
+
+	r := New(false, "")
+	r.BabfilePath = mainBabfile
+	r.GlobalDir = "./globaldir"
+
+	task := &babfile.Task{
+		Name:       "sub:build",
+		SourcePath: subBabfile,
+		Dir:        "./taskdir",
+	}
+
+	ctx := &interpolate.Context{Vars: nil}
+	dir, err := r.resolveDir(task, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	if dir != taskDir {
+		t.Errorf("expected task dir resolved from included babfile %q, got %q", taskDir, dir)
+	}
+}
+
 func TestResolveDirIncludedTask(t *testing.T) {
 	tmpDir := t.TempDir()
 	subDir := filepath.Join(tmpDir, "sub")
@@ -1045,5 +1114,412 @@ func TestInterpolatePromptFields(t *testing.T) {
 
 	if original.Options[0] != "${{ env_val }}" {
 		t.Error("original Options slice was mutated")
+	}
+}
+
+func TestResolveDirComprehensive(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	dirs := []string{
+		"mainglobal", "maintask", "maincmd",
+		"api", "api/apiglobal", "api/apitask", "api/apicmd",
+		"deep", "deep/nested",
+	}
+	for _, d := range dirs {
+		if err := os.MkdirAll(filepath.Join(tmpDir, d), 0750); err != nil {
+			t.Fatalf("failed to create dir %s: %v", d, err)
+		}
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	apiBabfile := filepath.Join(tmpDir, "api", "Babfile.yml")
+	deepBabfile := filepath.Join(tmpDir, "deep", "nested", "Babfile.yml")
+
+	tests := []struct {
+		name       string
+		globalDir  string
+		taskSource string
+		taskDir    string
+		cmdDir     string
+		wantDir    string
+	}{
+		{
+			name:       "main: no dir anywhere → defaults to main babfile dir",
+			taskSource: mainBabfile,
+			wantDir:    tmpDir,
+		},
+		{
+			name:       "main: global dir only → resolves relative to main babfile",
+			globalDir:  "./mainglobal",
+			taskSource: mainBabfile,
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+		{
+			name:       "main: task dir overrides global → resolves relative to main babfile",
+			globalDir:  "./mainglobal",
+			taskSource: mainBabfile,
+			taskDir:    "./maintask",
+			wantDir:    filepath.Join(tmpDir, "maintask"),
+		},
+		{
+			name:       "main: cmd dir overrides task and global → resolves relative to main babfile",
+			globalDir:  "./mainglobal",
+			taskSource: mainBabfile,
+			taskDir:    "./maintask",
+			cmdDir:     "./maincmd",
+			wantDir:    filepath.Join(tmpDir, "maincmd"),
+		},
+		{
+			name:       "main: cmd dir overrides global (no task dir) → resolves relative to main babfile",
+			globalDir:  "./mainglobal",
+			taskSource: mainBabfile,
+			cmdDir:     "./maincmd",
+			wantDir:    filepath.Join(tmpDir, "maincmd"),
+		},
+		{
+			name:       "main: task dir only (no global) → resolves relative to main babfile",
+			taskSource: mainBabfile,
+			taskDir:    "./maintask",
+			wantDir:    filepath.Join(tmpDir, "maintask"),
+		},
+		{
+			name:       "main: cmd dir only (no global, no task) → resolves relative to main babfile",
+			taskSource: mainBabfile,
+			cmdDir:     "./maincmd",
+			wantDir:    filepath.Join(tmpDir, "maincmd"),
+		},
+
+		{
+			name:       "included: no dir anywhere → defaults to included babfile dir",
+			taskSource: apiBabfile,
+			wantDir:    filepath.Join(tmpDir, "api"),
+		},
+		{
+			name:       "included: included global dir baked into task.Dir → resolves relative to included babfile",
+			taskSource: apiBabfile,
+			taskDir:    "./apiglobal",
+			wantDir:    filepath.Join(tmpDir, "api", "apiglobal"),
+		},
+		{
+			name:       "included: task dir overrides included global → resolves relative to included babfile",
+			taskSource: apiBabfile,
+			taskDir:    "./apitask",
+			wantDir:    filepath.Join(tmpDir, "api", "apitask"),
+		},
+		{
+			name:       "included: cmd dir overrides task → resolves relative to included babfile",
+			taskSource: apiBabfile,
+			taskDir:    "./apitask",
+			cmdDir:     "./apicmd",
+			wantDir:    filepath.Join(tmpDir, "api", "apicmd"),
+		},
+		{
+			name:       "included: main global dir fallback (no included global, no task dir) → resolves relative to MAIN babfile",
+			globalDir:  "./mainglobal",
+			taskSource: apiBabfile,
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+		{
+			name:       "included: task dir beats main global → resolves relative to included babfile",
+			globalDir:  "./mainglobal",
+			taskSource: apiBabfile,
+			taskDir:    "./apitask",
+			wantDir:    filepath.Join(tmpDir, "api", "apitask"),
+		},
+		{
+			name:       "included: cmd dir beats main global and task → resolves relative to included babfile",
+			globalDir:  "./mainglobal",
+			taskSource: apiBabfile,
+			taskDir:    "./apitask",
+			cmdDir:     "./apicmd",
+			wantDir:    filepath.Join(tmpDir, "api", "apicmd"),
+		},
+
+		{
+			name:       "included: dir ../ goes to parent of included babfile",
+			taskSource: apiBabfile,
+			taskDir:    "../",
+			wantDir:    tmpDir,
+		},
+		{
+			name:       "included: dir ../mainglobal from api/ resolves to main-level dir",
+			taskSource: apiBabfile,
+			taskDir:    "../mainglobal",
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+
+		{
+			name:       "deep nested: no dir → defaults to nested babfile dir",
+			taskSource: deepBabfile,
+			wantDir:    filepath.Join(tmpDir, "deep", "nested"),
+		},
+		{
+			name:       "deep nested: main global dir fallback → resolves relative to MAIN babfile",
+			globalDir:  "./mainglobal",
+			taskSource: deepBabfile,
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+		{
+			name:       "deep nested: cmd dir → resolves relative to nested babfile",
+			taskSource: deepBabfile,
+			cmdDir:     "../../maincmd",
+			wantDir:    filepath.Join(tmpDir, "maincmd"),
+		},
+
+		{
+			name:       "absolute task dir ignores base",
+			taskSource: apiBabfile,
+			taskDir:    filepath.Join(tmpDir, "mainglobal"),
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+		{
+			name:       "absolute cmd dir ignores everything",
+			globalDir:  "./mainglobal",
+			taskSource: apiBabfile,
+			taskDir:    "./apitask",
+			cmdDir:     filepath.Join(tmpDir, "maincmd"),
+			wantDir:    filepath.Join(tmpDir, "maincmd"),
+		},
+		{
+			name:       "absolute global dir works for included task",
+			globalDir:  filepath.Join(tmpDir, "mainglobal"),
+			taskSource: apiBabfile,
+			wantDir:    filepath.Join(tmpDir, "mainglobal"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := New(false, "")
+			r.BabfilePath = mainBabfile
+			r.GlobalDir = tt.globalDir
+
+			task := &babfile.Task{
+				Name:       "test",
+				SourcePath: tt.taskSource,
+				Dir:        tt.taskDir,
+			}
+
+			ctx := &interpolate.Context{Vars: nil}
+			got, err := r.resolveDir(task, tt.cmdDir, ctx)
+			if err != nil {
+				t.Fatalf("resolveDir() error: %v", err)
+			}
+
+			if got != tt.wantDir {
+				t.Errorf("resolveDir() = %q, want %q", got, tt.wantDir)
+			}
+		})
+	}
+}
+
+func TestResolveDirEndToEnd(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	for _, d := range []string{"shared", "localdir", "api", "api/apilocal", "api/apicmd"} {
+		if err := os.MkdirAll(filepath.Join(tmpDir, d), 0750); err != nil {
+			t.Fatalf("failed to create dir %s: %v", d, err)
+		}
+	}
+
+	apiBabfile := filepath.Join(tmpDir, "api", "babfile.api.yml")
+	apiContent := `dir: ../
+
+tasks:
+  dev:
+    run:
+      - cmd: pwd
+  local:
+    dir: ./apilocal
+    run:
+      - cmd: pwd
+  cmdlevel:
+    run:
+      - cmd: pwd
+        dir: ./apicmd
+  override-all:
+    dir: ./apilocal
+    run:
+      - cmd: pwd
+        dir: ./apicmd
+`
+	if err := os.WriteFile(apiBabfile, []byte(apiContent), 0600); err != nil {
+		t.Fatalf("failed to write api babfile: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	mainContent := `dir: ./shared
+
+includes:
+  api:
+    babfile: ./api/babfile.api.yml
+
+tasks:
+  build:
+    run:
+      - cmd: pwd
+  local:
+    dir: ./localdir
+    run:
+      - cmd: pwd
+`
+	if err := os.WriteFile(mainBabfile, []byte(mainContent), 0600); err != nil {
+		t.Fatalf("failed to write main babfile: %v", err)
+	}
+
+	result, err := LoadTasks(mainBabfile)
+	if err != nil {
+		t.Fatalf("LoadTasks() error: %v", err)
+	}
+
+	if result.GlobalDir != "./shared" {
+		t.Errorf("GlobalDir = %q, want ./shared", result.GlobalDir)
+	}
+
+	r := New(false, "")
+	r.BabfilePath = result.Path
+	r.GlobalDir = result.GlobalDir
+	ctx := &interpolate.Context{Vars: nil}
+
+	tests := []struct {
+		taskName string
+		cmdDir   string
+		wantDir  string
+		desc     string
+	}{
+		{
+			taskName: "build",
+			wantDir:  filepath.Join(tmpDir, "shared"),
+			desc:     "main task inherits main global dir",
+		},
+		{
+			taskName: "local",
+			wantDir:  filepath.Join(tmpDir, "localdir"),
+			desc:     "main task-level dir overrides global",
+		},
+		{
+			taskName: "api:dev",
+			wantDir:  tmpDir,
+			desc:     "included task inherits included global dir (../ from api/ = project root)",
+		},
+		{
+			taskName: "api:local",
+			wantDir:  filepath.Join(tmpDir, "api", "apilocal"),
+			desc:     "included task-level dir overrides included global dir",
+		},
+		{
+			taskName: "api:cmdlevel",
+			cmdDir:   "./apicmd",
+			wantDir:  filepath.Join(tmpDir, "api", "apicmd"),
+			desc:     "included task cmd-level dir overrides included global dir",
+		},
+		{
+			taskName: "api:override-all",
+			cmdDir:   "./apicmd",
+			wantDir:  filepath.Join(tmpDir, "api", "apicmd"),
+			desc:     "included task cmd-level dir overrides both task and global",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			task, ok := result.Tasks[tt.taskName]
+			if !ok {
+				t.Fatalf("task %q not found in parse result", tt.taskName)
+			}
+
+			cmdDir := tt.cmdDir
+			if cmdDir == "" {
+				if cmd, ok := task.Run[0].(babfile.CommandRun); ok {
+					cmdDir = cmd.Dir
+				}
+			}
+
+			got, err := r.resolveDir(task, cmdDir, ctx)
+			if err != nil {
+				t.Fatalf("resolveDir() error: %v", err)
+			}
+
+			if got != tt.wantDir {
+				t.Errorf("resolveDir() = %q, want %q", got, tt.wantDir)
+			}
+		})
+	}
+}
+
+func TestResolveDirIncludedNoGlobalFallsToMainGlobal(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	for _, d := range []string{"shared", "lib"} {
+		if err := os.MkdirAll(filepath.Join(tmpDir, d), 0750); err != nil {
+			t.Fatalf("failed to create dir %s: %v", d, err)
+		}
+	}
+
+	libBabfile := filepath.Join(tmpDir, "lib", "babfile.yml")
+	libContent := `tasks:
+  test:
+    run:
+      - cmd: pwd
+`
+	if err := os.WriteFile(libBabfile, []byte(libContent), 0600); err != nil {
+		t.Fatalf("failed to write lib babfile: %v", err)
+	}
+
+	mainBabfile := filepath.Join(tmpDir, "Babfile.yml")
+	mainContent := `dir: ./shared
+
+includes:
+  lib:
+    babfile: ./lib/babfile.yml
+
+tasks:
+  main:
+    run:
+      - cmd: pwd
+`
+	if err := os.WriteFile(mainBabfile, []byte(mainContent), 0600); err != nil {
+		t.Fatalf("failed to write main babfile: %v", err)
+	}
+
+	result, err := LoadTasks(mainBabfile)
+	if err != nil {
+		t.Fatalf("LoadTasks() error: %v", err)
+	}
+
+	r := New(false, "")
+	r.BabfilePath = result.Path
+	r.GlobalDir = result.GlobalDir
+	ctx := &interpolate.Context{Vars: nil}
+
+	libTask := result.Tasks["lib:test"]
+	if libTask == nil {
+		t.Fatal("task lib:test not found")
+	}
+	if libTask.Dir != "" {
+		t.Errorf("expected lib:test to have no baked dir, got %q", libTask.Dir)
+	}
+
+	got, err := r.resolveDir(libTask, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+
+	want := filepath.Join(tmpDir, "shared")
+	if got != want {
+		t.Errorf("lib:test dir = %q, want %q (main global dir)", got, want)
+	}
+
+	mainTask := result.Tasks["main"]
+	if mainTask == nil {
+		t.Fatal("task main not found")
+	}
+
+	got, err = r.resolveDir(mainTask, "", ctx)
+	if err != nil {
+		t.Fatalf("resolveDir() error: %v", err)
+	}
+	if got != want {
+		t.Errorf("main dir = %q, want %q (main global dir)", got, want)
 	}
 }
