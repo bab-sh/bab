@@ -59,6 +59,28 @@ yay -S bab-bin
 yay -S bab
 ```
 
+### Nix (NixOS/Linux/macOS)
+
+Available via [NUR](https://github.com/nix-community/NUR) (Nix User Repository):
+
+```nix
+# flake.nix or configuration.nix — add NUR and the bab overlay
+{
+  inputs.nur.url = "github:nix-community/NUR";
+
+  # Then in your packages:
+  environment.systemPackages = [
+    nur.repos.bab-sh.bab
+  ];
+}
+```
+
+Or install directly with `nix profile`:
+
+```bash
+nix profile install nur#repos.bab-sh.bab
+```
+
 ### Go
 
 ```bash
