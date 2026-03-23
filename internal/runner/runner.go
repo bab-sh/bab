@@ -428,11 +428,13 @@ func (r *Runner) resolveDir(task *babfile.Task, cmdDir string, ctx *interpolate.
 	baseDir := filepath.Dir(task.SourcePath)
 
 	dir := cmdDir
+	resolveBase := baseDir
 	if dir == "" {
 		dir = task.Dir
 	}
 	if dir == "" {
 		dir = r.GlobalDir
+		resolveBase = filepath.Dir(r.BabfilePath)
 	}
 
 	if dir == "" {
@@ -445,7 +447,7 @@ func (r *Runner) resolveDir(task *babfile.Task, cmdDir string, ctx *interpolate.
 	}
 
 	if !filepath.IsAbs(interpolatedDir) {
-		interpolatedDir = filepath.Join(baseDir, interpolatedDir)
+		interpolatedDir = filepath.Join(resolveBase, interpolatedDir)
 	}
 
 	interpolatedDir = filepath.Clean(interpolatedDir)
