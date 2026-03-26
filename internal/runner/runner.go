@@ -474,12 +474,29 @@ func shellCommand() (string, string) {
 }
 
 func runCommand(ctx context.Context, shell, shellArg, command string, env map[string]string, showOutput bool, dir string) error {
-	var stdout, stderr io.Writer
+	cmd := exec.CommandContext(ctx, shell, shellArg, command)
+
 	if showOutput {
-		stdout = os.Stdout
-		stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	}
-	return runCommandWithWriters(ctx, shell, shellArg, command, env, stdout, stderr, showOutput, false, dir)
+
+	if len(env) > 0 {
+		cmdEnv := os.Environ()
+		cmdEnv = append(cmdEnv, babfile.MergeEnv(env)...)
+		cmd.Env = cmdEnv
+	}
+
+	if dir != "" {
+		cmd.Dir = dir
+	}
+
+	err := cmd.Run()
+	if err != nil && ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
 }
 
 func isRealTerminal(w io.Writer) bool {
