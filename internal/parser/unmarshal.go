@@ -46,6 +46,7 @@ const (
 	keyColor       = "color"
 	keyLabel       = "label"
 	keyArgs        = "args"
+	keyHooks       = "hooks"
 )
 
 type promptFields struct {
@@ -264,6 +265,7 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 		Env:      make(map[string]string),
 		Tasks:    make(map[string]babfile.Task),
 		Includes: make(map[string]babfile.Include),
+		Hooks:    make(babfile.HookMap),
 	}
 
 	verrs := &errs.ValidationErrors{}
@@ -291,6 +293,8 @@ func unmarshalBabfile(path string, data []byte) (*babfile.Schema, error) {
 			parseTasks(path, val, schema, verrs)
 		case keyIncludes:
 			parseIncludes(path, val, schema, verrs)
+		case keyHooks:
+			parseHooks(path, val, schema, verrs)
 		}
 	}
 
@@ -953,4 +957,86 @@ func parseIncludes(path string, node *yaml.Node, schema *babfile.Schema, verrs *
 		}
 		schema.Includes[nameNode.Value] = inc
 	}
+}
+
+func parseHooks(path string, node *yaml.Node, schema *babfile.Schema, verrs *errs.ValidationErrors) {
+	if node.Kind != yaml.MappingNode {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: "hooks must be a mapping"})
+		return
+	}
+
+	for i := 0; i < len(node.Content); i += 2 {
+		nameNode := node.Content[i]
+		hookNode := node.Content[i+1]
+		name := nameNode.Value
+
+		if !babfile.IsValidHookName(name) {
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    nameNode.Line,
+				Message: fmt.Sprintf("invalid hook name %q, must be a valid git hook name", name),
+			})
+			continue
+		}
+
+		hook, ok := parseHookDef(path, hookNode, name, verrs)
+		if !ok {
+			continue
+		}
+		hook.Line = nameNode.Line
+		hook.Name = name
+		schema.Hooks[name] = hook
+	}
+}
+
+func parseHookDef(path string, node *yaml.Node, hookName string, verrs *errs.ValidationErrors) (*babfile.HookDef, bool) {
+	if node.Kind != yaml.MappingNode {
+		verrs.Add(&errs.ParseError{Path: path, Line: node.Line, Message: fmt.Sprintf("hook %q: must be a mapping", hookName)})
+		return nil, false
+	}
+
+	hook := &babfile.HookDef{}
+	hasErrors := false
+	hasRun := false
+
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i]
+		val := node.Content[i+1]
+
+		switch key.Value {
+		case keyRun:
+			hasRun = true
+			runItems, ok := parseRunItems(path, val, "hook:"+hookName, verrs)
+			if !ok {
+				hasErrors = true
+			}
+			if len(runItems) == 0 {
+				verrs.Add(&errs.ParseError{
+					Path:    path,
+					Line:    val.Line,
+					Message: fmt.Sprintf("hook %q: 'run' must have at least one item", hookName),
+				})
+				hasErrors = true
+			}
+			hook.Run = runItems
+		default:
+			verrs.Add(&errs.ParseError{
+				Path:    path,
+				Line:    key.Line,
+				Message: fmt.Sprintf("hook %q: unknown key %q, only 'args' and 'run' are allowed", hookName, key.Value),
+			})
+			hasErrors = true
+		}
+	}
+
+	if !hasRun {
+		verrs.Add(&errs.ParseError{
+			Path:    path,
+			Line:    node.Line,
+			Message: fmt.Sprintf("hook %q: 'run' is required", hookName),
+		})
+		hasErrors = true
+	}
+
+	return hook, !hasErrors
 }

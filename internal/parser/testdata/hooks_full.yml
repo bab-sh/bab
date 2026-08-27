@@ -1,0 +1,19 @@
+tasks:
+  lint:
+    run:
+      - cmd: echo "linting"
+  test:unit:
+    run:
+      - cmd: echo "testing"
+  push:checks:
+    run:
+      - cmd: echo "push checks"
+
+hooks:
+  pre-push:
+    run:
+      - cmd: echo "Pushing to ${{ remote }}"
+      - task: push:checks
+      - parallel:
+          - task: lint
+          - task: test:unit

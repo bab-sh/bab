@@ -86,12 +86,55 @@ tasks:
     run:
       - cmd: gofmt -l .
 
-  hooks:install:
-    desc: Install git hooks via lefthook
+  vet:
+    desc: Run go vet
     run:
-      - cmd: lefthook install
+      - cmd: go vet ./...
 
-  hooks:uninstall:
-    desc: Uninstall git hooks
+  tidy:check:
+    desc: Check go.mod is tidy
     run:
-      - cmd: lefthook uninstall
+      - cmd: go mod tidy
+      - cmd: git diff --exit-code go.mod go.sum
+
+hooks:
+  pre-commit:
+    run:
+      - task: format
+      - parallel:
+          - task: vet
+          - task: tidy:check
+          - task: lint
+          - task: test:race
+
+  commit-msg:
+    run:
+      - cmd: |
+          msg="${{ msg }}"
+          case "$msg" in Merge*|fixup!*|squash!*) exit 0 ;; esac
+          pattern='^(feat|fix|perf|refactor|docs|test|build|ci|style|revert|chore)(\([a-zA-Z0-9_-]+\))?!?: .+'
+          if ! echo "$msg" | grep -qE "$pattern"; then
+            echo ""
+            echo "  Invalid commit message"
+            echo ""
+            echo "  got:      $msg"
+            echo "  expected: type(scope): description"
+            echo ""
+            echo "  types:    feat | fix | perf | refactor | docs | test"
+            echo "            build | ci | style | revert | chore"
+            echo ""
+            echo "  example:  feat(parser): add hook support"
+            echo ""
+            exit 1
+          fi
+          len=${#msg}
+          if [ "$len" -gt 72 ]; then
+            echo "  warning: subject is ${len} chars (recommended max: 72)"
+          fi
+        silent: true
+
+  pre-push:
+    run:
+      - parallel:
+          - task: lint
+          - task: test:race

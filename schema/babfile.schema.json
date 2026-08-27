@@ -2,6 +2,24 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://bab.sh/schema/babfile.schema.json",
   "$defs": {
+    "HookDef": {
+      "properties": {
+        "run": {
+          "items": {
+            "$ref": "#/$defs/RunItem"
+          },
+          "type": "array",
+          "minItems": 1,
+          "description": "Commands or tasks to execute"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "run"
+      ],
+      "description": "Hook definition"
+    },
     "Include": {
       "properties": {
         "babfile": {
@@ -634,6 +652,34 @@
       "type": "object",
       "minProperties": 1,
       "description": "Task definitions"
+    },
+    "hooks": {
+      "additionalProperties": {
+        "$ref": "#/$defs/HookDef"
+      },
+      "propertyNames": {
+        "enum": [
+          "pre-applypatch",
+          "post-applypatch",
+          "prepare-commit-msg",
+          "post-commit",
+          "update",
+          "post-update",
+          "post-rewrite",
+          "pre-rebase",
+          "applypatch-msg",
+          "pre-commit",
+          "commit-msg",
+          "post-checkout",
+          "post-merge",
+          "pre-auto-gc",
+          "pre-push",
+          "pre-receive",
+          "post-receive"
+        ]
+      },
+      "type": "object",
+      "description": "Git hook definitions"
     }
   },
   "additionalProperties": false,

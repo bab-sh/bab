@@ -1,0 +1,10 @@
+tasks:
+  validate:commit-msg:
+    run:
+      - cmd: echo "validating commit message"
+
+hooks:
+  commit-msg:
+    run:
+      - cmd: echo "${{ msg }}"
+      - task: validate:commit-msg

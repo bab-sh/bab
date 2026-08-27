@@ -1,0 +1,9 @@
+tasks:
+  lint:
+    run:
+      - cmd: echo "linting"
+
+hooks:
+  not-a-real-hook:
+    run:
+      - task: lint

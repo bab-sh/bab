@@ -13,6 +13,7 @@ type Schema struct {
 	Dir      string             `json:"dir,omitempty" yaml:"dir,omitempty"`
 	Includes map[string]Include `json:"includes,omitempty" yaml:"includes,omitempty"`
 	Tasks    map[string]Task    `json:"tasks" yaml:"tasks"`
+	Hooks    HookMap            `json:"hooks,omitempty" yaml:"hooks,omitempty"`
 }
 
 func (Schema) JSONSchema() *jsonschema.Schema {
@@ -41,6 +42,7 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 		},
 		AdditionalProperties: &jsonschema.Schema{Ref: "#/$defs/Task"},
 	})
+	props.Set("hooks", HooksSchema())
 
 	return &jsonschema.Schema{
 		Type:                 "object",
@@ -54,6 +56,7 @@ func (Schema) JSONSchema() *jsonschema.Schema {
 			"Platform":          Platform("").JSONSchema(),
 			"RunItem":           RunItemSchema(),
 			"ParallelChildItem": ParallelChildItemSchema(),
+			"HookDef":           HookDefSchema(),
 		},
 	}
 }

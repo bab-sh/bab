@@ -81,6 +81,7 @@ func (c *CLI) buildCommand() *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 	}
 
+	cmd.AddCommand(c.hooksCommand())
 	cmd.CompletionOptions.DisableDefaultCmd = true
 
 	cmd.PersistentFlags().BoolVarP(&c.verbose, "verbose", "v", false, "Enable verbose output")

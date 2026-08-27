@@ -7,13 +7,14 @@ import (
 	"github.com/bab-sh/bab/internal/errs"
 )
 
-func validateAll(path string, tasks babfile.TaskMap) error {
+func validateAll(path string, tasks babfile.TaskMap, hooks babfile.HookMap) error {
 	verrs := &errs.ValidationErrors{}
 	validateDependencies(path, tasks, verrs)
 	validateRunTaskRefs(path, tasks, verrs)
 	validateTaskArgs(path, tasks, verrs)
 	validateRunCycles(path, tasks, verrs)
 	validateAliases(path, tasks, verrs)
+	validateHookRefs(path, hooks, tasks, verrs)
 	return verrs.OrNil()
 }
 
@@ -213,5 +214,12 @@ func validateRunCycles(path string, tasks babfile.TaskMap, verrs *errs.Validatio
 		if !visited[name] {
 			dfs(name, nil)
 		}
+	}
+}
+
+func validateHookRefs(path string, hooks babfile.HookMap, tasks babfile.TaskMap, verrs *errs.ValidationErrors) {
+	for name, hook := range hooks {
+		validateRunItemTaskRefs(path, "hook:"+name, hook.Run, tasks, verrs)
+		validateRunItemArgs(path, hook.Run, tasks, verrs)
 	}
 }

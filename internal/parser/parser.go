@@ -21,6 +21,7 @@ type ParseResult struct {
 	GlobalDir    string
 	Tasks        babfile.TaskMap
 	Aliases      map[string]string
+	Hooks        babfile.HookMap
 }
 
 func Parse(path string) (*ParseResult, error) {
@@ -39,7 +40,7 @@ func Parse(path string) (*ParseResult, error) {
 		return nil, err
 	}
 
-	if err := validateAll(absPath, result.Tasks); err != nil {
+	if err := validateAll(absPath, result.Tasks, result.Hooks); err != nil {
 		return nil, err
 	}
 
@@ -110,6 +111,7 @@ func parseFile(absPath string, visited map[string]bool) (*ParseResult, error) {
 		GlobalDir:    bf.Dir,
 		Tasks:        tasks,
 		Aliases:      buildAliasMap(tasks),
+		Hooks:        bf.Hooks,
 	}, nil
 }
 

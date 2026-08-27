@@ -1,0 +1,9 @@
+tasks:
+  lint:
+    run:
+      - cmd: echo "linting"
+
+hooks:
+  pre-commit:
+    run:
+      - task: nonexistent

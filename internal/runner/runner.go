@@ -62,12 +62,7 @@ func LoadTasks(customPath string) (*parser.ParseResult, error) {
 	return parser.Parse(path)
 }
 
-func (r *Runner) Run(ctx context.Context, taskName string) error {
-	result, err := LoadTasks(r.Babfile)
-	if err != nil {
-		return err
-	}
-
+func (r *Runner) initFromResult(result *parser.ParseResult) error {
 	r.BabfilePath = result.Path
 	r.Aliases = result.Aliases
 
@@ -80,6 +75,18 @@ func (r *Runner) Run(ctx context.Context, taskName string) error {
 	r.GlobalSilent = result.GlobalSilent
 	r.GlobalOutput = result.GlobalOutput
 	r.GlobalDir = result.GlobalDir
+	return nil
+}
+
+func (r *Runner) Run(ctx context.Context, taskName string) error {
+	result, err := LoadTasks(r.Babfile)
+	if err != nil {
+		return err
+	}
+
+	if err := r.initFromResult(result); err != nil {
+		return err
+	}
 
 	resolvedName := r.resolveTaskName(taskName)
 
@@ -352,14 +359,21 @@ func (r *Runner) executeCommand(ctx context.Context, v babfile.CommandRun, task 
 			outW, errW = stdout, stderr
 		}
 		if err := runCommandWithWriters(ctx, shell, shellArg, interpolatedCmd, cmdEnv, outW, errW, false, noColor, cmdDir); err != nil {
-			return fmt.Errorf("task %q: command %q failed: %w", task.Name, interpolatedCmd, err)
+			return fmt.Errorf("task %q: command %q failed: %w", task.Name, truncateCmd(interpolatedCmd), err)
 		}
 	} else {
 		if err := runCommand(ctx, shell, shellArg, interpolatedCmd, cmdEnv, showOutput, cmdDir); err != nil {
-			return fmt.Errorf("task %q: command %q failed: %w", task.Name, interpolatedCmd, err)
+			return fmt.Errorf("task %q: command %q failed: %w", task.Name, truncateCmd(interpolatedCmd), err)
 		}
 	}
 	return nil
+}
+
+func truncateCmd(cmd string) string {
+	if i := strings.IndexByte(cmd, '\n'); i >= 0 {
+		return cmd[:i] + "..."
+	}
+	return cmd
 }
 
 func (r *Runner) shouldSkipRunItem(item babfile.RunItem, taskVars map[string]string, taskName string, index int) (bool, error) {
@@ -585,6 +599,61 @@ func sortedArgsKey(args map[string]string) string {
 		b.WriteString(args[k])
 	}
 	return b.String()
+}
+
+func (r *Runner) RunHook(ctx context.Context, hookName string, positionalArgs []string) error {
+	result, err := LoadTasks(r.Babfile)
+	if err != nil {
+		return err
+	}
+
+	if err := r.initFromResult(result); err != nil {
+		return err
+	}
+
+	hook, exists := result.Hooks[hookName]
+	if !exists {
+		return fmt.Errorf("hook %q not found in Babfile", hookName)
+	}
+
+	taskVars := make(map[string]string)
+	var taskArgs babfile.ArgMap
+	argDefs := babfile.HookArgs[hookName]
+	if len(argDefs) > 0 {
+		taskArgs = make(babfile.ArgMap, len(argDefs))
+		for _, def := range argDefs {
+			idx := def.Position - 1
+			if idx < len(positionalArgs) {
+				val := positionalArgs[idx]
+				if def.ReadFile {
+					content, err := os.ReadFile(val)
+					if err != nil {
+						return fmt.Errorf("hook %q: reading %q: %w", hookName, def.Name, err)
+					}
+					val = strings.TrimRight(string(content), "\n")
+				}
+				taskVars[def.Name] = val
+			}
+			taskArgs[def.Name] = babfile.ArgDef{Line: hook.Line}
+		}
+	}
+
+	syntheticTask := &babfile.Task{
+		Name:       "hook:" + hookName,
+		SourcePath: result.Path,
+		Line:       hook.Line,
+		Args:       taskArgs,
+		Run:        hook.Run,
+	}
+
+	allTasks := make(babfile.TaskMap, len(result.Tasks)+1)
+	for k, v := range result.Tasks {
+		allTasks[k] = v
+	}
+	allTasks[syntheticTask.Name] = syntheticTask
+
+	r.CLIArgs = taskVars
+	return r.RunWithTasks(ctx, syntheticTask.Name, allTasks)
 }
 
 func buildChainSlice(current string, tasks babfile.TaskMap, state map[string]status) []string {

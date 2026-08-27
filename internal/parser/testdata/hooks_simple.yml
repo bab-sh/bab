@@ -1,0 +1,13 @@
+tasks:
+  lint:
+    run:
+      - cmd: echo "linting"
+  test:unit:
+    run:
+      - cmd: echo "testing"
+
+hooks:
+  pre-commit:
+    run:
+      - task: lint
+      - task: test:unit

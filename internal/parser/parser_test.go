@@ -1805,3 +1805,113 @@ func TestParseWhen(t *testing.T) {
 		})
 	}
 }
+
+func TestParseHooksSimple(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "hooks_simple.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	if len(result.Hooks) != 1 {
+		t.Fatalf("expected 1 hook, got %d", len(result.Hooks))
+	}
+	hook := result.Hooks["pre-commit"]
+	if hook == nil {
+		t.Fatal("hook 'pre-commit' not found")
+	}
+	if len(hook.Run) != 2 {
+		t.Fatalf("expected 2 run items, got %d", len(hook.Run))
+	}
+	tr, ok := hook.Run[0].(babfile.TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun for run[0]")
+	}
+	if tr.Task != "lint" {
+		t.Errorf("expected task 'lint', got %q", tr.Task)
+	}
+	tr2, ok := hook.Run[1].(babfile.TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun for run[1]")
+	}
+	if tr2.Task != "test:unit" {
+		t.Errorf("expected task 'test:unit', got %q", tr2.Task)
+	}
+}
+
+func TestParseHooksWithArgs(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "hooks_with_args.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	hook := result.Hooks["commit-msg"]
+	if hook == nil {
+		t.Fatal("hook 'commit-msg' not found")
+	}
+	if len(hook.Run) != 2 {
+		t.Fatalf("expected 2 run items, got %d", len(hook.Run))
+	}
+}
+
+func TestParseHooksFull(t *testing.T) {
+	result, err := Parse(filepath.Join("testdata", "hooks_full.yml"))
+	if err != nil {
+		t.Fatalf("Parse() error: %v", err)
+	}
+	hook := result.Hooks["pre-push"]
+	if hook == nil {
+		t.Fatal("hook 'pre-push' not found")
+	}
+	if len(hook.Run) != 3 {
+		t.Fatalf("expected 3 run items, got %d", len(hook.Run))
+	}
+
+	cmd, ok := hook.Run[0].(babfile.CommandRun)
+	if !ok {
+		t.Fatal("expected CommandRun for run[0]")
+	}
+	if cmd.Cmd != `echo "Pushing to ${{ remote }}"` {
+		t.Errorf("unexpected cmd: %q", cmd.Cmd)
+	}
+
+	tr, ok := hook.Run[1].(babfile.TaskRun)
+	if !ok {
+		t.Fatal("expected TaskRun for run[1]")
+	}
+	if tr.Task != "push:checks" {
+		t.Errorf("expected task 'push:checks', got %q", tr.Task)
+	}
+
+	pr, ok := hook.Run[2].(babfile.ParallelRun)
+	if !ok {
+		t.Fatal("expected ParallelRun for run[2]")
+	}
+	if len(pr.Items) != 2 {
+		t.Fatalf("expected 2 parallel items, got %d", len(pr.Items))
+	}
+}
+
+func TestParseHooksInvalidName(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "hooks_invalid_name.yml"))
+	if err == nil {
+		t.Fatal("expected error for invalid hook name")
+	}
+	if !strings.Contains(err.Error(), "invalid hook name") {
+		t.Errorf("expected 'invalid hook name' error, got: %v", err)
+	}
+}
+
+func TestParseHooksMissingTaskRef(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "hooks_missing_task_ref.yml"))
+	if err == nil {
+		t.Fatal("expected error for missing task ref")
+	}
+	if !errors.Is(err, errs.ErrTaskNotFound) {
+		t.Errorf("expected ErrTaskNotFound, got: %v", err)
+	}
+}
+
+func TestParseHooksEmptyRun(t *testing.T) {
+	_, err := Parse(filepath.Join("testdata", "hooks_empty_run.yml"))
+	if err == nil {
+		t.Fatal("expected error for empty run")
+	}
+}
