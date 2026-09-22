@@ -185,29 +185,6 @@ nfpms:
         replaces:
           - bab-bin
 
-brews:
-  - name: bab
-    repository:
-      owner: bab-sh
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.PAT_TOKEN }}"
-    commit_author:
-      name: goreleaserbot
-      email: "[email protected]"
-    commit_msg_template: "chore: update {{ .ProjectName }} to {{ .Tag }}"
-    homepage: "https://github.com/bab-sh/bab"
-    description: "Task runner for defining project commands in YAML"
-    license: "MIT"
-    directory: Formula
-    install: |
-      bin.install "bab"
-      bash_completion.install "completions/bab.bash" => "bab"
-      zsh_completion.install "completions/bab.zsh" => "_bab"
-      fish_completion.install "completions/bab.fish"
-    test: |
-      system "#{bin}/bab", "--version"
-
 homebrew_casks:
   - name: bab
     repository:
@@ -223,9 +200,8 @@ homebrew_casks:
     description: "Task runner for defining project commands in YAML"
     license: "MIT"
     directory: Casks
-    url:
-      verified: github.com/bab-sh/bab
-    binary: bab
+    binaries:
+      - bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
@@ -251,9 +227,8 @@ homebrew_casks:
     description: "Task runner for defining project commands in YAML (v{{ .Major }}.{{ .Minor }}.x)"
     license: "MIT"
     directory: Casks
-    url:
-      verified: github.com/bab-sh/bab
-    binary: bab
+    binaries:
+      - bab
     completions:
       bash: completions/bab.bash
       zsh: completions/bab.zsh
